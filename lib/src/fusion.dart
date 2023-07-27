@@ -126,12 +126,14 @@ class Input {
     );
   }
 
-  static Input fromStackUTXO(UTXO utxo) {
+  static Input fromStackUTXOData(
+    ({String txid, int vout, int value}) utxoInfo,
+  ) {
     return Input(
-      prevTxid: utf8.encode(utxo.txid), // Convert txid to a List<int>
-      prevIndex: utxo.vout,
+      prevTxid: utf8.encode(utxoInfo.txid), // Convert txid to a List<int>
+      prevIndex: utxoInfo.vout,
       pubKey: utf8.encode('0000'), // Placeholder
-      amount: utxo.value,
+      amount: utxoInfo.value,
     );
   }
 }
@@ -224,10 +226,12 @@ class Fusion {
   }
 */
 
-  Future<void> add_coins_from_wallet(List<UTXO> utxoList) async {
-    // Convert each UTXO to an Input and add to 'coins'
-    for (UTXO utxo in utxoList) {
-      coins.add(Input.fromStackUTXO(utxo));
+  Future<void> add_coins_from_wallet(
+      List<({String txid, int vout, int value})> utxoList,
+  ) async {
+    // Convert each UTXO info to an Input and add to 'coins'
+    for (final utxoInfo in utxoList) {
+      coins.add(Input.fromStackUTXOData(utxoInfo));
     }
   }
 
