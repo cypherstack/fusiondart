@@ -8,7 +8,6 @@ import 'package:crypto/crypto.dart';
 import 'package:fixnum/fixnum.dart';
 import "package:pointycastle/export.dart";
 import 'package:protobuf/protobuf.dart';
-import 'package:stackwallet/models/isar/models/blockchain_data/utxo.dart';
 
 import 'comms.dart';
 import 'connection.dart';
