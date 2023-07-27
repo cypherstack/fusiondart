@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
-import 'package:stackwallet/services/cashfusion/socketwrapper.dart';
+import 'package:fusiondart/socketwrapper.dart';
 
 /*
 This file might need some fixing up because each time we call fillBuf, we're trying to

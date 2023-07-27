@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:fusiondart/util.dart';
 import 'package:pointycastle/ecc/api.dart';
-import 'package:stackwallet/services/cashfusion/util.dart';
 
 ECDomainParameters getDefaultParams() {
   return ECDomainParameters("secp256k1");
