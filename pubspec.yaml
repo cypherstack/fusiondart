@@ -12,10 +12,11 @@ dependencies:
   convert: ^3.1.1
   crypto: ^3.0.3
   cryptography: ^2.5.0
+  fixnum: ^1.1.0
   flutter:
     sdk: flutter
   pointycastle: ^3.7.3
-  protobuf: ^2.0.0
+  protobuf: ^3.0.0
 
 dev_dependencies:
   flutter_test:
