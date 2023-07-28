@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:fusiondart/connection.dart';
-import 'package:fusiondart/fusion.dart';
-import 'package:fusiondart/fusion.pb.dart';
-import 'package:fusiondart/socketwrapper.dart';
-import 'package:fusiondart/util.dart';
+import 'package:fusiondart/src/connection.dart';
+import 'package:fusiondart/src/fusion.dart';
+import 'package:fusiondart/src/fusion.pb.dart';
+import 'package:fusiondart/src/socketwrapper.dart';
+import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart';
 
 typedef PbCreateFunc = GeneratedMessage Function();

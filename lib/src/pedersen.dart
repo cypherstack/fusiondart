@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:fusiondart/util.dart';
+import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
 
 ECDomainParameters getDefaultParams() {
