@@ -36,6 +36,7 @@ void check(bool condition, String failMessage) {
 }
 
 dynamic protoStrictParse(dynamic msg, List<int> blob) {
+  // TODO validate "is InitialCommitment"
   try {
     if (msg.mergeFromBuffer(blob) != blob.length) {
       throw ArgumentError('DecodeError');
@@ -44,7 +45,7 @@ dynamic protoStrictParse(dynamic msg, List<int> blob) {
     throw ArgumentError('ValidationError: decode error');
   }
 
-  if (!msg.isInitialized()) {
+  if (!(msg.isInitialized() as bool)) {
     throw ArgumentError('missing fields');
   }
 
@@ -79,7 +80,8 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
 
   List<pb.InitialCommitment> commitMessages = [];
   for (var cblob in msg.initialCommitments) {
-    pb.InitialCommitment cmsg = protoStrictParse(pb.InitialCommitment(), cblob);
+    pb.InitialCommitment cmsg =
+        protoStrictParse(pb.InitialCommitment(), cblob) as pb.InitialCommitment;
     check(cmsg.saltedComponentHash.length == 32, "bad salted hash");
     var P = cmsg.amountCommitment;
     check(P.length == 65 && P[0] == 4, "bad commitment point");
@@ -133,7 +135,7 @@ Tuple<String, int> checkCovertComponent(
 
   String sortKey;
 
-  if (cmsg.hasInput()) {
+  if (cmsg.hasInput() as bool) {
     var inp = cmsg.input;
     check(inp.prevTxid.length == 32, "bad txid");
     check(
@@ -141,28 +143,31 @@ Tuple<String, int> checkCovertComponent(
                 (inp.pubkey[0] == 2 || inp.pubkey[0] == 3)) ||
             (inp.pubkey.length == 65 && inp.pubkey[0] == 4),
         "bad pubkey");
-    sortKey = 'i' +
-        String.fromCharCodes(inp.prevTxid.reversed) +
-        inp.prevIndex.toString() +
-        String.fromCharCodes(cmsg.saltCommitment);
-  } else if (cmsg.hasOutput()) {
+    if (!(cmsg.saltCommitment is Iterable<int>)) {
+      throw new Exception(
+          'cmsg.saltCommitment is not Iterable<int> in checkCovertComponent');
+    }
+    sortKey =
+        'i${String.fromCharCodes(inp.prevTxid.reversed as Iterable<int>)}${inp.prevIndex.toString()}${String.fromCharCodes(cmsg.saltCommitment as Iterable<int>)}';
+  } else if (cmsg.hasOutput() as bool) {
     var out = cmsg.output;
     Address addr;
     // Basically just checks if its ok address. should throw error if not.
-    addr = Util.getAddressFromOutputScript(out.scriptpubkey);
+    addr = Util.getAddressFromOutputScript(out.scriptpubkey as Uint8List);
 
-    check(out.amount >= Util.dustLimit(out.scriptpubkey.length), "dust output");
-    sortKey = 'o' +
-        out.amount.toString() +
-        String.fromCharCodes(out.scriptpubkey) +
-        String.fromCharCodes(cmsg.saltCommitment);
-  } else if (cmsg.hasBlank()) {
-    sortKey = 'b' + String.fromCharCodes(cmsg.saltCommitment);
+    check(
+        (out.amount >= Util.dustLimit(out.scriptpubkey.length as int) as bool),
+        "dust output");
+    sortKey =
+        'o${out.amount.toString()}${String.fromCharCodes(out.scriptpubkey as Iterable<int>)}${String.fromCharCodes(cmsg.saltCommitment as Iterable<int>)}';
+  } else if (cmsg.hasBlank() as bool) {
+    sortKey = 'b${String.fromCharCodes(cmsg.saltCommitment as Iterable<int>)}';
   } else {
     throw ValidationError('missing component details');
   }
 
-  return Tuple(sortKey, componentContrib(cmsg, componentFeerate));
+  return Tuple(
+      sortKey, componentContrib(cmsg as pb.Component, componentFeerate));
 }
 
 pb.InputComponent? validateProofInternal(
@@ -186,7 +191,7 @@ pb.InputComponent? validateProofInternal(
 
   Uint8List componentBlob;
   try {
-    componentBlob = allComponents[msg.componentIdx];
+    componentBlob = allComponents[msg.componentIdx as int];
   } catch (e) {
     throw ValidationError("component index out of range");
   }
@@ -199,11 +204,13 @@ pb.InputComponent? validateProofInternal(
 
   check(msg.salt.length == 32, "salt wrong length");
   check(
-    Util.sha256(msg.salt) == comp.saltCommitment,
+    Util.sha256(msg.salt as Uint8List) == comp.saltCommitment,
     "salt commitment mismatch",
   );
+
+  var iterableSalt = msg.salt as Iterable<int>;
   check(
-    Util.sha256(Uint8List.fromList([...msg.salt, ...componentBlob])) ==
+    Util.sha256(Uint8List.fromList([...iterableSalt, ...componentBlob])) ==
         commitment.saltedComponentHash,
     "salted component hash mismatch",
   );
@@ -214,7 +221,7 @@ pb.InputComponent? validateProofInternal(
 
   var claimedCommit = setup.commit(
     BigInt.from(contrib),
-    nonce: Util.bytesToBigInt(msg.pedersenNonce),
+    nonce: Util.bytesToBigInt(msg.pedersenNonce as Uint8List),
   );
 
   check(
