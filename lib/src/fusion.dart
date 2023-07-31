@@ -227,7 +227,7 @@ class Fusion {
 */
 
   Future<void> add_coins_from_wallet(
-      List<({String txid, int vout, int value})> utxoList,
+    List<({String txid, int vout, int value})> utxoList,
   ) async {
     // Convert each UTXO info to an Input and add to 'coins'
     for (final utxoInfo in utxoList) {
@@ -870,28 +870,31 @@ class Fusion {
       var maxtiers = <int>[];
       int? besttime;
       int? besttimetier;
-      for (var entry in statuses.entries) {
-        double frac =
-            entry.value.players.toInt() / entry.value.minPlayers.toInt();
-        if (frac >= maxfraction) {
-          if (frac > maxfraction) {
-            maxfraction = frac;
-            maxtiers.clear();
+      if (statuses!.entries is Iterable) {
+        for (var entry in statuses.entries as Iterable) {
+          double frac = ((entry.value.players.toInt()) as int) /
+              ((entry.value.minPlayers.toInt()) as int);
+          if (frac >= maxfraction) {
+            if (frac > maxfraction) {
+              maxfraction = frac;
+              maxtiers.clear();
+            }
+            maxtiers.add(entry.key.toInt() as int);
           }
-          maxtiers.add(entry.key.toInt());
-        }
 
-        var fieldInfoTimeRemaining = entry.value.info_.byName["timeRemaining"];
-        if (fieldInfoTimeRemaining == null) {
-          throw FusionError(
-              'Expected field not found in message: timeRemaining');
-        }
+          var fieldInfoTimeRemaining =
+              entry.value.info_.byName["timeRemaining"];
+          if (fieldInfoTimeRemaining == null) {
+            throw FusionError(
+                'Expected field not found in message: timeRemaining');
+          }
 
-        if (entry.value.hasField(fieldInfoTimeRemaining.tagNumber)) {
-          int tr = entry.value.timeRemaining.toInt();
-          if (besttime == null || tr < besttime) {
-            besttime = tr;
-            besttimetier = entry.key.toInt();
+          if (entry.value.hasField(fieldInfoTimeRemaining.tagNumber) as bool) {
+            int tr = entry.value.timeRemaining.toInt() as int;
+            if (besttime == null || tr < besttime) {
+              besttime = tr;
+              besttimetier = entry.key.toInt() as int;
+            }
           }
         }
       }
@@ -900,7 +903,7 @@ class Fusion {
       var displayMid = <String>[];
       var displayQueued = <String>[];
       for (var tier in tiersSorted) {
-        if (statuses.containsKey(tier)) {
+        if (statuses.containsKey(tier) as bool) {
           var tierStr = tiersStrings[tier];
           if (tierStr == null) {
             throw FusionError(
@@ -952,7 +955,8 @@ class Fusion {
       throw FusionError('Expected field not found in message: fusionbegin');
     }
 
-    bool messageIsFusionBegin = msg.hasField(fieldInfoFusionBegin.tagNumber);
+    bool messageIsFusionBegin =
+        msg.hasField(fieldInfoFusionBegin.tagNumber) as bool;
     if (!messageIsFusionBegin) {
       throw FusionError('Expected a FusionBegin message');
     }
@@ -961,19 +965,19 @@ class Fusion {
 
     var clockMismatch =
         msg.serverTime - DateTime.now().millisecondsSinceEpoch / 1000;
-    if (clockMismatch.abs() > Protocol.MAX_CLOCK_DISCREPANCY) {
+    if ((clockMismatch.abs() > Protocol.MAX_CLOCK_DISCREPANCY) as bool) {
       throw FusionError(
           "Clock mismatch too large: ${clockMismatch.toStringAsFixed(3)}.");
     }
 
-    tier = msg.tier;
+    tier = msg.tier as int;
     if (msg is FusionBegin) {
       covertDomainB = Uint8List.fromList(msg.covertDomain);
     }
 
-    covertPort = msg.covertPort;
-    covertSSL = msg.covertSSL;
-    beginTime = msg.serverTime;
+    covertPort = msg.covertPort as int;
+    covertSSL = msg.covertSSL as bool;
+    beginTime = msg.serverTime as double;
 
     lastHash = Util.calcInitialHash(
         tier, covertDomainB, covertPort, covertSSL, beginTime);
@@ -983,7 +987,8 @@ class Fusion {
 
     reservedAddresses = outAddrs;
     outputs = Util.zip(outAmounts ?? [], outAddrs)
-        .map((pair) => Output(value: pair[0], addr: pair[1]))
+        .map((pair) => Output(
+            value: pair[0] as int, addr: Address.fromString(pair[1] as String)))
         .toList();
 
     safetyExcessFee = safety_exess_fees[tier] ?? 0;
@@ -1034,8 +1039,8 @@ class Fusion {
         await Future.delayed(Duration(seconds: 1));
 
         covert.checkOk();
-        this.check_stop();
-        this.check_coins();
+        check_stop();
+        check_coins();
       }
     } catch (e) {
       covert.stop();
@@ -1216,7 +1221,7 @@ class Fusion {
     for (var i = 0; i < myComponents.length; i++) {
       messages[myComponentSlots[i]] = CovertComponent(
           roundPubkey: roundPubKey,
-          signature: blindSigs[i],
+          signature: blindSigs[i] as List<int>?,
           component: myComponents[i]);
     }
     if (messages.any((element) => element == null)) {
@@ -1262,7 +1267,7 @@ class Fusion {
     ShareCovertComponents shareCovertComponentsMsg =
         msg as ShareCovertComponents;
     List<List<int>> allComponents = shareCovertComponentsMsg.components;
-    bool skipSignatures = msg.getField(2);
+    bool skipSignatures = msg.getField(2) as bool;
 
     // Critical check on server's response timing.
     if (covertClock() > Protocol.T_START_SIGS) {
@@ -1310,8 +1315,8 @@ class Fusion {
           Transaction.txFromComponents(allComponents, sessionHash);
 
       Tuple txData = Transaction.txFromComponents(allComponents, sessionHash);
-      tx = txData.item1;
-      List<int> inputIndices = txData.item2;
+      tx = txData!.item1 as Transaction;
+      List<int> inputIndices = txData!.item2 as List<int>;
 
       List<CovertTransactionSignature?> covertTransactionSignatureMessages =
           List<CovertTransactionSignature?>.filled(myComponents.length, null);
@@ -1478,7 +1483,7 @@ class Fusion {
 
     TheirProofsList proofsList = msg as TheirProofsList;
 
-    var privKey;
+    List<int>? privKey;
     var commitmentBlob;
     for (var i = 0; i < proofsList.proofs.length; i++) {
       var rp = msg.proofs[i];
@@ -1489,30 +1494,36 @@ class Fusion {
         throw FusionError("Server relayed bad proof indices");
       }
 
-      var sKey;
+      List<int> sKey;
       var proofBlob;
 
       try {
+        BigInt eccPrivateKey =
+            parseBigIntFromBytes(Uint8List.fromList(privKey));
+        ECPrivateKey privateKey = ECPrivateKey(eccPrivateKey, params);
+
         var result =
-            await decrypt(Uint8List.fromList(rp.encryptedProof), privKey);
+            await decrypt(Uint8List.fromList(rp.encryptedProof), privateKey);
         proofBlob = result.item1; // First item is the decrypted data
         sKey = result.item2; // Second item is the symmetric key
       } on Exception catch (e) {
         print("found an undecryptable proof");
         blames.add(Blames_BlameProof(
-            whichProof: i, privkey: privKey, blameReason: 'undecryptable'));
+            whichProof: i,
+            privkey: privKey as List<int>?,
+            blameReason: 'undecryptable'));
         continue;
       }
 
       var commitment = InitialCommitment();
       try {
-        commitment
-            .mergeFromBuffer(commitmentBlob); // Method to parse protobuf data
+        commitment.mergeFromBuffer(
+            commitmentBlob as List<int>); // Method to parse protobuf data
       } on FormatException catch (e) {
         throw FusionError("Server relayed bad commitment");
       }
 
-      var inpComp;
+      InputComponent? inpComp;
 
       try {
         // Convert allComponents to List<Uint8List>
@@ -1525,7 +1536,7 @@ class Fusion {
         int componentFeerateInt = componentFeeRate
             .round(); // or use .toInt() if you want to truncate instead of rounding
 
-        var inpComp = validateProofInternal(proofBlob, commitment,
+        var inpComp = validateProofInternal(proofBlob as Uint8List, commitment,
             allComponentsUint8, badComponentsList, componentFeerateInt);
       } on Exception catch (e) {
         print("found an erroneous proof: ${e.toString()}");
@@ -1574,4 +1585,18 @@ class Fusion {
                 (Protocol.STANDARD_TIMEOUT.round() +
                     Protocol.BLAME_VERIFY_TIME.round())));
   } // end of run_round() function.
-} //  END OF CLASS
+}
+
+BigInt parseBigIntFromBytes(Uint8List bytes) {
+  return BigInt.parse(
+    bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(),
+    radix: 16,
+  );
+}
+
+extension HexEncoding on List<int> {
+  String toHex() {
+    return map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+  }
+}
+//  END OF CLASS
