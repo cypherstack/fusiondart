@@ -6,7 +6,7 @@ import 'package:fusiondart/src/fusion.pb.dart' as pb;
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/export.dart';
-
+import 'package:protobuf/protobuf.dart';
 
 class ValidationError implements Exception {
   final String message;
@@ -35,8 +35,11 @@ void check(bool condition, String failMessage) {
   }
 }
 
-dynamic protoStrictParse(dynamic msg, List<int> blob) {
-  // TODO validate "is InitialCommitment"
+T protoStrictParse<T extends GeneratedMessage>(dynamic msg, List<int> blob) {
+  if (msg is! T) {
+    throw ArgumentError('ValidationError: msg not expected type');
+  }
+
   try {
     if (msg.mergeFromBuffer(blob) != blob.length) {
       throw ArgumentError('DecodeError');
@@ -45,7 +48,7 @@ dynamic protoStrictParse(dynamic msg, List<int> blob) {
     throw ArgumentError('ValidationError: decode error');
   }
 
-  if (!(msg.isInitialized() as bool)) {
+  if (!(msg.isInitialized())) {
     throw ArgumentError('missing fields');
   }
 
@@ -81,7 +84,7 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   List<pb.InitialCommitment> commitMessages = [];
   for (var cblob in msg.initialCommitments) {
     pb.InitialCommitment cmsg =
-        protoStrictParse(pb.InitialCommitment(), cblob) as pb.InitialCommitment;
+        protoStrictParse<pb.InitialCommitment>(pb.InitialCommitment(), cblob);
     check(cmsg.saltedComponentHash.length == 32, "bad salted hash");
     var P = cmsg.amountCommitment;
     check(P.length == 65 && P[0] == 4, "bad commitment point");
@@ -130,7 +133,7 @@ Tuple<String, int> checkCovertComponent(
   check(Util.schnorrVerify(roundPubkey, msg.signature, messageHash),
       "bad message signature");
 
-  var cmsg = protoStrictParse(pb.Component(), msg.component);
+  var cmsg = protoStrictParse<pb.Component>(pb.Component(), msg.component);
   check(cmsg.saltCommitment.length == 32, "bad salt commitment");
 
   String sortKey;
@@ -187,7 +190,7 @@ pb.InputComponent? validateProofInternal(
   ECPoint H = HMaybe;
   PedersenSetup setup = PedersenSetup(H);
 
-  var msg = protoStrictParse(pb.Proof(), proofBlob);
+  var msg = protoStrictParse<pb.Proof>(pb.Proof(), proofBlob);
 
   Uint8List componentBlob;
   try {
