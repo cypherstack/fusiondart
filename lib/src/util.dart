@@ -4,32 +4,9 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/fusion.pb.dart';
+import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
-
-class Address {
-  String addr = "";
-
-  Address(
-      {required this.addr}); // Constructor updated to accept addr as a named parameter
-
-  Address._create({required this.addr});
-
-  static Address fromScriptPubKey(List<int> scriptPubKey) {
-    // This is just a placeholder code
-    String addr = ""; // This should be computed from the scriptPubKey
-    return Address(addr: addr);
-  }
-
-  // Public constructor for testing
-  static Address fromString(String address) {
-    return Address._create(addr: address);
-  }
-
-  List<int> toScript() {
-    return [];
-  }
-}
 
 class Tuple<T1, T2> {
   T1 item1;

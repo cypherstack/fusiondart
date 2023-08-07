@@ -11,6 +11,7 @@ import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/covert.dart';
 import 'package:fusiondart/src/encrypt.dart';
 import 'package:fusiondart/src/fusion.pb.dart';
+import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
@@ -167,6 +168,7 @@ class Fusion {
   List<Input> coins =
       []; //"coins" and "inputs" are often synonmous in the original python code.
   List<Output> outputs = [];
+  List<Address> changeAddresses = [];
   bool server_connected_and_greeted = false;
   bool stopping = false;
   bool stopping_if_not_running = false;
@@ -233,6 +235,11 @@ class Fusion {
     for (final utxoInfo in utxoList) {
       coins.add(Input.fromStackUTXOData(utxoInfo));
     }
+  }
+
+  Future<void> addChangeAddress(Address address) async {
+    // add address to addresses[]
+    changeAddresses.add(address);
   }
 
   Future<void> fusion_run() async {

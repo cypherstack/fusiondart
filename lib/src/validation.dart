@@ -6,7 +6,7 @@ import 'package:fusiondart/src/fusion.pb.dart' as pb;
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/export.dart';
-
+import 'package:fusiondart/src/models/address.dart';
 
 class ValidationError implements Exception {
   final String message;
