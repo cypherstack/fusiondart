@@ -165,23 +165,6 @@ class Util {
     return Uint8List.fromList(_lastGenesisHash);
   }
 
-  static List<Address> reserve_change_addresses(int number_addresses) {
-    // TODO
-    // get current change address
-    // get int number_addresses next addresses
-    return [];
-  }
-
-  static List<Address> unreserve_change_address(Address addr) {
-    //implement later based on wallet.
-    return [];
-  }
-
-  static bool walletHasTransaction(String txid) {
-    // implement later based on wallet.
-    return true;
-  }
-
   static Uint8List bigIntToBytes(BigInt bigInt) {
     return Uint8List.fromList(
         bigInt.toRadixString(16).padLeft(32, '0').codeUnits);

@@ -165,14 +165,14 @@ class Output {
 
 // Class to handle fusion
 class Fusion {
-  late final Future<String> Function() _generateChangeAddress;
+  late final Future<Address> Function() _generateChangeAddress;
 
   Fusion({
-    required Future<String> Function() generateChangeAddress,
+    required Future<Address> Function() generateChangeAddress,
   });
 
   void initFusion({
-    required Future<String> Function() generateChangeAddress,
+    required Future<Address> Function() generateChangeAddress,
   }) {
     _generateChangeAddress = generateChangeAddress;
   }
@@ -355,7 +355,7 @@ class Fusion {
           break; // not an error
         }
 
-        if (Util.walletHasTransaction(txid)) {
+        if (walletHasTransaction(txid)) {
           break;
         }
 
@@ -380,7 +380,7 @@ class Fusion {
       clear_coins();
       if (status.item1 != 'complete') {
         for (var output in outputs) {
-          Util.unreserve_change_address(output.addr);
+          unreserve_change_address(output.addr);
         }
         if (!server_connected_and_greeted) {
           notify_server_status(false, tup: status);
@@ -996,7 +996,7 @@ class Fusion {
         tier, covertDomainB, covertPort, covertSSL, beginTime);
 
     var outAmounts = tierOutputs[tier];
-    var outAddrs = Util.reserve_change_addresses(outAmounts?.length ?? 0);
+    var outAddrs = reserve_change_addresses(outAmounts?.length ?? 0);
 
     reservedAddresses = outAddrs;
     outputs = Util.zip(outAmounts ?? [], outAddrs)
@@ -1607,6 +1607,25 @@ class Fusion {
                     Protocol.BLAME_VERIFY_TIME.round())));
     return true;
   } // end of run_round() function.
+
+  Future<List<Address>> reserve_change_addresses(int numberOfAddresses) async {
+    List<Address> addresses = [];
+    for (int i = 0; i < numberOfAddresses; i++) {
+      addresses.add(await _generateChangeAddress());
+    }
+
+    return addresses;
+  }
+
+  static List<Address> unreserve_change_address(Address addr) {
+    //implement later based on wallet.
+    return [];
+  }
+
+  static bool walletHasTransaction(String txid) {
+    // implement later based on wallet.
+    return true;
+  }
 }
 
 BigInt parseBigIntFromBytes(Uint8List bytes) {
