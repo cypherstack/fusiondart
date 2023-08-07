@@ -14,14 +14,14 @@ class Address {
 
   Address._create({required this.addr});
 
-  Address fromScriptPubKey(List<int> scriptPubKey) {
+  static Address fromScriptPubKey(List<int> scriptPubKey) {
     // This is just a placeholder code
     String addr = ""; // This should be computed from the scriptPubKey
     return Address(addr: addr);
   }
 
   // Public constructor for testing
-  Address fromString(String address) {
+  static Address fromString(String address) {
     return Address._create(addr: address);
   }
 
