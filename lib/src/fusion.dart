@@ -165,16 +165,16 @@ class Output {
 
 // Class to handle fusion
 class Fusion {
-  late final Future<String> Function() _generateChangeAddress;
+  late final Future<Address> Function() _createNewReservedChangeAddress;
 
   Fusion({
-    required Future<String> Function() generateChangeAddress,
+    required Future<Address> Function() createNewReservedChangeAddress,
   });
 
   void initFusion({
-    required Future<String> Function() generateChangeAddress,
+    required Future<Address> Function() createNewReservedChangeAddress,
   }) {
-    _generateChangeAddress = generateChangeAddress;
+    _createNewReservedChangeAddress = createNewReservedChangeAddress;
   }
 
   List<Input> coins =
