@@ -165,16 +165,6 @@ class Util {
     return Uint8List.fromList(_lastGenesisHash);
   }
 
-  static List<Address> unreserve_change_address(Address addr) {
-    //implement later based on wallet.
-    return [];
-  }
-
-  static List<Address> reserve_change_addresses(int number_addresses) {
-    //implement later based on wallet.
-    return [];
-  }
-
   static bool walletHasTransaction(String txid) {
     // implement later based on wallet.
     return true;
