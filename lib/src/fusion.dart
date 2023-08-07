@@ -198,7 +198,7 @@ class Fusion {
   Map<int, List<int>> tierOutputs =
       {}; // not sure if this should be using outputs class.
 
-  int inactiveTimeLimit = 0;
+  int inactiveTimeLimit = 600000; // this is in ms... equates to 10 minutes.
   int tier = 0;
   int covertPort = 0;
   bool covertSSL = false;
@@ -311,17 +311,13 @@ class Fusion {
         // Register for tiers, wait for a pool.
         await registerAndWait(socketwrapper);
 
-        print("FUSION DEBUG 273");
-        print("RETURNING early in fusion_run....");
-        return;
-
         // launch the covert submitter
-        CovertSubmitter covert = await start_covert();
+        CovertSubmitter covert = await startCovert();
         try {
           // Pool started. Keep running rounds until fail or complete.
           while (true) {
             roundcount += 1;
-            if (await run_round(covert)) {
+            if (await runRound(covert)) {
               break;
             }
           }
@@ -331,6 +327,9 @@ class Fusion {
       } finally {
         (await connection)?.close();
       }
+
+      print("RETURNING early in fusion_run....");
+      return;
 
       for (int i = 0; i < 60; i++) {
         if (stopping) {
@@ -370,20 +369,6 @@ class Fusion {
       }
     }
   } // end fusion_run function.
-
-  Future<CovertSubmitter> start_covert() async {
-    // Function implementation here...
-
-    // For now, just return a new instance of CovertSubmitter
-    return CovertSubmitter("dummy", 0, true, "some_host", 0, 0, 0, 0);
-  }
-
-  Future<bool> run_round(CovertSubmitter covert) async {
-    // function implementation here...
-
-    // placeholder return statement
-    return Future.value(false);
-  }
 
   void notify_server_status(bool b, {Tuple? tup}) {
     // Function implementation goes here
@@ -791,7 +776,7 @@ class Fusion {
   }
 
   Future<void> registerAndWait(SocketWrapper socketwrapper) async {
-    print("DEBUG register and wait top.");
+    var stopwatch = Stopwatch()..start();
     // msg can be different classes depending on which protobuf msg is sent.
     dynamic? msg;
 
@@ -832,12 +817,14 @@ class Fusion {
 
     while (true) {
       print("RECEIVE LOOP 870............DEBUG");
-      var msg = await recv2(socketwrapper, ['tierstatusupdate', 'fusionbegin'],
+      GeneratedMessage msg = await recv2(
+          socketwrapper, ['tierstatusupdate', 'fusionbegin'],
           timeout: Duration(seconds: 10));
 
       var fieldInfoFusionBegin = msg.info_.byName["fusionbegin"];
       if (fieldInfoFusionBegin != null &&
           msg.hasField(fieldInfoFusionBegin.tagNumber)) {
+        print("DEBUG 867 Fusion Begin message...");
         break;
       }
 
@@ -853,6 +840,7 @@ class Fusion {
       }
 
       bool messageIsTierStatusUpdate = msg.hasField(fieldInfo.tagNumber);
+      print("DEBUG 889 getting tier update.");
 
       if (!messageIsTierStatusUpdate) {
         throw FusionError('Expected a TierStatusUpdate message');
@@ -884,10 +872,10 @@ class Fusion {
 
           var fieldInfoTimeRemaining =
               entry.value.info_.byName["timeRemaining"];
-          if (fieldInfoTimeRemaining == null) {
-            throw FusionError(
-                'Expected field not found in message: timeRemaining');
-          }
+          // if (fieldInfoTimeRemaining == null) {
+          //   throw FusionError(
+          //       'Expected field not found in message: timeRemaining');
+          // }
 
           if (entry.value.hasField(fieldInfoTimeRemaining.tagNumber) as bool) {
             int tr = entry.value.timeRemaining.toInt() as int;
@@ -902,6 +890,7 @@ class Fusion {
       var displayBest = <String>[];
       var displayMid = <String>[];
       var displayQueued = <String>[];
+
       for (var tier in tiersSorted) {
         if (statuses.containsKey(tier) as bool) {
           var tierStr = tiersStrings[tier];
@@ -931,9 +920,13 @@ class Fusion {
       var tiersString = parts.join(' ');
 
       if (besttime == null && inactiveTimeLimit != null) {
-        if (DateTime.now().millisecondsSinceEpoch > inactiveTimeLimit) {
+        if (stopwatch.elapsedMilliseconds > inactiveTimeLimit) {
           throw FusionError('stopping due to inactivity');
+        } else {
+          // debug
         }
+      } else {
+        // debug
       }
 
       if (besttime != null) {
@@ -963,21 +956,26 @@ class Fusion {
 
     t_fusionBegin = DateTime.now();
 
-    var clockMismatch =
-        msg.serverTime - DateTime.now().millisecondsSinceEpoch / 1000;
-    if ((clockMismatch.abs() > Protocol.MAX_CLOCK_DISCREPANCY) as bool) {
+    FusionBegin fusionBeginMsg = msg.fusionbegin
+        as FusionBegin; // TODO handle better than with just a cast
+
+    var elapsedSeconds = (stopwatch.elapsedMilliseconds / 1000).toInt();
+    var clockMismatch = fusionBeginMsg.serverTime.toInt() -
+        DateTime.now().millisecondsSinceEpoch / 1000;
+
+    if (clockMismatch.abs().toDouble() > Protocol.MAX_CLOCK_DISCREPANCY) {
       throw FusionError(
-          "Clock mismatch too large: ${clockMismatch.toStringAsFixed(3)}.");
+          "Clock mismatch too large: ${(clockMismatch.toDouble()).toStringAsFixed(3)}.");
     }
 
-    tier = msg.tier as int;
+    tier = fusionBeginMsg.tier.toInt();
     if (msg is FusionBegin) {
       covertDomainB = Uint8List.fromList(msg.covertDomain);
     }
 
-    covertPort = msg.covertPort as int;
-    covertSSL = msg.covertSSL as bool;
-    beginTime = msg.serverTime as double;
+    covertPort = fusionBeginMsg.covertPort;
+    covertSSL = fusionBeginMsg.covertSsl;
+    beginTime = fusionBeginMsg.serverTime.toDouble();
 
     lastHash = Util.calcInitialHash(
         tier, covertDomainB, covertPort, covertSSL, beginTime);
@@ -998,6 +996,7 @@ class Fusion {
   }
 
   Future<CovertSubmitter> startCovert() async {
+    print("DEBUG START COVERT!");
     status = Tuple('running', 'Setting up Tor connections');
 
     String covertDomain;
@@ -1020,6 +1019,9 @@ class Fusion {
           Duration(seconds: Protocol.COVERT_CONNECT_WINDOW.toInt()),
           numSpares: Protocol.COVERT_CONNECT_SPARES.toInt(),
           connectTimeout: Protocol.COVERT_CONNECT_TIMEOUT.toInt());
+
+      print("DEBUG return early from covert");
+      return covert;
 
       // loop until a just a bit before we're expecting startRound, watching for status updates
       final tend = t_fusionBegin.add(Duration(
@@ -1050,7 +1052,8 @@ class Fusion {
     return covert;
   }
 
-  void runRound(CovertSubmitter covert) async {
+  Future<bool> runRound(CovertSubmitter covert) async {
+    print("START OF RUN ROUND");
     status = Tuple('running', 'Starting round ${roundcount.toString()}');
     int timeoutInSeconds =
         (2 * Protocol.WARMUP_SLOP + Protocol.STANDARD_TIMEOUT).toInt();
@@ -1152,6 +1155,9 @@ class Fusion {
     final blindSigRequests = blindNoncePoints.map((e) => Schnorr.BlindSignatureRequest(roundPubKey, e, sha256(myComponents.elementAt(e)))).toList();
 
 */
+
+    print("RETURNING EARLY FROM run round .....");
+    return true;
     final randomNumber = Util.getRandomBytes(32);
     covert.checkOk();
     check_stop();
@@ -1584,6 +1590,7 @@ class Fusion {
             seconds: 2 *
                 (Protocol.STANDARD_TIMEOUT.round() +
                     Protocol.BLAME_VERIFY_TIME.round())));
+    return true;
   } // end of run_round() function.
 }
 
