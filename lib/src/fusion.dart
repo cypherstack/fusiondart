@@ -6,25 +6,25 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart';
 import 'package:fixnum/fixnum.dart';
+import 'package:fusiondart/src/comms.dart';
+import 'package:fusiondart/src/connection.dart';
+import 'package:fusiondart/src/covert.dart';
+import 'package:fusiondart/src/encrypt.dart';
+import 'package:fusiondart/src/fusion.pb.dart';
+import 'package:fusiondart/src/pedersen.dart';
+import 'package:fusiondart/src/protocol.dart';
+import 'package:fusiondart/src/socketwrapper.dart';
+import 'package:fusiondart/src/util.dart';
+import 'package:fusiondart/src/validation.dart';
 import "package:pointycastle/export.dart";
 import 'package:protobuf/protobuf.dart';
-
-import 'comms.dart';
-import 'connection.dart';
-import 'covert.dart';
-import 'encrypt.dart';
-import 'fusion.pb.dart';
-import 'pedersen.dart';
-import 'protocol.dart';
-import 'socketwrapper.dart';
-import 'util.dart';
-import 'validation.dart';
 
 class FusionError implements Exception {
   final String message;
 
   FusionError(this.message);
 
+  @override
   String toString() => "FusionError: $message";
 }
 
