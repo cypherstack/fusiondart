@@ -165,8 +165,20 @@ class Output {
 
 // Class to handle fusion
 class Fusion {
+  late final Future<String> Function() _generateChangeAddress;
+
+  Fusion({
+    required Future<String> Function() generateChangeAddress,
+  });
+
+  void initFusion({
+    required Future<String> Function() generateChangeAddress,
+  }) {
+    _generateChangeAddress = generateChangeAddress;
+  }
+
   List<Input> coins =
-      []; //"coins" and "inputs" are often synonmous in the original python code.
+      []; //"coins" and "inputs" are often synonymous in the original python code.
   List<Output> outputs = [];
   List<Address> changeAddresses = [];
   bool server_connected_and_greeted = false;
