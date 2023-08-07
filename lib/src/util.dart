@@ -3,10 +3,9 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:fusiondart/src/fusion.pb.dart';
+import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
-
-import 'fusion.pb.dart';
-import 'protocol.dart';
 
 class Address {
   String addr = "";

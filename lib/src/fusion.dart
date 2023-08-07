@@ -51,7 +51,7 @@ class Transaction {
   static Tuple txFromComponents(
       List<dynamic> allComponents, List<dynamic> sessionHash) {
     Transaction tx = Transaction(); // Initialize a new Transaction
-    // This should be based on wallet layer... implement the logic of constructing the transaction from components
+    // TODO This should be based on wallet layer... implement the logic of constructing the transaction from components
     // For now, it just initializes Inputs and Outputs as empty lists
     tx.Inputs = [];
     tx.Outputs = [];
@@ -224,7 +224,7 @@ class Fusion {
     Socket socket = await Socket.connect(host, port);
     connection = Connection()..socket = socket;
   }
-*/
+  */
 
   Future<void> add_coins_from_wallet(
     List<({String txid, int vout, int value})> utxoList,
