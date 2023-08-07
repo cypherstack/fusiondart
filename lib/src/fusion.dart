@@ -107,12 +107,12 @@ class Input {
     return amount;
   }
 
-  String getPubKey(int pubkey_index) {
+  String getPubKey(int pubkeyIndex) {
     // TO BE IMPLEMENTED...
     return "";
   }
 
-  String getPrivKey(int pubkey_index) {
+  String getPrivKey(int pubkeyIndex) {
     // TO BE IMPLEMENTED...
     return "";
   }
@@ -401,10 +401,6 @@ class Fusion {
   void check_coins() {
     // Implement by calling wallet layer to check the coins are ok.
     return;
-  }
-
-  static void foo() {
-    print("hello");
   }
 
   void clear_coins() {
