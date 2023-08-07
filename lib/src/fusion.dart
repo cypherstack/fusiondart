@@ -229,11 +229,11 @@ class Fusion {
   List<int> myCommitmentIndexes = [];
   Set<int> badComponents = {};
 
+  /*
   Fusion() {
     //initializeConnection(host, port)
   }
 
-  /*
   Future<void> initializeConnection(String host, int port) async {
     Socket socket = await Socket.connect(host, port);
     connection = Connection()..socket = socket;
