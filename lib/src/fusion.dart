@@ -166,15 +166,21 @@ class Output {
 // Class to handle fusion
 class Fusion {
   late final Future<Address> Function() _createNewReservedChangeAddress;
+  late final Future<List<Address>> Function(int numberOfAddresses)
+      _getUnusedReservedChangeAddresses;
 
-  Fusion({
-    required Future<Address> Function() createNewReservedChangeAddress,
-  });
+  Fusion(
+      {required Future<Address> Function() createNewReservedChangeAddress,
+      required Future<List<Address>> Function(int numberOfAddresses)
+          getUnusedReservedChangeAddresses});
 
   void initFusion({
     required Future<Address> Function() createNewReservedChangeAddress,
+    required Future<List<Address>> Function(int numberOfAddresses)
+        getUnusedReservedChangeAddresses,
   }) {
     _createNewReservedChangeAddress = createNewReservedChangeAddress;
+    _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
   }
 
   List<Input> coins =
@@ -996,7 +1002,8 @@ class Fusion {
         tier, covertDomainB, covertPort, covertSSL, beginTime);
 
     var outAmounts = tierOutputs[tier];
-    var outAddrs = Util.reserve_change_addresses(outAmounts?.length ?? 0);
+    var outAddrs =
+        await _getUnusedReservedChangeAddresses(outAmounts?.length ?? 0);
 
     reservedAddresses = outAddrs;
     outputs = Util.zip(outAmounts ?? [], outAddrs)
