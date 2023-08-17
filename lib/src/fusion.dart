@@ -17,7 +17,7 @@ import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:fusiondart/src/validation.dart';
-import "package:pointycastle/export.dart";
+import 'package:pointycastle/export.dart';
 import 'package:protobuf/protobuf.dart';
 
 class FusionError implements Exception {
