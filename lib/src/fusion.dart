@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:bip340/bip340.dart' as bip340;
 import 'package:collection/collection.dart';
+import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/src/comms.dart';
@@ -17,7 +19,7 @@ import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:fusiondart/src/validation.dart';
-import "package:pointycastle/export.dart";
+import 'package:pointycastle/export.dart';
 import 'package:protobuf/protobuf.dart';
 
 class FusionError implements Exception {
@@ -90,7 +92,7 @@ class Input {
   int prevIndex;
   List<int> pubKey;
   int amount;
-  List<dynamic> signatures = [];
+  List<String> signatures = [];
 
   Input(
       {required this.prevTxid,
@@ -137,6 +139,34 @@ class Input {
       amount: utxoInfo.value,
     );
   }
+
+  void sign(String privateKey, Transaction tx) {
+    String message = tx.txid();
+
+    // generate 32 random bytes
+    Uint8List aux = Uint8List(32);
+    Random random = Random.secure();
+    for (int i = 0; i < 32; i++) {
+      aux[i] = random.nextInt(256);
+    }
+
+    String signature = bip340.sign(privateKey, message, hex.encode(aux));
+
+    signatures.add(signature);
+  }
+
+  bool verify(String publicKey, Transaction tx) {
+    String message = tx.txid();
+
+    for (String signature in signatures) {
+      if (!bip340.verify(publicKey, message, signature)) {
+        return false;
+      }
+    }
+
+    // only return true if no signatures failed
+    return true;
+  }
 }
 
 class Output {
@@ -161,6 +191,14 @@ class Output {
       addr: address,
     );
   }
+}
+
+class BlindSignatureRequest {
+  final Uint8List roundPubKey;
+  final Uint8List R; // nonce
+  final Uint8List messageHash;
+
+  BlindSignatureRequest(this.roundPubKey, this.R, this.messageHash);
 }
 
 // Class to handle fusion
@@ -671,12 +709,12 @@ class Fusion {
 
     //deprecated
     //Connection greet_connection_1 = Connection.withoutSocket();
-
     /*
     lets move this up a level to the fusion_run and pass it in....
     SocketWrapper socketwrapper = SocketWrapper(server_host, server_port);
     await socketwrapper.connect();
-*/
+    */
+    // TODO should this be awaited?
     send2(socketwrapper, clientMessage);
 
     var replyMsg = await recv2(socketwrapper, ['serverhello']);
@@ -1171,12 +1209,17 @@ class Fusion {
     assert(myComponents.toSet().length == myComponents.length); // no duplicates
 
     // Need to implement this!  schnorr is from EC schnorr.py
-    var blindSigRequests = <dynamic>[];
-
     /*
     final blindSigRequests = blindNoncePoints.map((e) => Schnorr.BlindSignatureRequest(roundPubKey, e, sha256(myComponents.elementAt(e)))).toList();
+    */
+    var blindSigRequests = List.generate(blindNoncePoints.length, (index) {
+      final R = blindNoncePoints[index];
+      final m = myComponents[index];
+      final messageHash = sha256.convert(m).bytes;
 
-*/
+      return BlindSignatureRequest(Uint8List.fromList(roundPubKey),
+          Uint8List.fromList(R), Uint8List.fromList(messageHash));
+    });
 
     print("RETURNING EARLY FROM run round .....");
     return true;
