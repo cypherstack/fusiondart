@@ -15,6 +15,7 @@ class Address {
   Address._create({required this.addr});
 
   static Address fromScriptPubKey(List<int> scriptPubKey) {
+    // TODO implement
     // This is just a placeholder code
     String addr = ""; // This should be computed from the scriptPubKey
     return Address(addr: addr);
@@ -26,6 +27,7 @@ class Address {
   }
 
   List<int> toScript() {
+    // TODO implement
     return [];
   }
 
