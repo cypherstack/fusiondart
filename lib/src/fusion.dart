@@ -37,8 +37,9 @@ class ComponentResult {
   final Uint8List component;
   final Proof proof;
   final Uint8List privateKey;
-  final dynamic pedersenAmount; // replace dynamic with actual type
-  final dynamic pedersenNonce; // replace dynamic with actual type
+  // TODO type
+  final dynamic pedersenAmount;
+  final dynamic pedersenNonce;
 
   ComponentResult(this.commitment, this.counter, this.component, this.proof,
       this.privateKey,
@@ -51,6 +52,7 @@ class Transaction {
 
   Transaction();
 
+  // TODO type
   static Tuple txFromComponents(
       List<dynamic> allComponents, List<dynamic> sessionHash) {
     Transaction tx = Transaction(); // Initialize a new Transaction
@@ -837,6 +839,7 @@ class Fusion {
 
   Future<void> registerAndWait(SocketWrapper socketwrapper) async {
     Stopwatch stopwatch = Stopwatch()..start();
+    // TODO type
     // msg can be different classes depending on which protobuf msg is sent.
     dynamic? msg;
 
@@ -884,6 +887,7 @@ class Fusion {
           socketwrapper, ['tierstatusupdate', 'fusionbegin'],
           timeout: Duration(seconds: 10));
 
+      // TODO type
       FieldInfo<dynamic>? fieldInfoFusionBegin =
           msg.info_.byName["fusionbegin"];
       if (fieldInfoFusionBegin != null &&
@@ -1200,10 +1204,9 @@ class Fusion {
     final List<Uint8List> myComponents = [];
     final List<Proof> myProofs = [];
     final List<Uint8List> privKeys = [];
-    final List<dynamic> pedersenAmount =
-        []; // replace dynamic with the actual type
-    final List<dynamic> pedersenNonce =
-        []; // replace dynamic with the actual type
+    // TODO type
+    final List<dynamic> pedersenAmount = [];
+    final List<dynamic> pedersenNonce = [];
 
     for (ComponentResult genComponentResult in genComponentsResults) {
       myCommitments.add(genComponentResult.commitment);

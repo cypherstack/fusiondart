@@ -3,10 +3,12 @@ import 'dart:typed_data';
 import 'package:fusiondart/src/encrypt.dart' as Encrypt;
 import 'package:fusiondart/src/fusion.dart';
 import 'package:fusiondart/src/fusion.pb.dart' as pb;
+import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/export.dart';
-import 'package:fusiondart/src/models/address.dart';
+
+import 'fusion.pb.dart';
 
 class ValidationError implements Exception {
   final String message;
@@ -17,10 +19,10 @@ class ValidationError implements Exception {
 
 int componentContrib(pb.Component component, int feerate) {
   if (component.hasInput()) {
-    var inp = Input.fromInputComponent(component.input);
+    Input inp = Input.fromInputComponent(component.input);
     return inp.amount.toInt() - Util.componentFee(inp.sizeOfInput(), feerate);
   } else if (component.hasOutput()) {
-    var out = Output.fromOutputComponent(component.output);
+    Output out = Output.fromOutputComponent(component.output);
     return -out.amount.toInt() - Util.componentFee(out.sizeOfOutput(), feerate);
   } else if (component.hasBlank()) {
     return 0;
@@ -35,6 +37,7 @@ void check(bool condition, String failMessage) {
   }
 }
 
+// TODO type
 dynamic protoStrictParse(dynamic msg, List<int> blob) {
   // TODO validate "is InitialCommitment"
   try {
@@ -79,11 +82,11 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
       "bad blind sig request");
 
   List<pb.InitialCommitment> commitMessages = [];
-  for (var cblob in msg.initialCommitments) {
+  for (List<int> cblob in msg.initialCommitments) {
     pb.InitialCommitment cmsg =
         protoStrictParse(pb.InitialCommitment(), cblob) as pb.InitialCommitment;
     check(cmsg.saltedComponentHash.length == 32, "bad salted hash");
-    var P = cmsg.amountCommitment;
+    List<int> P = cmsg.amountCommitment;
     check(P.length == 65 && P[0] == 4, "bad commitment point");
     check(
         cmsg.communicationKey.length == 33 &&
@@ -102,8 +105,8 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   ECPoint H = HMaybe;
   PedersenSetup setup = PedersenSetup(H);
 
-  var claimedCommit;
-  var pointsum;
+  Commitment claimedCommit;
+  Uint8List pointsum;
   // Verify pedersen commitment
   try {
     pointsum = Commitment.add_points(commitMessages
@@ -124,33 +127,36 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
 
 Tuple<String, int> checkCovertComponent(
     pb.CovertComponent msg, ECPoint roundPubkey, int componentFeerate) {
-  var messageHash = Util.sha256(Uint8List.fromList(msg.component));
+  Uint8List messageHash = Util.sha256(Uint8List.fromList(msg.component));
 
   check(msg.signature.length == 64, "bad message signature");
   check(Util.schnorrVerify(roundPubkey, msg.signature, messageHash),
       "bad message signature");
 
-  var cmsg = protoStrictParse(pb.Component(), msg.component);
+  // TODO type
+  dynamic cmsg = protoStrictParse(pb.Component(), msg.component);
   check(cmsg.saltCommitment.length == 32, "bad salt commitment");
 
   String sortKey;
 
   if (cmsg.hasInput() as bool) {
-    var inp = cmsg.input;
+    // TODO type
+    dynamic inp = cmsg.input;
     check(inp.prevTxid.length == 32, "bad txid");
     check(
         (inp.pubkey.length == 33 &&
                 (inp.pubkey[0] == 2 || inp.pubkey[0] == 3)) ||
             (inp.pubkey.length == 65 && inp.pubkey[0] == 4),
         "bad pubkey");
-    if (!(cmsg.saltCommitment is Iterable<int>)) {
-      throw new Exception(
+    if (cmsg.saltCommitment is! Iterable<int>) {
+      throw Exception(
           'cmsg.saltCommitment is not Iterable<int> in checkCovertComponent');
     }
     sortKey =
         'i${String.fromCharCodes(inp.prevTxid.reversed as Iterable<int>)}${inp.prevIndex.toString()}${String.fromCharCodes(cmsg.saltCommitment as Iterable<int>)}';
   } else if (cmsg.hasOutput() as bool) {
-    var out = cmsg.output;
+    // TODO type
+    dynamic out = cmsg.output;
     Address addr;
     // Basically just checks if its ok address. should throw error if not.
     addr = Util.getAddressFromOutputScript(out.scriptpubkey as Uint8List);
@@ -187,7 +193,8 @@ pb.InputComponent? validateProofInternal(
   ECPoint H = HMaybe;
   PedersenSetup setup = PedersenSetup(H);
 
-  var msg = protoStrictParse(pb.Proof(), proofBlob);
+  // TODO type
+  dynamic msg = protoStrictParse(pb.Proof(), proofBlob);
 
   Uint8List componentBlob;
   try {
@@ -198,7 +205,7 @@ pb.InputComponent? validateProofInternal(
 
   check(!badComponents.contains(msg.componentIdx), "component in bad list");
 
-  var comp = pb.Component();
+  Component comp = pb.Component();
   comp.mergeFromBuffer(componentBlob);
   assert(comp.isInitialized());
 
@@ -208,18 +215,19 @@ pb.InputComponent? validateProofInternal(
     "salt commitment mismatch",
   );
 
-  var iterableSalt = msg.salt as Iterable<int>;
+  // TODO validate
+  Iterable<int> iterableSalt = msg.salt as Iterable<int>;
   check(
     Util.sha256(Uint8List.fromList([...iterableSalt, ...componentBlob])) ==
         commitment.saltedComponentHash,
     "salted component hash mismatch",
   );
 
-  var contrib = componentContrib(comp, componentFeerate);
+  int contrib = componentContrib(comp, componentFeerate);
 
-  var PCommitted = commitment.amountCommitment;
+  List<int> PCommitted = commitment.amountCommitment;
 
-  var claimedCommit = setup.commit(
+  Commitment claimedCommit = setup.commit(
     BigInt.from(contrib),
     nonce: Util.bytesToBigInt(msg.pedersenNonce as Uint8List),
   );
@@ -236,6 +244,7 @@ pb.InputComponent? validateProofInternal(
   }
 }
 
+// TODO type
 Future<dynamic> validateBlame(
   pb.Blames_BlameProof blame,
   Uint8List encProof,
@@ -245,24 +254,25 @@ Future<dynamic> validateBlame(
   List<int> badComponents,
   int componentFeerate,
 ) async {
-  var destCommit = pb.InitialCommitment();
+  InitialCommitment destCommit = pb.InitialCommitment();
   destCommit.mergeFromBuffer(destCommitBlob);
-  var destPubkey = destCommit.communicationKey;
+  List<int> destPubkey = destCommit.communicationKey;
 
-  var srcCommit = pb.InitialCommitment();
+  InitialCommitment srcCommit = pb.InitialCommitment();
   srcCommit.mergeFromBuffer(srcCommitBlob);
 
-  var decrypter = blame.whichDecrypter();
+  Blames_BlameProof_Decrypter decrypter = blame.whichDecrypter();
   ECDomainParameters params = ECDomainParameters('secp256k1');
   if (decrypter == pb.Blames_BlameProof_Decrypter.privkey) {
-    var privkey = Uint8List.fromList(blame.privkey);
+    Uint8List privkey = Uint8List.fromList(blame.privkey);
     check(privkey.length == 32, 'bad blame privkey');
-    var privkeyHexStr =
+    String privkeyHexStr =
         Util.bytesToHex(privkey); // Convert bytes to hex string.
-    var privkeyBigInt =
+    BigInt privkeyBigInt =
         BigInt.parse(privkeyHexStr, radix: 16); // Convert hex string to BigInt.
-    var privateKey = ECPrivateKey(privkeyBigInt, params); // Create ECPrivateKey
-    var pubkeys = Util.pubkeysFromPrivkey(privkeyHexStr);
+    ECPrivateKey privateKey =
+        ECPrivateKey(privkeyBigInt, params); // Create ECPrivateKey
+    List<String> pubkeys = Util.pubkeysFromPrivkey(privkeyHexStr);
     check(destCommit.communicationKey == pubkeys[1], 'bad blame privkey');
     try {
       Encrypt.decrypt(encProof, privateKey);
@@ -273,7 +283,7 @@ Future<dynamic> validateBlame(
   } else if (decrypter != pb.Blames_BlameProof_Decrypter.sessionKey) {
     throw ValidationError('unknown blame decrypter');
   }
-  var key = Uint8List.fromList(blame.sessionKey);
+  Uint8List key = Uint8List.fromList(blame.sessionKey);
   check(key.length == 32, 'bad blame session key');
   Uint8List proofBlob;
   try {
