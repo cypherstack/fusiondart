@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:bip340/bip340.dart' as bip340;
 import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
-import 'package:crypto/crypto.dart';
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
@@ -267,7 +267,7 @@ class Fusion {
   DateTime t_fusionBegin = DateTime.now();
   Uint8List covertDomainB = Uint8List(0);
 
-  var txInputIndices;
+  List<int>? txInputIndices;
   Transaction tx = Transaction();
   List<int> myComponentIndexes = [];
   List<int> myCommitmentIndexes = [];
@@ -423,7 +423,7 @@ class Fusion {
     } finally {
       clear_coins();
       if (status.item1 != 'complete') {
-        for (var output in outputs) {
+        for (Output output in outputs) {
           Util.unreserve_change_address(output.addr);
         }
         if (!server_connected_and_greeted) {
@@ -575,7 +575,7 @@ class Fusion {
     for (Input input in inputs) {
       int fee = Util.componentFee(input.sizeOfInput(), feerate);
 
-      var comp = Component();
+      Component comp = Component();
       comp.input = InputComponent(
           prevTxid: Uint8List.fromList(input.prevTxid.reversed.toList()),
           prevIndex: input.prevIndex,
@@ -585,17 +585,17 @@ class Fusion {
     }
 
     for (Output output in outputs) {
-      var script = output.addr.toScript();
+      List<int> script = output.addr.toScript();
       int fee = Util.componentFee(output.sizeOfOutput(), feerate);
 
-      var comp = Component();
+      Component comp = Component();
       comp.output =
           OutputComponent(scriptpubkey: script, amount: Int64(output.value));
       components.add(Tuple<Component, int>(comp, -output.value - fee));
     }
 
     for (int i = 0; i < numBlanks; i++) {
-      var comp = Component();
+      Component comp = Component();
       comp.blank = BlankComponent();
       components.add(Tuple<Component, int>(comp, 0));
     }
@@ -605,7 +605,7 @@ class Fusion {
     components.asMap().forEach((cnum, Tuple<Component, int> componentTuple) {
       Uint8List salt = Util.tokenBytes(32);
       componentTuple.item1.saltCommitment = Util.sha256(salt);
-      var compser = componentTuple.item1.writeToBuffer();
+      List<int> compser = componentTuple.item1.writeToBuffer();
 
       Tuple<Uint8List, Uint8List> keyPair = Util.genKeypair();
       Uint8List privateKey = keyPair.item1;
@@ -647,12 +647,12 @@ class Fusion {
       throw FusionError('Connection not initialized');
     }
 
-    var result = await recvPb2(
+    Tuple<GeneratedMessage, String> result = await recvPb2(
         socketwrapper, connection!, ServerMessage, expectedMsgNames,
         timeout: timeout);
 
-    var submsg = result.item1;
-    var mtype = result.item2;
+    GeneratedMessage submsg = result.item1;
+    String mtype = result.item2;
 
     if (mtype == 'error') {
       throw FusionError('server error: ${submsg.toString()}');
@@ -668,11 +668,12 @@ class Fusion {
       throw FusionError('Connection not initialized');
     }
 
-    var result = await recvPb(connection!, ServerMessage, expectedMsgNames,
+    Tuple<GeneratedMessage, String> result = await recvPb(
+        connection!, ServerMessage, expectedMsgNames,
         timeout: timeout);
 
-    var submsg = result.item1;
-    var mtype = result.item2;
+    GeneratedMessage submsg = result.item1;
+    String mtype = result.item2;
 
     if (mtype == 'error') {
       throw FusionError('server error: ${submsg.toString()}');
@@ -717,7 +718,7 @@ class Fusion {
     // TODO should this be awaited?
     send2(socketwrapper, clientMessage);
 
-    var replyMsg = await recv2(socketwrapper, ['serverhello']);
+    GeneratedMessage replyMsg = await recv2(socketwrapper, ['serverhello']);
     if (replyMsg is ServerMessage) {
       ServerHello reply = replyMsg.serverhello;
 
@@ -790,13 +791,13 @@ class Fusion {
       throw FusionError('Selected inputs had too little value');
     }
 
-    var rng = Random();
-    var seed = List<int>.generate(32, (_) => rng.nextInt(256));
+    Random rng = Random();
+    List<int> seed = List<int>.generate(32, (_) => rng.nextInt(256));
 
     print("DBUG allocateoutputs 785");
     tierOutputs = {};
-    var excessFees = <int, int>{};
-    for (var scale in availableTiers) {
+    Map<int, int> excessFees = <int, int>{};
+    for (int scale in availableTiers) {
       int fuzzFeeMax = scale ~/ 1000000;
       int fuzzFeeMaxReduced = min(
           fuzzFeeMax,
@@ -811,7 +812,7 @@ class Fusion {
         continue;
       }
 
-      var outputs = randomOutputsForTier(
+      List<int>? outputs = randomOutputsForTier(
           rng, reducedAvailForOutputs, scale, offsetPerOutput, maxOutputs);
       if (outputs != null) {
         print(outputs);
@@ -835,12 +836,12 @@ class Fusion {
   }
 
   Future<void> registerAndWait(SocketWrapper socketwrapper) async {
-    var stopwatch = Stopwatch()..start();
+    Stopwatch stopwatch = Stopwatch()..start();
     // msg can be different classes depending on which protobuf msg is sent.
     dynamic? msg;
 
-    var tierOutputs = this.tierOutputs;
-    var tiersSorted = tierOutputs.keys.toList()..sort();
+    Map<int, List<int>> tierOutputs = this.tierOutputs;
+    List<int> tiersSorted = tierOutputs.keys.toList()..sort();
 
     if (tierOutputs.isEmpty) {
       throw FusionError(
@@ -850,12 +851,14 @@ class Fusion {
     print('registering for tiers: $tiersSorted');
 
     int self_fuse = 1; // Temporary value for now
-    var cashfusionTag = [1]; // temp value for now
+    List<int> cashfusionTag = [1]; // temp value for now
 
     check_stop(running: false);
     check_coins();
 
-    var tags = [JoinPools_PoolTag(id: cashfusionTag, limit: self_fuse)];
+    List<JoinPools_PoolTag> tags = [
+      JoinPools_PoolTag(id: cashfusionTag, limit: self_fuse)
+    ];
 
 // Create JoinPools message
     JoinPools joinPools =
@@ -868,7 +871,8 @@ class Fusion {
 
     status = Tuple<String, String>('waiting', 'Registered for tiers');
 
-    var tiersStrings = {
+    Map<dynamic, String> tiersStrings = {
+      // TODO make Entry class or otherwise type this section
       for (var entry in tierOutputs.entries)
         entry.key:
             (entry.key * 1e-8).toStringAsFixed(8).replaceAll(RegExp(r'0+$'), '')
@@ -880,7 +884,8 @@ class Fusion {
           socketwrapper, ['tierstatusupdate', 'fusionbegin'],
           timeout: Duration(seconds: 10));
 
-      var fieldInfoFusionBegin = msg.info_.byName["fusionbegin"];
+      FieldInfo<dynamic>? fieldInfoFusionBegin =
+          msg.info_.byName["fusionbegin"];
       if (fieldInfoFusionBegin != null &&
           msg.hasField(fieldInfoFusionBegin.tagNumber)) {
         print("DEBUG 867 Fusion Begin message...");
@@ -892,7 +897,7 @@ class Fusion {
 
       // Define the bool variable
 
-      var fieldInfo = msg.info_.byName["tierstatusupdate"];
+      FieldInfo<dynamic>? fieldInfo = msg.info_.byName["tierstatusupdate"];
       if (fieldInfo == null) {
         throw FusionError(
             'Expected field not found in message: tierstatusupdate');
@@ -905,54 +910,59 @@ class Fusion {
         throw FusionError('Expected a TierStatusUpdate message');
       }
 
-      late var statuses;
+      late Map<Int64, TierStatusUpdate_TierStatus> statuses;
       if (messageIsTierStatusUpdate) {
         //TierStatusUpdate tierStatusUpdate = msg.tierstatusupdate;
-        var tierStatusUpdate =
+        TierStatusUpdate tierStatusUpdate =
             msg.getField(fieldInfo.tagNumber) as TierStatusUpdate;
         statuses = tierStatusUpdate.statuses;
       }
 
       double maxfraction = 0.0;
-      var maxtiers = <int>[];
+      List<int> maxtiers = <int>[];
       int? besttime;
       int? besttimetier;
       if (statuses!.entries is Iterable) {
-        for (var entry in statuses.entries as Iterable) {
-          double frac = ((entry.value.players.toInt()) as int) /
-              ((entry.value.minPlayers.toInt()) as int);
+        for (var entry in statuses.entries) {
+          // TODO make Entry class or otherwise type this section
+          double frac = ((entry.value.players.toInt())) /
+              ((entry.value.minPlayers.toInt()));
           if (frac >= maxfraction) {
             if (frac > maxfraction) {
               maxfraction = frac;
               maxtiers.clear();
             }
-            maxtiers.add(entry.key.toInt() as int);
+            maxtiers.add(entry.key.toInt());
           }
 
-          var fieldInfoTimeRemaining =
+          FieldInfo<dynamic>? fieldInfoTimeRemaining =
               entry.value.info_.byName["timeRemaining"];
           // if (fieldInfoTimeRemaining == null) {
           //   throw FusionError(
           //       'Expected field not found in message: timeRemaining');
           // }
 
-          if (entry.value.hasField(fieldInfoTimeRemaining.tagNumber) as bool) {
-            int tr = entry.value.timeRemaining.toInt() as int;
-            if (besttime == null || tr < besttime) {
-              besttime = tr;
-              besttimetier = entry.key.toInt() as int;
+          if (fieldInfoTimeRemaining != null) {
+            if (entry.value.hasField(fieldInfoTimeRemaining!.tagNumber)) {
+              int tr = entry.value.timeRemaining.toInt();
+              if (besttime == null || tr < besttime) {
+                besttime = tr;
+                besttimetier = entry.key.toInt();
+              }
             }
+          } else {
+            // TODO throw warning or error?
           }
         }
       }
 
-      var displayBest = <String>[];
-      var displayMid = <String>[];
-      var displayQueued = <String>[];
+      List<String> displayBest = <String>[];
+      List<String> displayMid = <String>[];
+      List<String> displayQueued = <String>[];
 
-      for (var tier in tiersSorted) {
-        if (statuses.containsKey(tier) as bool) {
-          var tierStr = tiersStrings[tier];
+      for (int tier in tiersSorted) {
+        if (statuses.containsKey(tier)) {
+          String? tierStr = tiersStrings[tier];
           if (tierStr == null) {
             throw FusionError(
                 'server reported status on tier we are not registered for');
@@ -969,14 +979,14 @@ class Fusion {
         }
       }
 
-      var parts = <String>[];
+      List<String> parts = <String>[];
       if (displayBest.isNotEmpty || displayMid.isNotEmpty) {
         parts.add("Tiers: ${displayBest.join(', ')} ${displayMid.join(', ')}");
       }
       if (displayQueued.isNotEmpty) {
         parts.add("Queued: ${displayQueued.join(', ')}");
       }
-      var tiersString = parts.join(' ');
+      String tiersString = parts.join(' ');
 
       if (besttime == null && inactiveTimeLimit != null) {
         if (stopwatch.elapsedMilliseconds > inactiveTimeLimit) {
@@ -1002,7 +1012,8 @@ class Fusion {
       }
     }
 
-    var fieldInfoFusionBegin = msg.info_.byName["fusionbegin"];
+    // TODO type fieldInfoFusionBegin
+    dynamic fieldInfoFusionBegin = msg.info_.byName["fusionbegin"];
     if (fieldInfoFusionBegin == null) {
       throw FusionError('Expected field not found in message: fusionbegin');
     }
@@ -1018,8 +1029,8 @@ class Fusion {
     FusionBegin fusionBeginMsg = msg.fusionbegin
         as FusionBegin; // TODO handle better than with just a cast
 
-    var elapsedSeconds = (stopwatch.elapsedMilliseconds / 1000).toInt();
-    var clockMismatch = fusionBeginMsg.serverTime.toInt() -
+    int elapsedSeconds = stopwatch.elapsedMilliseconds ~/ 1000;
+    double clockMismatch = fusionBeginMsg.serverTime.toInt() -
         DateTime.now().millisecondsSinceEpoch / 1000;
 
     if (clockMismatch.abs().toDouble() > Protocol.MAX_CLOCK_DISCREPANCY) {
@@ -1039,8 +1050,8 @@ class Fusion {
     lastHash = Util.calcInitialHash(
         tier, covertDomainB, covertPort, covertSSL, beginTime);
 
-    var outAmounts = tierOutputs[tier];
-    var outAddrs =
+    List<int>? outAmounts = tierOutputs[tier];
+    List<Address> outAddrs =
         await _getUnusedReservedChangeAddresses(outAmounts?.length ?? 0);
 
     reservedAddresses = outAddrs;
@@ -1117,7 +1128,7 @@ class Fusion {
     status = Tuple('running', 'Starting round ${roundcount.toString()}');
     int timeoutInSeconds =
         (2 * Protocol.WARMUP_SLOP + Protocol.STANDARD_TIMEOUT).toInt();
-    var msg = await recv(['startround'],
+    GeneratedMessage msg = await recv(['startround'],
         timeout: Duration(seconds: timeoutInSeconds));
 
     // Record the time we got this message; it forms the basis time for all covert activities.
@@ -1128,8 +1139,8 @@ class Fusion {
     final roundTime = (msg as StartRound).serverTime;
 
     // Check the server's declared unix time, which will be committed.
-    final clockMismatch = (msg as StartRound).serverTime -
-        DateTime.now().millisecondsSinceEpoch / 1000;
+    final clockMismatch =
+        msg.serverTime - DateTime.now().millisecondsSinceEpoch / 1000;
     if (clockMismatch.abs() > Protocol.MAX_CLOCK_DISCREPANCY) {
       throw FusionError(
           "Clock mismatch too large: ${clockMismatch.toInt().toStringAsPrecision(3)}.");
@@ -1194,7 +1205,7 @@ class Fusion {
     final List<dynamic> pedersenNonce =
         []; // replace dynamic with the actual type
 
-    for (var genComponentResult in genComponentsResults) {
+    for (ComponentResult genComponentResult in genComponentsResults) {
       myCommitments.add(genComponentResult.commitment);
       myComponentSlots.add(genComponentResult.counter);
       myComponents.add(genComponentResult.component);
@@ -1212,17 +1223,18 @@ class Fusion {
     /*
     final blindSigRequests = blindNoncePoints.map((e) => Schnorr.BlindSignatureRequest(roundPubKey, e, sha256(myComponents.elementAt(e)))).toList();
     */
-    var blindSigRequests = List.generate(blindNoncePoints.length, (index) {
+    List<BlindSignatureRequest> blindSigRequests =
+        List.generate(blindNoncePoints.length, (index) {
       final R = blindNoncePoints[index];
       final m = myComponents[index];
-      final messageHash = sha256.convert(m).bytes;
+      final messageHash = crypto.sha256.convert(m).bytes;
 
       return BlindSignatureRequest(Uint8List.fromList(roundPubKey),
           Uint8List.fromList(R), Uint8List.fromList(messageHash));
     });
 
-    print("RETURNING EARLY FROM run round .....");
-    return true;
+    // print("RETURNING EARLY FROM run round .....");
+    // return true;
     final randomNumber = Util.getRandomBytes(32);
     covert.checkOk();
     check_stop();
@@ -1232,7 +1244,7 @@ class Fusion {
       initialCommitments: myCommitments,
       excessFee: Int64(excessFee),
       pedersenTotalNonce: pedersenNonce.cast<int>(),
-      randomNumberCommitment: sha256.convert(randomNumber).bytes,
+      randomNumberCommitment: crypto.sha256.convert(randomNumber).bytes,
       blindSigRequests:
           blindSigRequests.map((r) => r.getRequest() as List<int>).toList(),
     ));
@@ -1241,7 +1253,7 @@ class Fusion {
         timeout: Duration(seconds: Protocol.T_START_COMPS.toInt()));
 
     if (msg is BlindSigResponses) {
-      var typedMsg = msg as BlindSigResponses;
+      BlindSigResponses typedMsg = msg;
       assert(typedMsg.scalars.length == blindSigRequests.length);
     } else {
       // Handle the case where msg is not of type BlindSigResponses
@@ -1252,7 +1264,7 @@ class Fusion {
       blindSigRequests.length,
       (index) {
         if (msg is BlindSigResponses) {
-          var typedMsg = msg as BlindSigResponses;
+          BlindSigResponses typedMsg = msg;
           return blindSigRequests[index]
               .finalize(typedMsg.scalars[index], check: true);
         } else {
@@ -1263,7 +1275,7 @@ class Fusion {
     );
 
 // Sleep until the covert component phase really starts, to catch covert connection failures.
-    var remainingTime = Protocol.T_START_COMPS - covertClock();
+    double remainingTime = Protocol.T_START_COMPS - covertClock();
     if (remainingTime < 0) {
       throw FusionError('Arrived at covert-component phase too slowly.');
     }
@@ -1289,7 +1301,7 @@ class Fusion {
     // Schedule covert submissions.
     List<CovertComponent?> messages = List.filled(myComponents.length, null);
 
-    for (var i = 0; i < myComponents.length; i++) {
+    for (int i = 0; i < myComponents.length; i++) {
       messages[myComponentSlots[i]] = CovertComponent(
           roundPubkey: roundPubKey,
           signature: blindSigs[i] as List<int>?,
@@ -1382,7 +1394,7 @@ class Fusion {
         throw FusionError('Server component list includes duplicates.');
       }
 
-      var txInputIndices =
+      Tuple txInputIndices =
           Transaction.txFromComponents(allComponents, sessionHash);
 
       Tuple txData = Transaction.txFromComponents(allComponents, sessionHash);
@@ -1392,26 +1404,27 @@ class Fusion {
       List<CovertTransactionSignature?> covertTransactionSignatureMessages =
           List<CovertTransactionSignature?>.filled(myComponents.length, null);
 
-      var my_combined = List<Tuple<int, Input>>.generate(
+      List<Tuple<int, Input>> my_combined = List<Tuple<int, Input>>.generate(
         inputIndices.length,
         (index) => Tuple(inputIndices[index], tx.Inputs[index]),
       );
 
-      for (var i = 0; i < my_combined.length; i++) {
+      for (int i = 0; i < my_combined.length; i++) {
         int cIdx = my_combined[i].item1;
         Input inp = my_combined[i].item2;
 
         int myCompIdx = myComponentIndexes.indexOf(cIdx);
         if (myCompIdx == -1) continue; // not my input
 
-        var pubKey = inp.getPubKey(0);
-        var sec = inp.getPrivKey(0);
+        String pubKey = inp.getPubKey(0); // cast/convert to PublicKey?
+        String sec = inp.getPrivKey(0); // cast/convert to SecretKey?
 
-        var preimageBytes = tx.serializePreimage(i, 0x41, useCache: true);
-        var sighash = sha256.convert(sha256.convert(preimageBytes).bytes);
+        List<int> preimageBytes = tx.serializePreimage(i, 0x41, useCache: true);
+        crypto.Digest sighash =
+            crypto.sha256.convert(crypto.sha256.convert(preimageBytes).bytes);
 
         //var sig = schnorr.sign(sec, sighash); // Needs implementation
-        var sig = <int>[0, 1, 2, 3, 4]; // dummy placeholder
+        List<int> sig = <int>[0, 1, 2, 3, 4]; // dummy placeholder
 
         covertTransactionSignatureMessages[myComponentSlots[myCompIdx]] =
             CovertTransactionSignature(txsignature: sig, whichInput: i);
@@ -1445,7 +1458,7 @@ class Fusion {
         if (allSigs.length != tx.Inputs.length) {
           throw FusionError('Server gave wrong number of signatures.');
         }
-        for (var i = 0; i < allSigs.length; i++) {
+        for (int i = 0; i < allSigs.length; i++) {
           List<int> sigBytes = allSigs[i];
           String sig = base64.encode(sigBytes);
           Input inp = tx.Inputs[i];
@@ -1545,7 +1558,7 @@ class Fusion {
     status = Tuple('running', 'round failed - checking proofs');
 
     print("receiving proofs");
-    msg = await this.recv(['theirproofslist'],
+    msg = await recv(['theirproofslist'],
         timeout: Duration(seconds: (2 * Protocol.STANDARD_TIMEOUT).round()));
 
     List<Blames_BlameProof> blames = [];
@@ -1555,9 +1568,9 @@ class Fusion {
     TheirProofsList proofsList = msg as TheirProofsList;
 
     List<int>? privKey;
-    var commitmentBlob;
+    InitialCommitment commitmentBlob;
     for (var i = 0; i < proofsList.proofs.length; i++) {
-      var rp = msg.proofs[i];
+      TheirProofsList_RelayedProof rp = msg.proofs[i];
       try {
         privKey = privKeys[rp.dstKeyIdx];
         commitmentBlob = allCommitments[rp.srcCommitmentIdx];
@@ -1566,14 +1579,14 @@ class Fusion {
       }
 
       List<int> sKey;
-      var proofBlob;
+      Uint8List proofBlob;
 
       try {
         BigInt eccPrivateKey =
             parseBigIntFromBytes(Uint8List.fromList(privKey));
         ECPrivateKey privateKey = ECPrivateKey(eccPrivateKey, params);
 
-        var result =
+        Tuple<Uint8List, Uint8List> result =
             await decrypt(Uint8List.fromList(rp.encryptedProof), privateKey);
         proofBlob = result.item1; // First item is the decrypted data
         sKey = result.item2; // Second item is the symmetric key
@@ -1586,7 +1599,7 @@ class Fusion {
         continue;
       }
 
-      var commitment = InitialCommitment();
+      InitialCommitment commitment = InitialCommitment();
       try {
         commitment.mergeFromBuffer(
             commitmentBlob as List<int>); // Method to parse protobuf data
@@ -1607,11 +1620,11 @@ class Fusion {
         int componentFeerateInt = componentFeeRate
             .round(); // or use .toInt() if you want to truncate instead of rounding
 
-        var inpComp = validateProofInternal(proofBlob as Uint8List, commitment,
+        InputComponent? inpComp = validateProofInternal(proofBlob, commitment,
             allComponentsUint8, badComponentsList, componentFeerateInt);
       } on Exception catch (e) {
         print("found an erroneous proof: ${e.toString()}");
-        var blameProof = Blames_BlameProof();
+        Blames_BlameProof blameProof = Blames_BlameProof();
         blameProof.whichProof = i;
         blameProof.sessionKey = sKey;
         blameProof.blameReason = e.toString();
@@ -1627,7 +1640,7 @@ class Fusion {
           print(
               "found a bad input [${rp.srcCommitmentIdx}]: $e (${inpComp.prevTxid.reversed.toList().toHex()}:${inpComp.prevIndex})");
 
-          var blameProof = Blames_BlameProof();
+          Blames_BlameProof blameProof = Blames_BlameProof();
           blameProof.whichProof = i;
           blameProof.sessionKey = sKey;
           blameProof.blameReason =
