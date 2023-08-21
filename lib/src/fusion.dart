@@ -867,7 +867,7 @@ class Fusion {
 // Wrap it in a ClientMessage
     ClientMessage clientMessage = ClientMessage()..joinpools = joinPools;
 
-    send2(socketwrapper, clientMessage);
+    await send2(socketwrapper, clientMessage);
 
     status = Tuple<String, String>('waiting', 'Registered for tiers');
 
