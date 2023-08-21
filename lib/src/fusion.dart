@@ -309,7 +309,7 @@ class Fusion {
         ;
       } on Exception catch (e) {
         // handle exception, rethrow as a custom FusionError
-        throw FusionError("Incompatible: " + e.toString());
+        throw FusionError("Incompatible: $e");
       }
 
       // Check if can connect to Tor proxy, if not, raise FusionError. Empty String treated as no host.
@@ -718,8 +718,8 @@ class Fusion {
     SocketWrapper socketwrapper = SocketWrapper(server_host, server_port);
     await socketwrapper.connect();
     */
-    // TODO should this be awaited?
-    send2(socketwrapper, clientMessage);
+    // TODO should this be unawaited?
+    await send2(socketwrapper, clientMessage);
 
     GeneratedMessage replyMsg = await recv2(socketwrapper, ['serverhello']);
     if (replyMsg is ServerMessage) {
