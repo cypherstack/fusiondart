@@ -25,9 +25,9 @@ class Tuple<T1, T2> {
 
 class Util {
   static Uint8List hexToBytes(String hex) {
-    var result = new Uint8List(hex.length ~/ 2);
-    for (var i = 0; i < hex.length; i += 2) {
-      var byte = int.parse(hex.substring(i, i + 2), radix: 16);
+    Uint8List result = Uint8List(hex.length ~/ 2);
+    for (int i = 0; i < hex.length; i += 2) {
+      int byte = int.parse(hex.substring(i, i + 2), radix: 16);
       result[i ~/ 2] = byte;
     }
     return result;
@@ -40,16 +40,16 @@ class Util {
 
   static int randPosition(Uint8List seed, int numPositions, int counter) {
     // counter to bytes
-    var counterBytes = Uint8List(4);
-    var counterByteData = ByteData.sublistView(counterBytes);
+    Uint8List counterBytes = Uint8List(4);
+    ByteData counterByteData = ByteData.sublistView(counterBytes);
     counterByteData.setInt32(0, counter, Endian.big);
 
     // hash the seed and counter
-    var digest = crypto.sha256.convert([...seed, ...counterBytes]);
+    crypto.Digest digest = crypto.sha256.convert([...seed, ...counterBytes]);
 
     // take the first 8 bytes
-    var first8Bytes = digest.bytes.take(8).toList();
-    var int64 = ByteData.sublistView(Uint8List.fromList(first8Bytes))
+    List<int> first8Bytes = digest.bytes.take(8).toList();
+    int int64 = ByteData.sublistView(Uint8List.fromList(first8Bytes))
         .getUint64(0, Endian.big);
 
     // perform the modulo operation
@@ -106,9 +106,9 @@ class Util {
   static List<int> calcInitialHash(int tier, Uint8List covertDomainB,
       int covertPort, bool covertSsl, double beginTime) {
     // Converting int to bytes in BigEndian order
-    var tierBytes = ByteData(8)..setInt64(0, tier, Endian.big);
-    var covertPortBytes = ByteData(4)..setInt32(0, covertPort, Endian.big);
-    var beginTimeBytes = ByteData(8)
+    ByteData tierBytes = ByteData(8)..setInt64(0, tier, Endian.big);
+    ByteData covertPortBytes = ByteData(4)..setInt32(0, covertPort, Endian.big);
+    ByteData beginTimeBytes = ByteData(8)
       ..setInt64(0, beginTime.toInt(), Endian.big);
 
     // Define constants
@@ -126,7 +126,7 @@ class Util {
     elements.addAll(beginTimeBytes.buffer.asInt8List());
 
     // Hashing the concatenated elements
-    var digest = crypto.sha256.convert(elements);
+    crypto.Digest digest = crypto.sha256.convert(elements);
 
     return digest.bytes;
   }
@@ -148,10 +148,10 @@ class Util {
   }
 
   static List<int> listHash(Iterable<List<int>> iterable) {
-    var bytes = <int>[];
+    List<int> bytes = <int>[];
 
-    for (var x in iterable) {
-      var length = ByteData(4)..setUint32(0, x.length, Endian.big);
+    for (List<int> x in iterable) {
+      ByteData length = ByteData(4)..setUint32(0, x.length, Endian.big);
       bytes.addAll(length.buffer.asUint8List());
       bytes.addAll(x);
     }
@@ -159,22 +159,10 @@ class Util {
   }
 
   static Uint8List get_current_genesis_hash() {
-    var GENESIS =
+    String GENESIS =
         "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
-    var _lastGenesisHash = hexToBytes(GENESIS).reversed.toList();
+    List<int> _lastGenesisHash = hexToBytes(GENESIS).reversed.toList();
     return Uint8List.fromList(_lastGenesisHash);
-  }
-
-  static List<Address> reserve_change_addresses(int number_addresses) {
-    // TODO
-    // get current change address
-    // get int number_addresses next addresses
-    return [];
-  }
-
-  static List<Address> unreserve_change_address(Address addr) {
-    //implement later based on wallet.
-    return [];
   }
 
   static bool walletHasTransaction(String txid) {
@@ -188,9 +176,9 @@ class Util {
   }
 
   static Tuple<Uint8List, Uint8List> genKeypair() {
-    var params = ECDomainParameters('secp256k1');
-    var privKeyBigInt = _generatePrivateKey(params.n.bitLength);
-    var pubKeyPoint = params.G * privKeyBigInt;
+    ECDomainParameters params = ECDomainParameters('secp256k1');
+    BigInt privKeyBigInt = _generatePrivateKey(params.n.bitLength);
+    ECPoint? pubKeyPoint = params.G * privKeyBigInt;
 
     if (pubKeyPoint == null) {
       throw Exception("Error generating public key.");
@@ -205,14 +193,14 @@ class Util {
 // Generates a cryptographically secure private key
   static BigInt _generatePrivateKey(int bitLength) {
     final random = Random.secure();
-    var bytes = bitLength ~/ 8; // floor division
-    var remBit = bitLength % 8;
+    int bytes = bitLength ~/ 8; // floor division
+    int remBit = bitLength % 8;
 
     // Generate random BigInt
     List<int> rnd = List<int>.generate(bytes, (_) => random.nextInt(256));
-    var rndBit = random.nextInt(1 << remBit);
+    int rndBit = random.nextInt(1 << remBit);
     rnd.add(rndBit);
-    var privateKey = BigInt.parse(
+    BigInt privateKey = BigInt.parse(
         rnd.map((x) => x.toRadixString(16).padLeft(2, '0')).join(),
         radix: 16);
 
@@ -250,7 +238,7 @@ class Util {
 
   static ECPoint ser_to_point(
       Uint8List serializedPoint, ECDomainParameters params) {
-    var point = params.curve.decodePoint(serializedPoint);
+    ECPoint? point = params.curve.decodePoint(serializedPoint);
     if (point == null) {
       throw FormatException('Point decoding failed');
     }
@@ -280,7 +268,7 @@ class Util {
     if (pubKeys.isEmpty) throw ArgumentError('pubKeys cannot be empty');
 
     ECPoint combined = pubKeys.first.curve.infinity!;
-    for (var pubKey in pubKeys) {
+    for (ECPoint pubKey in pubKeys) {
       combined = (combined + pubKey)!;
     }
 
@@ -292,14 +280,15 @@ class Util {
   }
 
   static bool isPointOnCurve(ECPoint point, ECCurve curve) {
-    var x = point.x!.toBigInteger()!;
-    var y = point.y!.toBigInteger()!;
-    var a = curve.a!.toBigInteger()!;
-    var b = curve.b!.toBigInteger()!;
+    // TODO validate these null assertions
+    BigInt? x = point.x!.toBigInteger()!;
+    BigInt? y = point.y!.toBigInteger()!;
+    BigInt? a = curve.a!.toBigInteger()!;
+    BigInt? b = curve.b!.toBigInteger()!;
 
     // Calculate the left and right sides of the equation
-    var left = y * y;
-    var right = (x * x * x) + (a * x) + b;
+    BigInt? left = y * y;
+    BigInt? right = (x * x * x) + (a * x) + b;
 
     // Check if the point is on the curve
     return left == right;

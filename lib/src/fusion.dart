@@ -426,7 +426,8 @@ class Fusion {
       clear_coins();
       if (status.item1 != 'complete') {
         for (Output output in outputs) {
-          Util.unreserve_change_address(output.addr);
+          // TODO implement
+          // Util.unreserve_change_address(output.addr);
         }
         if (!server_connected_and_greeted) {
           notify_server_status(false, tup: status);
@@ -607,7 +608,7 @@ class Fusion {
     components.asMap().forEach((cnum, Tuple<Component, int> componentTuple) {
       Uint8List salt = Util.tokenBytes(32);
       componentTuple.item1.saltCommitment = Util.sha256(salt);
-      List<int> compser = componentTuple.item1.writeToBuffer();
+      Uint8List compser = componentTuple.item1.writeToBuffer();
 
       Tuple<Uint8List, Uint8List> keyPair = Util.genKeypair();
       Uint8List privateKey = keyPair.item1;

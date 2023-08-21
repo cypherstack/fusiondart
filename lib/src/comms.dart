@@ -53,7 +53,8 @@ Future<void> sendPb(
     return;
   }
 
-  var pbMessage = pbClassCreators[pbClass]!()..mergeFromMessage(subMsg);
+  GeneratedMessage pbMessage = pbClassCreators[pbClass]!()
+    ..mergeFromMessage(subMsg);
   final msgBytes = pbMessage.writeToBuffer();
   try {
     await connection.sendMessage(msgBytes, timeout: timeout);
@@ -76,7 +77,8 @@ Future<void> sendPb2(SocketWrapper socketwrapper, Connection connection,
     return;
   }
 
-  var pbMessage = pbClassCreators[pbClass]!()..mergeFromMessage(subMsg);
+  GeneratedMessage pbMessage = pbClassCreators[pbClass]!()
+    ..mergeFromMessage(subMsg);
   final msgBytes = pbMessage.writeToBuffer();
   try {
     await connection.sendMessageWithSocketWrapper(socketwrapper, msgBytes,
@@ -97,14 +99,16 @@ Future<Tuple<GeneratedMessage, String>> recvPb2(SocketWrapper socketwrapper,
     List<int> blob =
         await connection.recv_message2(socketwrapper, timeout: timeout);
 
-    var pbMessage = pbClassCreators[pbClass]!()..mergeFromBuffer(blob);
+    GeneratedMessage pbMessage = pbClassCreators[pbClass]!()
+      ..mergeFromBuffer(blob);
 
     if (!pbMessage.isInitialized()) {
       throw FusionError('Incomplete message received');
     }
 
-    for (var name in expectedFieldNames) {
-      var fieldInfo = pbMessage.info_.byName[name];
+    for (String name in expectedFieldNames) {
+      // TODO type
+      FieldInfo<dynamic>? fieldInfo = pbMessage.info_.byName[name];
 
       if (fieldInfo == null) {
         throw FusionError('Expected field not found in message: $name');
@@ -140,14 +144,16 @@ Future<Tuple<GeneratedMessage, String>> recvPb(
   try {
     List<int> blob = await connection.recv_message(timeout: timeout);
 
-    var pbMessage = pbClassCreators[pbClass]!()..mergeFromBuffer(blob);
+    GeneratedMessage pbMessage = pbClassCreators[pbClass]!()
+      ..mergeFromBuffer(blob);
 
     if (!pbMessage.isInitialized()) {
       throw FusionError('Incomplete message received');
     }
 
-    for (var name in expectedFieldNames) {
-      var fieldInfo = pbMessage.info_.byName[name];
+    for (String name in expectedFieldNames) {
+      // TODO type
+      FieldInfo<dynamic>? fieldInfo = pbMessage.info_.byName[name];
 
       if (fieldInfo == null) {
         throw FusionError('Expected field not found in message: $name');

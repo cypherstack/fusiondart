@@ -21,23 +21,23 @@ Future<Uint8List> encrypt(Uint8List message, ECPoint pubkey,
   } catch (_) {
     throw EncryptionFailed();
   }
-  var nonceSec = Util.secureRandomBigInt(params.n.bitLength);
-  var G_times_nonceSec = params.G * nonceSec;
+  BigInt nonceSec = Util.secureRandomBigInt(params.n.bitLength);
+  ECPoint? G_times_nonceSec = params.G * nonceSec;
   if (G_times_nonceSec == null) {
     throw Exception('Multiplication of G with nonceSec resulted in null');
   }
-  var noncePub = Util.point_to_ser(G_times_nonceSec, true);
+  Uint8List noncePub = Util.point_to_ser(G_times_nonceSec, true);
 
-  var pubpoint_times_nonceSec = pubpoint * nonceSec;
+  ECPoint? pubpoint_times_nonceSec = pubpoint * nonceSec;
   if (pubpoint_times_nonceSec == null) {
     throw Exception(
         'Multiplication of pubpoint with nonceSec resulted in null');
   }
-  var key = crypto.sha256
+  List<int> key = crypto.sha256
       .convert(Util.point_to_ser(pubpoint_times_nonceSec, true))
       .bytes;
 
-  var plaintext = Uint8List(4 + message.length)
+  Uint8List plaintext = Uint8List(4 + message.length)
     ..buffer.asByteData().setUint32(0, message.length, Endian.big)
     ..setRange(4, 4 + message.length, message);
   if (padToLength == null) {
@@ -78,7 +78,7 @@ Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
   if (data.length < 33 + 16 + 16) {
     throw DecryptionFailed();
   }
-  var ciphertext = data.sublist(33, data.length - 16);
+  Uint8List ciphertext = data.sublist(33, data.length - 16);
   if (ciphertext.length % 16 != 0) {
     throw DecryptionFailed();
   }
@@ -97,7 +97,7 @@ Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
 
   Uint8List uint8list = Uint8List.fromList(plaintext);
   ByteData byteData = ByteData.sublistView(uint8list);
-  var msgLength = byteData.getUint32(0, Endian.big);
+  int msgLength = byteData.getUint32(0, Endian.big);
 
   if (msgLength + 4 > plaintext.length) {
     throw DecryptionFailed();
@@ -110,7 +110,7 @@ Future<Tuple<Uint8List, Uint8List>> decrypt(
   if (data.length < 33 + 16 + 16) {
     throw DecryptionFailed();
   }
-  var noncePub = data.sublist(0, 33);
+  Uint8List noncePub = data.sublist(0, 33);
   ECPoint noncePoint;
   try {
     noncePoint = Util.ser_to_point(noncePub, params);
@@ -124,10 +124,11 @@ Future<Tuple<Uint8List, Uint8List>> decrypt(
   final List<int> key;
 
   if (privkey.d != null) {
-    var point = (G * privkey.d)! + noncePoint;
+    ECPoint? point = (G * privkey.d)! + noncePoint;
     key = crypto.sha256.convert(Util.point_to_ser(point!, true)).bytes;
     // ...
-    var decryptedData = await decryptWithSymmkey(data, Uint8List.fromList(key));
+    Uint8List decryptedData =
+        await decryptWithSymmkey(data, Uint8List.fromList(key));
     return Tuple(decryptedData, Uint8List.fromList(key));
   } else {
     // Handle the situation where privkey.d or noncePoint is null

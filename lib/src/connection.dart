@@ -10,7 +10,6 @@ import 'package:fusiondart/src/socketwrapper.dart';
 This file might need some fixing up because each time we call fillBuf, we're trying to
 remove data from a buffer but its a local copy , might not actually
 remove the data from the socket buffer.  We may need a wrapper class for the buffer??
-
  */
 
 class BadFrameError extends Error {
@@ -28,7 +27,7 @@ Future<Connection> openConnection(
   double connTimeout = 5.0,
   double defaultTimeout = 5.0,
   bool ssl = false,
-  dynamic socksOpts,
+  dynamic socksOpts, // TODO type
 }) async {
   try {
     // Dart's Socket class handles connection timeout internally.
@@ -123,7 +122,7 @@ class Connection {
       {Duration? timeout}) async {
     final maxTime = timeout != null ? DateTime.now().add(timeout) : null;
 
-    await for (var data in socketwrapper.socket!.cast<List<int>>()) {
+    await for (List<int> data in socketwrapper.socket!.cast<List<int>>()) {
       print("DEBUG fillBuf2 1 - new data received: $data");
       if (maxTime != null && DateTime.now().isAfter(maxTime)) {
         throw SocketException('Timeout');
@@ -151,7 +150,7 @@ class Connection {
   }
 
   Future<List<int>> fillBuf(int n, {Duration? timeout}) async {
-    var recvBuf = <int>[];
+    List<int> recvBuf = <int>[];
     socket?.listen((data) {
       print('Received from server: $data');
     }, onDone: () {
@@ -215,7 +214,7 @@ class Connection {
     print("DEBUG recv_message2 1 - about to read the header");
 
     try {
-      await for (var data in socketwrapper.receiveStream) {
+      await for (List<int> data in socketwrapper.receiveStream) {
         if (maxTime != null && DateTime.now().isAfter(maxTime)) {
           throw SocketException('Timeout');
         }

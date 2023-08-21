@@ -130,7 +130,7 @@ class Commitment {
   static Uint8List add_points(Iterable<Uint8List> pointsIterable) {
     ECDomainParameters params =
         getDefaultParams(); // Using helper function here
-    var pointList =
+    List<ECPoint> pointList =
         pointsIterable.map((pser) => Util.ser_to_point(pser, params)).toList();
 
     if (pointList.isEmpty) {
@@ -140,7 +140,7 @@ class Commitment {
     ECPoint pSum =
         pointList.first; // Initialize pSum with the first point in the list
 
-    for (var i = 1; i < pointList.length; i++) {
+    for (int i = 1; i < pointList.length; i++) {
       pSum = (pSum + pointList[i])!;
     }
 
