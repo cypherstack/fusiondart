@@ -1018,6 +1018,8 @@ class Fusion {
           socketwrapper, ['tierstatusupdate', 'fusionbegin'],
           timeout: Duration(seconds: 10));
 
+      if (msg == null) continue;
+
       // TODO type
       FieldInfo<dynamic>? fieldInfoFusionBegin =
           msg.info_.byName["fusionbegin"];
