@@ -261,7 +261,7 @@ class BlindSignatureRequest {
           'Failed to perform elliptic curve operation intermediateR + (pubpoint * b).');
     }
 
-    Rxnew = bigIntToBytes(Rnew.x!.toBigInteger()!); // TODO check for null
+    Rxnew = Util.bigIntToBytes(Rnew.x!.toBigInteger()!); // TODO check for null
     BigInt? y = Rnew.y?.toBigInteger();
 
     if (y == null) {
@@ -303,10 +303,6 @@ class BlindSignatureRequest {
     }
   }
 
-  Uint8List bigIntToBytes(BigInt number) {
-    return Uint8List.fromList(number.toRadixString(16).codeUnits);
-  }
-
   BigInt bytesToBigInt(Uint8List bytes) {
     return BigInt.parse(
         bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(),
@@ -314,7 +310,7 @@ class BlindSignatureRequest {
   }
 
   Uint8List get request {
-    return bigIntToBytes(e);
+    return Util.bigIntToBytes(e);
   }
 
   Uint8List finalize(Uint8List sBytes, {bool check = true}) {
@@ -325,7 +321,7 @@ class BlindSignatureRequest {
     BigInt s = bytesToBigInt(sBytes);
     BigInt snew = (c * (s + a)) % order;
 
-    List<int> sig = Rxnew + bigIntToBytes(snew);
+    List<int> sig = Rxnew + Util.bigIntToBytes(snew);
 
     ECPoint? pubPoint = Util.ser_to_point(pubkey, params);
 
