@@ -1,14 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:fusiondart/src/encrypt.dart' as Encrypt;
-import 'package:fusiondart/src/fusion.dart';
 import 'package:fusiondart/src/fusion.pb.dart' as pb;
+import 'package:fusiondart/src/fusion.pb.dart';
 import 'package:fusiondart/src/models/address.dart';
+import 'package:fusiondart/src/models/input.dart';
+import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/export.dart';
-
-import 'fusion.pb.dart';
 
 class ValidationError implements Exception {
   final String message;

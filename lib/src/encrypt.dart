@@ -2,9 +2,8 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:cryptography/cryptography.dart';
+import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/pointycastle.dart' hide Mac;
-
-import 'util.dart';
 
 final ECDomainParameters params = ECDomainParameters('secp256k1');
 final BigInt order = params.n;
