@@ -15,6 +15,7 @@ import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/blind_signature_request.dart';
 import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
+import 'package:fusiondart/src/models/protobuf.dart';
 import 'package:fusiondart/src/models/transaction.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protocol.dart';
@@ -24,24 +25,32 @@ import 'package:fusiondart/src/validation.dart';
 import 'package:pointycastle/export.dart';
 import 'package:protobuf/protobuf.dart';
 
-import 'models/protobuf.dart';
-
+/// Custom exception class for Fusion related errors.
+///
+/// Example usage:
+/// dart /// throw FusionError('Your specific error message'); /// class FusionError implements Exception {
 class FusionError implements Exception {
+  /// The error message describing the issue.
   final String message;
 
+  /// Constructs a new FusionError with the provided message.
   FusionError(this.message);
 
+  /// Custom string representation of the FusionError, useful for debugging.
   @override
   String toString() => "FusionError: $message";
 }
 
-// Class to handle fusion
+/// Fusion class is responsible for coordinating the CashFusion transaction process.
+/// It maintains the state and controls the flow of a fusion operation.
 class Fusion {
+  // Private late finals used for dependency injection.
   // late final Future<Address> Function() _createNewReservedChangeAddress;
   // Disabled because _getUnusedReservedChangeAddresses fulfills all requirements
   late final Future<List<Address>> Function(int numberOfAddresses)
       _getUnusedReservedChangeAddresses;
 
+  /// Constructor that sets up a Fusion object
   Fusion(
       {/*required Future<Address> Function() createNewReservedChangeAddress,*/
       required Future<List<Address>> Function(int numberOfAddresses)
@@ -55,7 +64,8 @@ class Fusion {
   }
   */
 
-  /// Method used to inject methods / get information from the wallet of your choice
+  /// Method to initialize Fusion instance with necessary wallet methods.
+  /// The methods injected here would be used for various operations throughout the fusion process.
   void initFusion({
     // required Future<Address> Function() createNewReservedChangeAddress,
     required Future<List<Address>> Function(int numberOfAddresses)
@@ -65,6 +75,7 @@ class Fusion {
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
   }
 
+  // Various state variables.
   List<Input> coins =
       []; //"coins" and "inputs" are often synonymous in the original python code.
   List<Output> outputs = [];
@@ -114,20 +125,45 @@ class Fusion {
   List<int> myCommitmentIndexes = [];
   Set<int> badComponents = {};
 
+  /// Adds Unspent Transaction Outputs (UTXOs) from [utxoList] to the `coins` list as `Input`s.
+  ///
+  /// Given a list of UTXOs [utxoList] (as represented by the `Record(String txid, int vout, int value)`),
+  /// this method converts them to `Input` objects and appends them to the internal `coins`
+  /// list, which will later be used in a fusion operation.
+  ///
+  /// Returns:
+  ///   Future<void> Returns a future that completes when the coins have been added.
   Future<void> addCoinsFromWallet(
     List<(String txid, int vout, int value)> utxoList,
   ) async {
-    // Convert each UTXO info to an Input and add to 'coins'
+    // Convert each UTXO info to an Input and add to 'coins'.
     for (final utxoInfo in utxoList) {
       coins.add(Input.fromStackUTXOData(utxoInfo));
     }
   }
 
+  /// Adds a change address [address] to the `changeAddresses` list.
+  ///
+  /// Takes an `Address` object and adds it to the internal `changeAddresses` list,
+  /// which is used to send back any remaining balance from a fusion operation.
+  ///
+  /// Returns:
+  ///   A future that completes when the address has been added.
   Future<void> addChangeAddress(Address address) async {
-    // add address to addresses[]
+    // Add address to addresses[].
     changeAddresses.add(address);
   }
 
+  /// Executes the fusion operation.
+  ///
+  /// This method orchestrates the entire lifecycle of a CashFusion operation.
+  ///
+  /// Returns:
+  ///   A future that completes when the fusion operation is finished.
+  ///
+  /// Throws:
+  ///   FusionError: If any step in the fusion operation fails.
+  ///   Exception: For general exceptions.
   Future<void> fuse() async {
     print("DEBUG FUSION 223...fusion run....");
     try {
@@ -259,15 +295,22 @@ class Fusion {
         }
       }
     }
-  }
+  } // /fuse
 
-  /// /fuse
+  /// Notifies the server about the current status of the system using bool [b]
+  /// and optional Record(String, String) status (status, message).
+  ///
+  /// Sends a status update to the server. The purpose and behavior of this method
+  /// depend on the application's requirements.
+  ///
+  /// TODO
+  void notifyServerStatus(bool b, {(String, String)? status}) {}
 
-  void notifyServerStatus(bool b, {Record? status}) {
-    // TODO implement
-  }
-
-  void stop([String reason = 'stopped', bool notIfRunning = false]) {
+  /// Stops the current operation with optional String [reason] (default: "stopped")
+  /// and bool [notIfRunning] (default: false).
+  ///
+  /// If an operation is in progress, stops it for the given reason.
+  void stop([String reason = "stopped", bool notIfRunning = false]) {
     if (stopping) {
       return;
     }
@@ -284,6 +327,11 @@ class Fusion {
     // note the reason is only overwritten if we were not already stopping this way.
   }
 
+  /// Checks if the system should stop the current operation.
+  ///
+  /// This function is periodically called to determine whether the system should
+  /// halt its operation.  Optional bool [running] indicates if the system is currently
+  /// running (default is true).
   void checkStop({bool running = true}) {
     // Gets called occasionally from fusion thread to allow a stop point.
     if (stopping || (!running && stoppingIfNotRunning)) {
@@ -291,29 +339,57 @@ class Fusion {
     }
   }
 
+  /// Checks the status of the coins in the wallet.
+  ///
+  /// Verifies the integrity and validity of the coins stored in the internal wallet.
   void checkCoins() {
     // Implement by calling wallet layer to check the coins are ok.
     return;
   }
 
+  /// Clears all coins from the internal `coins` list.
+  ///
+  /// Resets the internal coin list, effectively removing all stored coins.
   void clearCoins() {
     coins = [];
   }
 
+  /// Adds new coins to the internal `coins` list.
+  ///
+  /// Takes a list of `Input` [newCoins] objects representing new coins and appends them to the internal coin list.
   void addCoins(List<Input> newCoins) {
     coins.addAll(newCoins);
   }
 
+  /// Notifies the UI layer about changes to the `coins` list.
+  ///
+  /// Updates the UI to reflect changes in the internal list of coins.
+  ///
+  /// TODO
   void notifyCoinsUI() {
     return;
   }
 
+  /// Determines if the wallet is capable of participating in fusion operations.
+  ///
+  /// Checks various conditions to assess whether the wallet can be used for fusion.
+  ///
+  /// Returns:
+  ///   A boolean flag indicating the wallet's capability to participate in fusion operations.
+  ///
+  /// TODO
   static bool walletCanFuse() {
+    // TODO Implement logic here to return false if the wallet can't fuse (if it's read only or non P2PKH)
     return true;
-
-    // Implement logic here to return false if the wallet can't fuse (if it's read only or non P2PKH)
   }
 
+  /// Generates a non-zero random double.
+  ///
+  /// Produces a random double value that is guaranteed not to be zero using a
+  /// `Random` object parameter [rng] used for generating random numbers.
+  ///
+  /// Returns:
+  ///   A non-zero random double value.
   static double nextDoubleNonZero(Random rng) {
     double value = 0.0;
     while (value == 0.0) {
@@ -322,17 +398,29 @@ class Fusion {
     return value;
   }
 
+  /// Generates random outputs given specific parameters.
+  ///
+  /// Generates a list of random integer values for output tiers, adhering to the given parameters
+  /// [rng], [inputAmount], [scale], [offset], and [maxCount].
+  ///
+  /// Returns:
+  ///   A list of integer values representing the random outputs for the tier.
   static List<int>? randomOutputsForTier(
       Random rng, int inputAmount, int scale, int offset, int maxCount) {
+    // Check if the input amount is insufficient.
     if (inputAmount < offset) {
       return [];
     }
+
+    // Initialize required variables.
     double lambd = 1.0 / scale;
     int remaining = inputAmount;
-    List<double> values = []; // list of fractional random values without offset
+    List<double> values =
+        []; // List of fractional random values without offset.
     bool didBreak =
-        false; // Add this flag to detect when a break is encountered
+        false; // Add this flag to detect when a break is encountered.
 
+    // Generate random values.
     for (int i = 0; i < maxCount + 1; i++) {
       double val = -lambd * log(nextDoubleNonZero(rng));
       remaining -= (val.ceil() + offset);
@@ -343,6 +431,7 @@ class Fusion {
       values.add(val);
     }
 
+    // Truncate values list if needed.
     if (!didBreak && values.length > maxCount) {
       values = values.sublist(0, maxCount);
     }
@@ -355,11 +444,9 @@ class Fusion {
 
     int desiredRandomSum = inputAmount - values.length * offset;
     assert(desiredRandomSum >= 0, 'desiredRandomSum is less than 0');
-
-    /*Now we need to rescale and round the values so they fill up the desired.
-  input amount exactly. We perform rounding in cumulative space so that the
-  sum is exact, and the rounding is distributed fairly.
-   */
+    // Now we need to rescale and round the values so they fill up the desired.
+    // input amount exactly. We perform rounding in cumulative space so that the
+    // sum is exact, and the rounding is distributed fairly.
 
     // Dart equivalent of itertools.accumulate
     List<double> cumsum = [];
@@ -385,6 +472,15 @@ class Fusion {
     return result;
   }
 
+  /// Generates the components required for a fusion transaction.
+  ///
+  /// Given the number of blank components [numBlanks], input components [inputs],
+  /// output components [outputs], and fee rate [feerate], this method generates and
+  /// returns a list of `ComponentResult` objects that include all necessary
+  /// details for a fusion transaction.
+  ///
+  /// Returns:
+  ///   A list of `ComponentResult` objects containing all the components needed for the transaction.
   static List<ComponentResult> genComponents(
       int numBlanks, List<Input> inputs, List<Output> outputs, int feerate) {
     assert(numBlanks >= 0);
@@ -470,6 +566,16 @@ class Fusion {
     return resultList;
   }
 
+  /// Receives a message from the server with the modern API (vs `recv()`).
+  ///
+  /// Receives an expected message from the server based on the given list of message names
+  /// [expectedMsgNames]. Optionally, a [timeout] can be provided.
+  ///
+  /// Returns:
+  ///   A future that completes with the received `GeneratedMessage`.
+  ///
+  /// Throws:
+  ///   FusionError if the connection is not initialized or a server error occurs.
   Future<GeneratedMessage> recv2(
       SocketWrapper socketwrapper, List<String> expectedMsgNames,
       {Duration? timeout}) async {
@@ -491,9 +597,21 @@ class Fusion {
     return submsg;
   }
 
+  /// Receives a message from the server.
+  ///
+  /// [DEPRECATED]
+  ///
+  /// TODO rename or remove
+  ///
+  /// Returns:
+  ///   A future that completes with the received `GeneratedMessage`.
+  ///
+  /// Throws:
+  ///   FusionError if the connection is not initialized or a server error occurs.
   Future<GeneratedMessage> recv(List<String> expectedMsgNames,
       {Duration? timeout}) async {
     // DEPRECATED
+    // TODO remove usages of this function
     if (connection == null) {
       throw FusionError('Connection not initialized');
     }
@@ -512,8 +630,15 @@ class Fusion {
     return submsg;
   }
 
+  /// Sends a message to the server with the deprecated API.
+  ///
+  /// [DEPRECATED]
+  ///
+  /// TODO rename or remove
+  ///
+  /// Takes a `GeneratedMessage` object [submsg] and sends it to the server. Optionally,
+  /// a [timeout] can be specified.
   Future<void> send(GeneratedMessage submsg, {Duration? timeout}) async {
-    // DEPRECATED
     if (connection != null) {
       await sendPb(connection!, ClientMessage, submsg, timeout: timeout);
     } else {
@@ -521,6 +646,15 @@ class Fusion {
     }
   }
 
+  /// Sends a message to the server with the modern API (vs. `send()`).
+  ///
+  /// Sends a `GeneratedMessage` object [submsg] to the server using the provided
+  /// [socketwrapper]. Optionally, a [timeout] can be specified.
+  ///
+  /// TODO rename
+  ///
+  /// Returns:
+  ///   A future that completes when the message has been sent.
   Future<void> send2(SocketWrapper socketwrapper, GeneratedMessage submsg,
       {Duration? timeout}) async {
     if (connection != null) {

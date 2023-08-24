@@ -232,7 +232,7 @@ class Util {
         bigInt.toRadixString(16).padLeft(32, '0').codeUnits);
   }
 
-  /// Parses a BigInt from a Uint8List.
+  /// Parses a BigInt from a Uint8List [bytes].
   ///
   /// The function assumes that the bytes in the Uint8List are in big-endian order.
   ///
@@ -246,14 +246,11 @@ class Util {
     );
   }
 
-  /// Converts a Uint8List to a hexadecimal string representation.
+  /// Converts a Uint8List [bytes] to a hexadecimal string representation.
   ///
   /// Takes a Uint8List [bytes] and converts each byte to its hexadecimal
   /// representation. The resulting hexadecimal values are concatenated
   /// into a single string.
-  ///
-  /// Parameters:
-  ///   - [bytes]: The Uint8List to be converted.
   ///
   /// Returns:
   ///   A String containing the hexadecimal representation of the input [bytes].
@@ -261,7 +258,7 @@ class Util {
     return bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 
-  /// Converts a hexadecimal string to a Uint8List.
+  /// Converts a hexadecimal string [hex] to a Uint8List.
   ///
   /// The function assumes that the input string is a valid hexadecimal string
   /// with an even number of characters.
@@ -283,14 +280,11 @@ class Util {
     return result;
   }
 
-  /// Converts a BigInt to a Uint8List.
+  /// Converts a BigInt [bytes] to a Uint8List.
   ///
   /// Takes a Uint8List [bytes] and converts it into a BigInt.
   /// The input [bytes] are first converted to a hexadecimal string,
   /// which is then parsed into a BigInt object.
-  ///
-  /// Parameters:
-  ///   - [bytes]: The Uint8List to be converted.
   ///
   /// Returns:
   ///   A BigInt object representing the numerical value of the input [bytes].
