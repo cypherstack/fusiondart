@@ -16,7 +16,7 @@ Future<Uint8List> encrypt(Uint8List message, ECPoint pubkey,
     {int? padToLength}) async {
   ECPoint pubpoint;
   try {
-    pubpoint = Util.ser_to_point(pubkey.getEncoded(true), params);
+    pubpoint = Util.serToPoint(pubkey.getEncoded(true), params);
   } catch (_) {
     throw EncryptionFailed();
   }
@@ -25,7 +25,7 @@ Future<Uint8List> encrypt(Uint8List message, ECPoint pubkey,
   if (G_times_nonceSec == null) {
     throw Exception('Multiplication of G with nonceSec resulted in null');
   }
-  Uint8List noncePub = Util.point_to_ser(G_times_nonceSec, true);
+  Uint8List noncePub = Util.pointToSer(G_times_nonceSec, true);
 
   ECPoint? pubpoint_times_nonceSec = pubpoint * nonceSec;
   if (pubpoint_times_nonceSec == null) {
@@ -33,7 +33,7 @@ Future<Uint8List> encrypt(Uint8List message, ECPoint pubkey,
         'Multiplication of pubpoint with nonceSec resulted in null');
   }
   List<int> key = crypto.sha256
-      .convert(Util.point_to_ser(pubpoint_times_nonceSec, true))
+      .convert(Util.pointToSer(pubpoint_times_nonceSec, true))
       .bytes;
 
   Uint8List plaintext = Uint8List(4 + message.length)
@@ -104,7 +104,7 @@ Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
   return Uint8List.fromList(plaintext.sublist(4, 4 + msgLength));
 }
 
-Future<Tuple<Uint8List, Uint8List>> decrypt(
+Future<(Uint8List, Uint8List)> decrypt(
     Uint8List data, ECPrivateKey privkey) async {
   if (data.length < 33 + 16 + 16) {
     throw DecryptionFailed();
@@ -112,7 +112,7 @@ Future<Tuple<Uint8List, Uint8List>> decrypt(
   Uint8List noncePub = data.sublist(0, 33);
   ECPoint noncePoint;
   try {
-    noncePoint = Util.ser_to_point(noncePub, params);
+    noncePoint = Util.serToPoint(noncePub, params);
   } catch (_) {
     throw DecryptionFailed();
   }
@@ -124,11 +124,11 @@ Future<Tuple<Uint8List, Uint8List>> decrypt(
 
   if (privkey.d != null) {
     ECPoint? point = (G * privkey.d)! + noncePoint;
-    key = crypto.sha256.convert(Util.point_to_ser(point!, true)).bytes;
+    key = crypto.sha256.convert(Util.pointToSer(point!, true)).bytes;
     // ...
     Uint8List decryptedData =
         await decryptWithSymmkey(data, Uint8List.fromList(key));
-    return Tuple(decryptedData, Uint8List.fromList(key));
+    return (decryptedData, Uint8List.fromList(key));
   } else {
     // Handle the situation where privkey.d or noncePoint is null
     throw Exception("FIXME");

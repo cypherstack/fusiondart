@@ -50,13 +50,13 @@ class Input {
   }
 
   static Input fromStackUTXOData(
-    ({String txid, int vout, int value}) utxoInfo,
+    (String txId, int vout, int value) utxoInfo,
   ) {
     return Input(
-      prevTxid: utf8.encode(utxoInfo.txid), // Convert txid to a List<int>
-      prevIndex: utxoInfo.vout,
+      prevTxid: utf8.encode(utxoInfo.$1), // Convert txId to a List<int>
+      prevIndex: utxoInfo.$2,
       pubKey: utf8.encode('0000'), // Placeholder
-      amount: utxoInfo.value,
+      amount: utxoInfo.$3,
     );
   }
 

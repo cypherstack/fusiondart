@@ -140,8 +140,8 @@ class CovertSlot {
     var result = await recvPb(connection, CovertResponse, ['ok', 'error'],
         timeout: Duration(seconds: submitTimeout));
 
-    if (result.item1 == 'error') {
-      throw Unrecoverable('error from server: ${result.item2}');
+    if (result.$1 == 'error') {
+      throw Unrecoverable('error from server: ${result.$2}');
     }
     done = true;
     t_submit = DateTime.fromMillisecondsSinceEpoch(0);

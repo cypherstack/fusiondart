@@ -5,7 +5,6 @@ import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/fusion.dart';
 import 'package:fusiondart/src/fusion.pb.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
-import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart';
 
 typedef PbCreateFunc = GeneratedMessage Function();
@@ -92,7 +91,7 @@ Future<void> sendPb2(SocketWrapper socketwrapper, Connection connection,
   }
 }
 
-Future<Tuple<GeneratedMessage, String>> recvPb2(SocketWrapper socketwrapper,
+Future<(GeneratedMessage, String)> recvPb2(SocketWrapper socketwrapper,
     Connection connection, Type pbClass, List<String> expectedFieldNames,
     {Duration? timeout}) async {
   try {
@@ -115,7 +114,7 @@ Future<Tuple<GeneratedMessage, String>> recvPb2(SocketWrapper socketwrapper,
       }
 
       if (pbMessage.hasField(fieldInfo.tagNumber)) {
-        return Tuple(pbMessage, name);
+        return (pbMessage, name);
       }
     }
 
@@ -138,7 +137,7 @@ Future<Tuple<GeneratedMessage, String>> recvPb2(SocketWrapper socketwrapper,
   }
 }
 
-Future<Tuple<GeneratedMessage, String>> recvPb(
+Future<(GeneratedMessage, String)> recvPb(
     Connection connection, Type pbClass, List<String> expectedFieldNames,
     {Duration? timeout}) async {
   try {
@@ -160,7 +159,7 @@ Future<Tuple<GeneratedMessage, String>> recvPb(
       }
 
       if (pbMessage.hasField(fieldInfo.tagNumber)) {
-        return Tuple(pbMessage, name);
+        return (pbMessage, name);
       }
     }
 

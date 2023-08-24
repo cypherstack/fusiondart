@@ -131,7 +131,7 @@ class Commitment {
     ECDomainParameters params =
         getDefaultParams(); // Using helper function here
     List<ECPoint> pointList =
-        pointsIterable.map((pser) => Util.ser_to_point(pser, params)).toList();
+        pointsIterable.map((pser) => Util.serToPoint(pser, params)).toList();
 
     if (pointList.isEmpty) {
       throw ArgumentError('Empty list');
@@ -148,7 +148,7 @@ class Commitment {
       throw Exception('Result is at infinity');
     }
 
-    return Util.point_to_ser(pSum, false);
+    return Util.pointToSer(pSum, false);
   }
 
   Commitment addCommitments(Iterable<Commitment> commitmentIterable) {

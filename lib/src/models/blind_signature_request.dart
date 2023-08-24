@@ -56,10 +56,10 @@ class BlindSignatureRequest {
   }
 
   void _calcInitial() {
-    ECPoint? Rpoint = Util.ser_to_point(R, params);
-    ECPoint? pubpoint = Util.ser_to_point(pubkey, params);
+    ECPoint? Rpoint = Util.serToPoint(R, params);
+    ECPoint? pubpoint = Util.serToPoint(pubkey, params);
 
-    pubkeyCompressed = Util.point_to_ser(pubpoint, true);
+    pubkeyCompressed = Util.pointToSer(pubpoint, true);
 
     ECPoint? intermediateR = Rpoint + (params.G * a);
     if (intermediateR == null) {
@@ -135,7 +135,7 @@ class BlindSignatureRequest {
 
     List<int> sig = Rxnew + Util.bigIntToBytes(snew);
 
-    ECPoint? pubPoint = Util.ser_to_point(pubkey, params);
+    ECPoint? pubPoint = Util.serToPoint(pubkey, params);
 
     if (check && !Util.schnorrVerify(pubPoint, sig, messageHash)) {
       throw Exception('Blind signature verification failed.');

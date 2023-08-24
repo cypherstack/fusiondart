@@ -125,7 +125,7 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   return commitMessages;
 }
 
-Tuple<String, int> checkCovertComponent(
+(String, int) checkCovertComponent(
     pb.CovertComponent msg, ECPoint roundPubkey, int componentFeerate) {
   Uint8List messageHash = Util.sha256(Uint8List.fromList(msg.component));
 
@@ -172,8 +172,7 @@ Tuple<String, int> checkCovertComponent(
     throw ValidationError('missing component details');
   }
 
-  return Tuple(
-      sortKey, componentContrib(cmsg as pb.Component, componentFeerate));
+  return (sortKey, componentContrib(cmsg as pb.Component, componentFeerate));
 }
 
 pb.InputComponent? validateProofInternal(

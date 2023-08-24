@@ -8,31 +8,13 @@ import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
 
-class Tuple<T1, T2> {
-  T1 item1;
-  T2 item2;
-
-  Tuple(this.item1, this.item2);
-
-  set setItem1(T1 value) {
-    this.item1 = value;
-  }
-
-  set setItem2(T2 value) {
-    this.item2 = value;
+extension HexEncoding on List<int> {
+  String toHex() {
+    return map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 }
 
 class Util {
-  static Uint8List hexToBytes(String hex) {
-    Uint8List result = Uint8List(hex.length ~/ 2);
-    for (int i = 0; i < hex.length; i += 2) {
-      int byte = int.parse(hex.substring(i, i + 2), radix: 16);
-      result[i ~/ 2] = byte;
-    }
-    return result;
-  }
-
   static void checkInputElectrumX(InputComponent inputComponent) {
     //  Implementation needed here
     //
@@ -170,36 +152,67 @@ class Util {
     return true;
   }
 
-  static Uint8List bigIntToBytes(BigInt bigInt) {
-    return Uint8List.fromList(
-        bigInt.toRadixString(16).padLeft(32, '0').codeUnits);
-  }
-
-  static Tuple<Uint8List, Uint8List> genKeypair() {
+  /// Generates an elliptic curve key pair based on the secp256k1 curve.
+  ///
+  /// This function uses the Elliptic Curve Domain Parameters for secp256k1 to
+  /// generate a private and a public key. The keys are returned as Uint8List.
+  ///
+  /// Returns:
+  ///   A tuple containing the private key and the public key as Uint8List.
+  static (Uint8List, Uint8List) genKeypair() {
+    // Initialize the EC domain parameters for secp256k1
     ECDomainParameters params = ECDomainParameters('secp256k1');
+
+    // Generate a private key using secure random values and curve's bit length
     BigInt privKeyBigInt = _generatePrivateKey(params.n.bitLength);
+
+    // Calculate the public key point using elliptic curve multiplication
     ECPoint? pubKeyPoint = params.G * privKeyBigInt;
 
+    // Check for any errors in public key generation
     if (pubKeyPoint == null) {
       throw Exception("Error generating public key.");
     }
 
+    // Convert the private and public keys to Uint8List format
     Uint8List privKey = bigIntToBytes(privKeyBigInt);
     Uint8List pubKey = pubKeyPoint.getEncoded(true);
 
-    return Tuple(privKey, pubKey);
+    return (privKey, pubKey);
   }
 
-// Generates a cryptographically secure private key
+  /// Generates a cryptographically secure private key of a given bit length.
+  ///
+  /// Uses a secure random number generator to create a private key. The bit
+  /// length of the generated key is specified by the [bitLength] parameter.
+  ///
+  /// Note: The cryptographic safety of this function still needs to be verified.
+  ///
+  /// Parameters:
+  ///   - [bitLength]: The bit length of the private key to be generated.
+  ///
+  /// Returns:
+  ///   A BigInt representing the generated private key.
   static BigInt _generatePrivateKey(int bitLength) {
+    // TODO verify cryptographic safety
+
+    // Use secure random generator
     final random = Random.secure();
+
+    // Calculate the number of bytes and the remaining bits
     int bytes = bitLength ~/ 8; // floor division
     int remBit = bitLength % 8;
 
-    // Generate random BigInt
+    // Generate a list of random bytes
     List<int> rnd = List<int>.generate(bytes, (_) => random.nextInt(256));
+
+    // Generate the remaining random bits
     int rndBit = random.nextInt(1 << remBit);
+
+    // Add the remaining bits to the random list
     rnd.add(rndBit);
+
+    // Convert the list of random numbers to a hex string and then to a BigInt
     BigInt privateKey = BigInt.parse(
         rnd.map((x) => x.toRadixString(16).padLeft(2, '0')).join(),
         radix: 16);
@@ -207,21 +220,110 @@ class Util {
     return privateKey;
   }
 
-  // Additional helper function to convert bytes to hex
+  /// Converts a BigInt to a Uint8List.
+  ///
+  /// The returned Uint8List is padded to 32 bytes if necessary.
+  ///
+  /// Returns:
+  ///   A Uint8List representing the given BigInt.
+  static Uint8List bigIntToBytes(BigInt bigInt) {
+    // Convert the BigInt to a hexadecimal string and pad it to 32 bytes
+    return Uint8List.fromList(
+        bigInt.toRadixString(16).padLeft(32, '0').codeUnits);
+  }
+
+  /// Parses a BigInt from a Uint8List.
+  ///
+  /// The function assumes that the bytes in the Uint8List are in big-endian order.
+  ///
+  /// Returns:
+  ///   A BigInt parsed from the given Uint8List.
+  static BigInt parseBigIntFromBytes(Uint8List bytes) {
+    // Convert the bytes to a hexadecimal string
+    return BigInt.parse(
+      bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(),
+      radix: 16,
+    );
+  }
+
+  /// Converts a Uint8List to a hexadecimal string representation.
+  ///
+  /// Takes a Uint8List [bytes] and converts each byte to its hexadecimal
+  /// representation. The resulting hexadecimal values are concatenated
+  /// into a single string.
+  ///
+  /// Parameters:
+  ///   - [bytes]: The Uint8List to be converted.
+  ///
+  /// Returns:
+  ///   A String containing the hexadecimal representation of the input [bytes].
   static String bytesToHex(Uint8List bytes) {
     return bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 
+  /// Converts a hexadecimal string to a Uint8List.
+  ///
+  /// The function assumes that the input string is a valid hexadecimal string
+  /// with an even number of characters.
+  ///
+  /// Returns:
+  ///   A Uint8List containing the bytes represented by the input hex string.
+  static Uint8List hexToBytes(String hex) {
+    // Initialize the result Uint8List with a length of half the hex string
+    Uint8List result = Uint8List(hex.length ~/ 2);
+
+    // Loop through the hex string, two characters at a time
+    for (int i = 0; i < hex.length; i += 2) {
+      // Parse the next byte from the hex string
+      int byte = int.parse(hex.substring(i, i + 2), radix: 16);
+
+      // Place the parsed byte into the result Uint8List
+      result[i ~/ 2] = byte;
+    }
+    return result;
+  }
+
+  /// Converts a BigInt to a Uint8List.
+  ///
+  /// Takes a Uint8List [bytes] and converts it into a BigInt.
+  /// The input [bytes] are first converted to a hexadecimal string,
+  /// which is then parsed into a BigInt object.
+  ///
+  /// Parameters:
+  ///   - [bytes]: The Uint8List to be converted.
+  ///
+  /// Returns:
+  ///   A BigInt object representing the numerical value of the input [bytes].
   static BigInt bytesToBigInt(Uint8List bytes) {
     String hexString = bytesToHex(bytes);
     return BigInt.parse(hexString, radix: 16);
   }
 
+  /// Returns the sha256 hash of a Uint8List.
+  ///
+  /// Uses the `crypto` library to perform the sha256 hash operation
+  /// on the input [bytes].
+  ///
+  /// Parameters:
+  ///   - [bytes]: The Uint8List to hash.
+  ///
+  /// Returns:
+  ///   A Uint8List containing the sha256 hash of the input [bytes].
   static Uint8List sha256(Uint8List bytes) {
     crypto.Digest digest = crypto.sha256.convert(bytes);
     return Uint8List.fromList(digest.bytes);
   }
 
+  /// Returns a random Uint8List of length [nbytes].
+  ///
+  /// Generates a cryptographically secure random sequence of bytes.
+  /// Uses `Random.secure()` to generate each byte.
+  ///
+  /// Optional parameter [nbytes] sets the length of the output list.
+  /// Defaults to 32 bytes if not specified.
+  ///
+  /// Returns:
+  ///   A Uint8List containing [nbytes] random bytes.
   static Uint8List tokenBytes([int nbytes = 32]) {
     final Random _random = Random.secure();
 
@@ -229,14 +331,27 @@ class Util {
         List<int>.generate(nbytes, (i) => _random.nextInt(256)));
   }
 
+  /// Calculates the component fee based on size and feerate.
+  ///
+  /// The function calculates the fee required for a component of a given size
+  /// when the feerate is known. The feerate should be specified in sat/kB.
+  /// Fee is always rounded up to the nearest integer value.
+  ///
+  /// Parameters:
+  ///   size: The size of the component in bytes.
+  ///   feerate: The fee rate in sat/kB.
+  ///
+  /// Returns:
+  ///   The calculated fee for the component in satoshis.
   static int componentFee(int size, int feerate) {
-    // feerate in sat/kB
-    // size and feerate should both be integer
-    // fee is always rounded up
+    // feerate is provided in sat/kB (satoshi per kilobyte)
+    // size is the size of the component in bytes
+
+    // Calculate the fee and round up to the nearest integer value
     return ((size * feerate) + 999) ~/ 1000;
   }
 
-  static ECPoint ser_to_point(
+  static ECPoint serToPoint(
       Uint8List serializedPoint, ECDomainParameters params) {
     ECPoint? point = params.curve.decodePoint(serializedPoint);
     if (point == null) {
@@ -245,7 +360,7 @@ class Util {
     return point;
   }
 
-  static Uint8List point_to_ser(ECPoint point, bool compress) {
+  static Uint8List pointToSer(ECPoint point, bool compress) {
     return point.getEncoded(compress);
   }
 
@@ -293,4 +408,4 @@ class Util {
     // Check if the point is on the curve
     return left == right;
   }
-} //  END OF CLASS
+}
