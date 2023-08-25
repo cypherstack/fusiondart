@@ -8,18 +8,25 @@ import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
 
-extension HexEncoding on List<int> {
-  String toHex() {
-    return map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
-  }
-}
-
+/// A utility class that provides various helper functions.
 class Util {
+  /// Checks the input for ElectrumX server.
+  ///
+  /// Parameters:
+  /// - [inputComponent] The input component to be checked.
   static void checkInputElectrumX(InputComponent inputComponent) {
     //  Implementation needed here
-    //
   }
 
+  /// Calculates a random position based on a seed, number of positions, and a counter.
+  ///
+  /// Parameters:
+  /// - [seed] A Uint8List used as a seed.
+  /// - [numPositions] The number of positions to consider.
+  /// - [counter] The counter value.
+  ///
+  /// Returns:
+  ///   A random position calculated from the seed and counter.
   static int randPosition(Uint8List seed, int numPositions, int counter) {
     // counter to bytes
     Uint8List counterBytes = Uint8List(4);
@@ -38,39 +45,88 @@ class Util {
     return ((int64 * numPositions) >> 64).toInt();
   }
 
+  /// Generates public keys from a given private key.
+  ///
+  /// Parameters:
+  /// - [privkey] A private key in String format.
+  ///
+  /// Returns:
+  ///   A list of public keys.
   static List<String> pubkeysFromPrivkey(String privkey) {
     // This is a placeholder implementation.
     return ['public_key1_dummy', 'public_key2_dummy'];
   }
 
+  /// Determines the dust limit based on the length of the transaction.
+  ///
+  /// Parameters:
+  /// - [length] The length of the transaction.
+  ///
+  /// Returns:
+  ///   The calculated dust limit.
   static int dustLimit(int length) {
-    // This is a dummy implementation.
+    // TODO implement; dummy implementation.
     return 500;
   }
 
+  /// Extracts the address from an output script.
+  ///
+  /// Parameters:
+  /// - [scriptpubkey] The output script in Uint8List format.
+  ///
+  /// Returns:
+  ///   The extracted Address.
   static Address getAddressFromOutputScript(Uint8List scriptpubkey) {
-    // Dummy implementation...
-
+    // TODO implement; dummy implementation.
     // Throw exception if this is not a standard P2PKH address!
 
     return Address.fromString('dummy_address');
   }
 
+  /// Verifies a Schnorr signature.
+  ///
+  /// Parameters:
+  /// - [pubkey] The public key as an ECPoint.
+  /// - [signature] The signature as a List<int>.
+  /// - [messageHash] The hash of the message as a Uint8List.
+  ///
+  /// Returns:
+  ///   True if the verification succeeds, otherwise false.
   static bool schnorrVerify(
       ECPoint pubkey, List<int> signature, Uint8List messageHash) {
-    // Implementation needed: actual Schnorr signature verification
+    // TODO implement; dummy implementation.
     return true;
   }
 
+  /// Formats a given number of satoshis.
+  ///
+  /// Parameters:
+  /// - [sats] The number of satoshis to format.
+  /// - [numZeros] The number of zeros for formatting (optional).
+  ///
+  /// Returns:
+  ///   The formatted satoshis as a string.
   static String formatSatoshis(sats, {int numZeros = 8}) {
     // To implement
     return "";
   }
 
+  /// Updates the wallet label for a given transaction ID.
+  ///
+  /// Parameters:
+  /// - [txid] The transaction ID.
+  /// - [label] The new label for the transaction.
   static void updateWalletLabel(String txid, String label) {
-    // Call the wallet layer.
+    // TODO implement; call the wallet layer.
   }
 
+  /// Generates a random sequence of bytes of a given length.
+  ///
+  /// Parameters:
+  /// - [length] The length of the byte sequence.
+  ///
+  /// Returns:
+  ///   A Uint8List containing the random bytes.
   static Uint8List getRandomBytes(int length) {
     final rand = Random.secure();
     final bytes = Uint8List(length);
@@ -80,11 +136,30 @@ class Util {
     return bytes;
   }
 
+  /// Zips two lists together.
+  ///
+  /// Parameters:
+  /// - [list1] The first list.
+  /// - [list2] The second list.
+  ///
+  /// Returns:
+  ///   A list of lists, each containing one element from each input list.
   static List<List<T>> zip<T>(List<T> list1, List<T> list2) {
     int length = min(list1.length, list2.length);
     return List<List<T>>.generate(length, (i) => [list1[i], list2[i]]);
   }
 
+  /// Calculates the initial hash for the Fusion protocol.
+  ///
+  /// Parameters:
+  /// - [tier] The tier level.
+  /// - [covertDomainB] The covert domain in Uint8List format.
+  /// - [covertPort] The covert port number.
+  /// - [covertSsl] A boolean indicating whether SSL is used.
+  /// - [beginTime] The starting time.
+  ///
+  /// Returns:
+  ///   The calculated hash as a List<int>.
   static List<int> calcInitialHash(int tier, Uint8List covertDomainB,
       int covertPort, bool covertSsl, double beginTime) {
     // Converting int to bytes in BigEndian order
@@ -113,6 +188,17 @@ class Util {
     return digest.bytes;
   }
 
+  /// Calculates the round hash for the Fusion protocol.
+  ///
+  /// Parameters:
+  /// - [lastHash] The last hash value.
+  /// - [roundPubkey] The round public key.
+  /// - [roundTime] The round time.
+  /// - [allCommitments] All commitments in the round.
+  /// - [allComponents] All components in the round.
+  ///
+  /// Returns:
+  ///   The calculated hash as a List<int>.
   static List<int> calcRoundHash(
       List<int> lastHash,
       List<int> roundPubkey,
@@ -140,10 +226,10 @@ class Util {
     return crypto.sha256.convert(bytes).bytes;
   }
 
-  static Uint8List get_current_genesis_hash() {
-    String GENESIS =
+  static Uint8List getCurrentGenesisHash() {
+    String genesis =
         "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
-    List<int> _lastGenesisHash = hexToBytes(GENESIS).reversed.toList();
+    List<int> _lastGenesisHash = hexToBytes(genesis).reversed.toList();
     return Uint8List.fromList(_lastGenesisHash);
   }
 
@@ -316,6 +402,9 @@ class Util {
   /// Optional parameter [nbytes] sets the length of the output list.
   /// Defaults to 32 bytes if not specified.
   ///
+  /// Parameters:
+  ///  - [nbytes]: The length of the output list.  Defaults to 32 bytes if not specified.
+  ///
   /// Returns:
   ///   A Uint8List containing [nbytes] random bytes.
   static Uint8List tokenBytes([int nbytes = 32]) {
@@ -442,5 +531,12 @@ class Util {
 
     // Check if the point is on the curve.
     return left == right;
+  }
+}
+
+/// An extension on the `List<int>` class that adds a `toHex` method.
+extension HexEncoding on List<int> {
+  String toHex() {
+    return map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 }

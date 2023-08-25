@@ -115,13 +115,13 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
     claimedCommit = setup.commit(BigInt.from(msg.excessFee.toInt()),
         nonce: Util.bytesToBigInt(Uint8List.fromList(msg.pedersenTotalNonce)));
 
-    check(pointsum == claimedCommit.PUncompressed,
+    check(pointsum == claimedCommit.pointPUncompressed,
         "pedersen commitment mismatch");
   } catch (e) {
     throw ValidationError("pedersen commitment verification error");
   }
-  check(
-      pointsum == claimedCommit.PUncompressed, "pedersen commitment mismatch");
+  check(pointsum == claimedCommit.pointPUncompressed,
+      "pedersen commitment mismatch");
   return commitMessages;
 }
 
@@ -232,7 +232,7 @@ pb.InputComponent? validateProofInternal(
   );
 
   check(
-    Uint8List.fromList(PCommitted) == claimedCommit.PUncompressed,
+    Uint8List.fromList(PCommitted) == claimedCommit.pointPUncompressed,
     "pedersen commitment mismatch",
   );
 

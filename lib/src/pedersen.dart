@@ -3,66 +3,122 @@ import 'dart:typed_data';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
 
+/// Fetches the default parameters for the secp256k1 curve
+///
+/// Returns:
+///   An ECDomainParameters object representing the secp256k1 curve
 ECDomainParameters getDefaultParams() {
   return ECDomainParameters("secp256k1");
 }
 
+// Custom exception classes to provide detailed error information.
 class NullPointError implements Exception {
+  /// Returns a string representation of the error.
   String errMsg() => 'NullPointError: Either Hpoint or HGpoint is null.';
 }
 
+/// Represents an error when the nonce value is not within a valid range.
 class NonceRangeError implements Exception {
+  /// The error message String.
   final String message;
+
+  /// Creates a new [NonceRangeError] with an optional error [message].
   NonceRangeError(
       [this.message = "Nonce value must be in the range 0 < nonce < order"]);
+
+  /// Returns a string representation of the error.
+  @override
   String toString() => "NonceRangeError: $message";
 }
 
+/// Represents an error when the result is at infinity.
 class ResultAtInfinity implements Exception {
+  /// The error message String.
   final String message;
+
+  /// Creates a new [ResultAtInfinity] with an optional error [message].
   ResultAtInfinity([this.message = "Result is at infinity"]);
+
+  /// Returns a string representation of the error.
+  @override
   String toString() => "ResultAtInfinity: $message";
 }
 
+/// Represents an error when the H point has a known discrete logarithm.
 class InsecureHPoint implements Exception {
+  /// The error message String.
   final String message;
+
+  /// Creates a new [InsecureHPoint] with an optional error [message].
   InsecureHPoint(
       [this.message =
           "The H point has a known discrete logarithm, which means the commitment setup is broken"]);
+
+  /// Returns a string representation of the error.
+  @override
   String toString() => "InsecureHPoint: $message";
 }
 
+/// Class responsible for setting up a Pedersen commitment.
 class PedersenSetup {
-  late ECPoint _H;
-  late ECPoint _HG;
+  late final ECPoint _pointH;
+  late ECPoint _pointHG;
   late ECDomainParameters _params;
+
+  /// Get the EC parameters for the setup.
   ECDomainParameters get params => _params;
 
-  PedersenSetup(this._H) {
-    _params = new ECDomainParameters("secp256k1");
+  /// Constructor initializes the Pedersen setup with a given H point.
+  ///
+  /// Parameters:
+  /// - [_H]: An EC point to initialize the Pedersen setup.
+  PedersenSetup(this._pointH) {
+    _params = ECDomainParameters("secp256k1");
     // validate H point
-    if (!Util.isPointOnCurve(_H, _params.curve)) {
+    if (!Util.isPointOnCurve(_pointH, _params.curve)) {
       throw Exception('H is not a valid point on the curve');
     }
-    _HG = Util.combinePubKeys([_H, _params.G]);
+    _pointHG = Util.combinePubKeys([_pointH, _params.G]);
   }
 
-  Uint8List get H => _H.getEncoded(false);
-  Uint8List get HG => _HG.getEncoded(false);
+  // Getter methods to fetch _H and _HG points as Uint8Lists.
+  Uint8List get pointH => _pointH.getEncoded(false);
+  Uint8List get pointHG => _pointHG.getEncoded(false);
 
-  Commitment commit(BigInt amount, {BigInt? nonce, Uint8List? PUncompressed}) {
-    return Commitment(this, amount, nonce: nonce, PUncompressed: PUncompressed);
+  /// Create a new commitment.
+  ///
+  /// Parameters:
+  /// - [amount]: The amount to be committed.
+  /// - [nonce]: Optional. A BigInt representing the nonce.
+  /// - [PUncompressed]: Optional. The uncompressed representation of point P.
+  ///
+  /// Returns:
+  ///   A new `Commitment` object.
+  Commitment commit(BigInt amount,
+      {BigInt? nonce, Uint8List? pointPUncompressed}) {
+    return Commitment(this, amount,
+        nonce: nonce, pointPUncompressed: pointPUncompressed);
   }
 }
 
+/// Class to encapsulate the Pedersen commitment
+///
+/// Parameters:
+/// - [setup]: The Pedersen setup object.
+/// - [amountMod]: The amount to be committed.
+/// - [nonce]: A BigInt representing the nonce.
+/// - [pointPUncompressed]: The uncompressed representation of point P.
+///
 class Commitment {
+  // Private instance variables
   late PedersenSetup setup; // Added setup property to Commitment class
   late BigInt amountMod;
   late BigInt nonce;
-  late Uint8List PUncompressed;
+  late Uint8List pointPUncompressed;
 
+  /// Constructor for Commitment
   Commitment(this.setup, BigInt amount,
-      {BigInt? nonce, Uint8List? PUncompressed}) {
+      {BigInt? nonce, Uint8List? pointPUncompressed}) {
     this.nonce = nonce ?? Util.secureRandomBigInt(setup.params.n.bitLength);
     amountMod = amount % setup.params.n;
 
@@ -70,18 +126,18 @@ class Commitment {
       throw NonceRangeError();
     }
 
-    ECPoint? Hpoint = setup._H;
-    ECPoint? HGpoint = setup._HG;
+    ECPoint? pointH = setup._pointH;
+    ECPoint? pointHG = setup._pointHG;
 
-    if (Hpoint == null || HGpoint == null) {
+    if (pointH == null || pointHG == null) {
       throw NullPointError();
     }
 
     BigInt multiplier1 = (amountMod - this.nonce) % setup.params.n;
     BigInt multiplier2 = this.nonce;
 
-    ECPoint? HpointMultiplied = Hpoint * multiplier1;
-    ECPoint? HGpointMultiplied = HGpoint * multiplier2;
+    ECPoint? HpointMultiplied = pointH * multiplier1;
+    ECPoint? HGpointMultiplied = pointHG * multiplier2;
 
     ECPoint? Ppoint = HpointMultiplied != null && HGpointMultiplied != null
         ? HpointMultiplied + HGpointMultiplied
@@ -91,16 +147,16 @@ class Commitment {
       throw ResultAtInfinity();
     }
 
-    this.PUncompressed =
-        PUncompressed ?? Ppoint?.getEncoded(false) ?? Uint8List(0);
+    this.pointPUncompressed =
+        pointPUncompressed ?? Ppoint?.getEncoded(false) ?? Uint8List(0);
   }
 
   void calcInitial(PedersenSetup setup, BigInt amount) {
     amountMod = amount % setup.params.n;
     nonce = Util.secureRandomBigInt(setup.params.n.bitLength);
 
-    ECPoint? Hpoint = setup._H;
-    ECPoint? HGpoint = setup._HG;
+    ECPoint? Hpoint = setup._pointH;
+    ECPoint? HGpoint = setup._pointHG;
 
     if (nonce <= BigInt.zero || nonce >= setup.params.n) {
       throw NonceRangeError();
@@ -124,7 +180,7 @@ class Commitment {
       throw ResultAtInfinity();
     }
 
-    PUncompressed = Ppoint?.getEncoded(false) ?? Uint8List(0);
+    pointPUncompressed = Ppoint?.getEncoded(false) ?? Uint8List(0);
   }
 
   static Uint8List add_points(Iterable<Uint8List> pointsIterable) {
@@ -159,7 +215,7 @@ class Commitment {
     for (Commitment c in commitmentIterable) {
       ktotal += c.nonce;
       atotal += c.amountMod; // Changed from amount to amountMod
-      points.add(c.PUncompressed);
+      points.add(c.pointPUncompressed);
       setups.add(c.setup);
     }
 
@@ -190,6 +246,6 @@ class Commitment {
       PUncompressed = null;
     }
     return Commitment(setup, atotal,
-        nonce: ktotal, PUncompressed: PUncompressed);
+        nonce: ktotal, pointPUncompressed: PUncompressed);
   }
 }

@@ -36,7 +36,7 @@ class Fusion {
 
   /// Constructor that sets up a Fusion object.
   Fusion(
-      {/*required Future<Address> Function() createNewReservedChangeAddress,*/
+      {required Future<Address> Function() createNewReservedChangeAddress,
       required Future<List<Address>> Function(int numberOfAddresses)
           getUnusedReservedChangeAddresses}); /*{
     initializeConnection(host, port);
@@ -549,7 +549,7 @@ class Fusion {
 
       Commitment commitmentInstance =
           setup.commit(BigInt.from(componentRecord.$2));
-      Uint8List amountCommitment = commitmentInstance.PUncompressed;
+      Uint8List amountCommitment = commitmentInstance.pointPUncompressed;
 
       // Convert BigInt nonce to Uint8List
       Uint8List pedersenNonce = Uint8List.fromList(
@@ -712,7 +712,7 @@ class Fusion {
     // Create the ClientHello message with version and genesis hash.
     ClientHello clientHello = ClientHello(
         version: Uint8List.fromList(utf8.encode(Protocol.VERSION)),
-        genesisHash: Util.get_current_genesis_hash());
+        genesisHash: Util.getCurrentGenesisHash());
 
     // Wrap the ClientHello in a ClientMessage.
     ClientMessage clientMessage = ClientMessage()..clienthello = clientHello;
@@ -1013,8 +1013,8 @@ class Fusion {
         statuses = tierStatusUpdate.statuses;
       }
 
-      print("DEBUG 8892 statuses: $statuses.");
-      print("DEBUG 8893 statuses: ${statuses!.entries}.");
+      // print("DEBUG 8892 statuses: $statuses.");
+      // print("DEBUG 8893 statuses: ${statuses!.entries}.");
 
       // Initialize variables to store the maximum fraction and tier numbers.
       double maxfraction = 0.0;
@@ -1198,7 +1198,7 @@ class Fusion {
   /// - `FusionError` if the covert domain is badly encoded or if other errors occur.
   ///
   /// Returns:
-  /// - A `Future<CovertSubmitter>` that resolves to the initialized `CovertSubmitter`.
+  ///   A `Future<CovertSubmitter>` that resolves to the initialized `CovertSubmitter`.
   Future<CovertSubmitter> startCovert() async {
     print("DEBUG START COVERT!");
 
@@ -1280,7 +1280,8 @@ class Fusion {
   ///
   /// [covert] is a `CovertSubmitter` instance used for covert submissions.
   ///
-  /// Returns: a `Future<bool>` indicating the success or failure of the round.
+  /// Returns:
+  ///   A `Future<bool>` indicating the success or failure of the round.
   Future<bool> runRound(CovertSubmitter covert) async {
     print("START OF RUN ROUND");
 
