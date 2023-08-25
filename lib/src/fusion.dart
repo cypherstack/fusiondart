@@ -25,27 +25,11 @@ import 'package:fusiondart/src/validation.dart';
 import 'package:pointycastle/export.dart';
 import 'package:protobuf/protobuf.dart';
 
-/// Custom exception class for Fusion related errors.
-///
-/// Example usage:
-/// dart /// throw FusionError('Your specific error message'); /// class FusionError implements Exception {
-class FusionError implements Exception {
-  /// The error message describing the issue.
-  final String message;
-
-  /// Constructs a new FusionError with the provided message.
-  FusionError(this.message);
-
-  /// Custom string representation of the FusionError, useful for debugging.
-  @override
-  String toString() => "FusionError: $message";
-}
-
 /// Fusion class is responsible for coordinating the CashFusion transaction process.
 /// It maintains the state and controls the flow of a fusion operation.
 class Fusion {
   // Private late finals used for dependency injection.
-  // late final Future<Address> Function() _createNewReservedChangeAddress;
+  /*late final Future<Address> Function() _createNewReservedChangeAddress;*/
   // Disabled because _getUnusedReservedChangeAddresses fulfills all requirements
   late final Future<List<Address>> Function(int numberOfAddresses)
       _getUnusedReservedChangeAddresses;
@@ -64,8 +48,82 @@ class Fusion {
   }
   */
 
+  // Host and port variables.
+  // TODO parameterize; should these be fed in as parameters upon construction/instantiation?
+  bool serverSsl = false;
+
+  // Defines the host address for the CashFusion server.
+  // Alternative host: `"fusion.servo.cash"`.
+  String serverHost = "cashfusion.stackwallet.com";
+  // Specifies the port number for the server.
+  // For use with the alternative host above, use `8789`.
+  int serverPort = 8787;
+
+  String torHost = ""; // Defines the host address for the Tor connection.
+  // Could use InternetAddress.looopbackIPv4 or InternetAddress.loopbackIPv6
+  int torPort = 0; // Specifies the port number for the Tor connection.
+
+  int covertPort = 0; // Port number for the covert connection.
+  bool covertSSL =
+      false; // Specifies if SSL is enabled for the covert connection.
+
+  int roundCount = 0; // Tracks the number of CashFusion rounds.
+  String txId = ""; // Holds a transaction ID.
+
+  // Various state variables.
+  List<Input> coins =
+      []; // "coins" and "inputs" are often synonymous in the original python code.
+  List<Output> outputs = [];
+  List<Address> changeAddresses = [];
+
+  bool serverConnectedAndGreeted =
+      false; // Flag to indicate if the server connection has been established and greeted.
+  bool stopping =
+      false; // Flag to indicate if the CashFusion operation should stop.
+  bool stoppingIfNotRunning =
+      false; // Flag to indicate if the operation should stop if it's not running.
+  String stopReason = ""; // Specifies the reason for stopping the operation.
+
+  (String, String) status =
+      ("", ""); // Holds the current status of the operation as a Record.
+  Connection? connection; // Holds the active Connection object.
+
+  int numComponents = 0; // Tracks the number of components.
+  double componentFeeRate = 0; // Defines the fee rate for each component.
+  double minExcessFee = 0; // Specifies the minimum excess fee.
+  double maxExcessFee = 0; // Specifies the maximum excess fee.
+  List<int> availableTiers = []; // Lists the available CashFusion tiers.
+
+  int maxOutputs = 0; // Maximum number of outputs allowed.
+  int safetySumIn = 0; // The sum of all inputs, used for safety checks.
+  Map<int, int> safetyExcessFees = {}; // Holds safety excess fees.
+  Map<int, List<int>> tierOutputs =
+      {}; // Associates CashFusion tiers with their corresponding outputs.
+  // Not sure if this should be using the Output model.
+
+  int inactiveTimeLimit = 600000; // [ms] 10 minutes in milliseconds.
+  int tier = 0; // Currently selected CashFusion tier.
+  double beginTime = 0.0; // [s] Represent time in seconds.
+  List<int> lastHash = <int>[]; // Holds the last hash used in a fusion.
+  List<Address> reservedAddresses = <Address>[]; // List of reserved addresses.
+  int safetyExcessFee = 0; // Safety excess fee for the operation.
+  DateTime tFusionBegin =
+      DateTime.now(); // The timestamp when the CashFusion operation started.
+  Uint8List covertDomainB = Uint8List(0); // Holds the covert domain in bytes.
+
+  List<int>? txInputIndices; // Indices for transaction inputs.
+  Transaction tx = Transaction(); // Holds the current Transaction object.
+  List<int> myComponentIndexes =
+      []; // Holds the indexes for the components belonging to this client.
+  List<int> myCommitmentIndexes =
+      []; // Holds the indexes for the commitments belonging to this client.
+  Set<int> badComponents =
+      {}; // Holds the indexes of bad components for this client.
+
+  SocketWrapper? _socketWrapper;
+
   /// Method to initialize Fusion instance with necessary wallet methods.
-  /// The methods injected here would be used for various operations throughout the fusion process.
+  /// The methods injected here are used for various operations throughout the fusion process.
   void initFusion({
     // required Future<Address> Function() createNewReservedChangeAddress,
     required Future<List<Address>> Function(int numberOfAddresses)
@@ -74,57 +132,6 @@ class Fusion {
     // _createNewReservedChangeAddress = createNewReservedChangeAddress;
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
   }
-
-  // Various state variables.
-  List<Input> coins =
-      []; // "coins" and "inputs" are often synonymous in the original python code.
-  List<Output> outputs = [];
-  List<Address> changeAddresses = [];
-  bool serverConnectedAndGreeted = false;
-  bool stopping = false;
-  bool stoppingIfNotRunning = false;
-  String stopReason = "";
-  String torHost = "";
-  bool serverSsl = false;
-  String serverHost =
-      "cashfusion.stackwallet.com"; // Alternative: `"fusion.servo.cash"`
-  int serverPort = 8787; // Use with the commented host above: `8789`
-
-  int torPort = 0;
-  int roundCount = 0;
-  String txId = "";
-
-  (String, String) status = ("", "");
-  Connection? connection;
-
-  int numComponents = 0;
-  double componentFeeRate = 0;
-  double minExcessFee = 0;
-  double maxExcessFee = 0;
-  List<int> availableTiers = [];
-
-  int maxOutputs = 0;
-  int safetySumIn = 0;
-  Map<int, int> safetyExcessFees = {};
-  Map<int, List<int>> tierOutputs =
-      {}; // Not sure if this should be using outputs class.
-
-  int inactiveTimeLimit = 600000; // [ms] 10 minutes in milliseconds.
-  int tier = 0;
-  int covertPort = 0;
-  bool covertSSL = false;
-  double beginTime = 0.0; // [s] Represent time in seconds.
-  List<int> lastHash = <int>[];
-  List<Address> reservedAddresses = <Address>[];
-  int safetyExcessFee = 0;
-  DateTime tFusionBegin = DateTime.now();
-  Uint8List covertDomainB = Uint8List(0);
-
-  List<int>? txInputIndices;
-  Transaction tx = Transaction();
-  List<int> myComponentIndexes = [];
-  List<int> myCommitmentIndexes = [];
-  Set<int> badComponents = {};
 
   /// Adds Unspent Transaction Outputs (UTXOs) from [utxoList] to the `coins` list as `Input`s.
   ///
@@ -214,13 +221,17 @@ class Fusion {
       // Once connection is successful, wrap operations inside this block
       // Within this block, version checks, downloads server params, handles coins and runs rounds
       try {
-        SocketWrapper socketwrapper = SocketWrapper(serverHost, serverPort);
-        await socketwrapper.connect();
+        _socketWrapper = SocketWrapper(serverHost, serverPort);
+
+        if (_socketWrapper == null) {
+          throw FusionError('Could not connect to $serverHost:$serverPort');
+        }
+        await _socketWrapper!.connect();
 
         // Version check and download server params.
-        await greet(socketwrapper);
+        await greet();
 
-        socketwrapper.status();
+        _socketWrapper!.status();
         serverConnectedAndGreeted = true;
         notifyServerStatus(true);
 
@@ -229,18 +240,17 @@ class Fusion {
         try {
           if (coins.isEmpty) {
             throw FusionError('Started with no coins');
-            return;
           }
         } catch (e) {
           print(e);
           return;
         }
 
-        await allocateOutputs(socketwrapper);
+        await allocateOutputs();
         // In principle we can hook a pause in here -- user can tweak tier_outputs, perhaps cancelling some unwanted tiers.
 
         // Register for tiers, wait for a pool.
-        await registerAndWait(socketwrapper);
+        await registerAndWait(_socketWrapper!);
 
         // launch the covert submitter
         CovertSubmitter covert = await startCovert();
@@ -262,6 +272,7 @@ class Fusion {
       print("RETURNING early in fuse....");
       return;
 
+      // Wait for transaction to show up in wallet.
       for (int i = 0; i < 60; i++) {
         if (stopping) {
           break; // not an error
@@ -271,14 +282,11 @@ class Fusion {
           break;
         }
 
-        await Future.delayed(Duration(seconds: 1));
+        await Future<void>.delayed(Duration(seconds: 1));
       }
 
-      // Set status to 'complete' with 'time_wait'
+      // Set status to 'complete' with txid.
       status = ('complete', 'txid: $txId');
-
-      // Wait for transaction to show up in wallets
-      // Set status to 'complete' with txid
     } on FusionError catch (err) {
       print('Failed: ${err}');
       status = ("failed", err.toString());
@@ -297,7 +305,7 @@ class Fusion {
         }
       }
     }
-  } // /fuse
+  } // End of `fuse()`.
 
   /// Notifies the server about the current status of the system using bool [b]
   /// and optional Record(String, String) status (status, message).
@@ -326,7 +334,7 @@ class Fusion {
       stopReason = reason;
       stopping = true;
     }
-    // note the reason is only overwritten if we were not already stopping this way.
+    // Note the reason is only overwritten if we were not already stopping this way.
   }
 
   /// Checks if the system should stop the current operation.
@@ -573,27 +581,37 @@ class Fusion {
   /// Receives an expected message from the server based on the given list of message names
   /// [expectedMsgNames]. Optionally, a [timeout] can be provided.
   ///
+  /// TODO rename and return a GeneratedMessage or superclass that can include a FusionBegin
+  ///
+  /// Parameters:
+  /// - [expectedMsgNames]: The list of expected message names.
+  /// - [timeout] (optional): The timeout to use for the receive.
+  ///
   /// Returns:
   ///   A future that completes with the received `GeneratedMessage`.
   ///
   /// Throws:
   ///   FusionError if the connection is not initialized or a server error occurs.
-  Future<GeneratedMessage> recv2(
-      SocketWrapper socketwrapper, List<String> expectedMsgNames,
+  Future<GeneratedMessage> recv2(List<String> expectedMsgNames,
       {Duration? timeout}) async {
     if (connection == null) {
       throw FusionError('Connection not initialized');
     }
 
+    if (_socketWrapper == null) {
+      throw FusionError('Socket wrapper not initialized');
+    }
+    // This throw could be removed if it's an issue
+
     (GeneratedMessage, String) result = await recvPb2(
-        socketwrapper, connection!, ServerMessage, expectedMsgNames,
+        _socketWrapper!, connection!, ServerMessage, expectedMsgNames,
         timeout: timeout);
 
     GeneratedMessage submsg = result.$1;
     String mtype = result.$2;
 
     if (mtype == 'error') {
-      throw FusionError('server error: ${submsg.toString()}');
+      throw FusionError('server error: ${result.$1.toString()}');
     }
 
     return submsg;
@@ -641,11 +659,12 @@ class Fusion {
   /// Takes a `GeneratedMessage` object [submsg] and sends it to the server. Optionally,
   /// a [timeout] can be specified.
   Future<void> send(GeneratedMessage submsg, {Duration? timeout}) async {
-    if (connection != null) {
-      await sendPb(connection!, ClientMessage, submsg, timeout: timeout);
-    } else {
-      print('Connection is null');
+    if (connection == null) {
+      throw FusionError('Connection not initialized');
     }
+    // Previously this code just printed an error; if it's an issue, comment out the throw
+
+    await sendPb(connection!, ClientMessage, submsg, timeout: timeout);
   }
 
   /// Sends a message to the server with the modern API (vs. `send()`).
@@ -655,16 +674,27 @@ class Fusion {
   ///
   /// TODO rename
   ///
+  /// Parameters:
+  /// - [socketwrapper]: The SocketWrapper object to use for communication.
+  /// - [submsg]: The GeneratedMessage to send.
+  /// - [timeout] (optional): The timeout to use for the send.
+  ///
   /// Returns:
   ///   A future that completes when the message has been sent.
-  Future<void> send2(SocketWrapper socketwrapper, GeneratedMessage submsg,
-      {Duration? timeout}) async {
-    if (connection != null) {
-      await sendPb2(socketwrapper, connection!, ClientMessage, submsg,
-          timeout: timeout);
-    } else {
-      print('Connection is null');
+  Future<void> send2(GeneratedMessage submsg, {Duration? timeout}) async {
+    // Check if _socketWrapper has been initialized
+    if (_socketWrapper == null) {
+      throw FusionError('Socket wrapper not initialized');
     }
+
+    // Check if connection has been initialized
+    if (connection == null) {
+      throw FusionError('Connection not initialized');
+    }
+
+    // Send the message to the server.
+    await sendPb2(_socketWrapper!, connection!, ClientMessage, submsg,
+        timeout: timeout);
   }
 
   /// Initializes communication by sending a greeting message to the server.
@@ -678,7 +708,7 @@ class Fusion {
   /// Throws:
   ///   FusionError if there are problems with the server's configuration or if
   ///   an unexpected message type is received.
-  Future<void> greet(SocketWrapper socketwrapper) async {
+  Future<void> greet() async {
     // Create the ClientHello message with version and genesis hash.
     ClientHello clientHello = ClientHello(
         version: Uint8List.fromList(utf8.encode(Protocol.VERSION)),
@@ -696,10 +726,10 @@ class Fusion {
 
     // Send the message to the server.
     // TODO should this be unawaited?
-    await send2(socketwrapper, clientMessage);
+    await send2(clientMessage);
 
     // Wait for a ServerHello message in reply.
-    GeneratedMessage replyMsg = await recv2(socketwrapper, ['serverhello']);
+    GeneratedMessage replyMsg = await recv2(['serverhello']);
 
     // Process the ServerHello message.
     if (replyMsg is ServerMessage) {
@@ -735,19 +765,24 @@ class Fusion {
   /// Allocates outputs for transaction components.
   ///
   /// Uses server parameters and local constraints to determine the number and
-  /// sizes of the outputs in a transaction through a [socketwrapper].
+  /// sizes of the outputs in a transaction through a [_socketWrapper].
   ///
   /// Returns:
   ///   A `Future<void>` that completes once the outputs are successfully allocated.
   ///
   /// Throws:
   ///   FusionError if any constraints or limits are violated.
-  Future<void> allocateOutputs(socketwrapper) async {
+  Future<void> allocateOutputs() async {
     print("DBUG allocateoutputs 746");
     print("CHECK socketwrapper 746");
 
+    // Check if the connection is initialized.  _socketWrapper will need to be initialized.
+    if (_socketWrapper == null) {
+      throw FusionError('Connection not initialized');
+    }
+
     // Initial sanity checks
-    socketwrapper.status();
+    _socketWrapper!.status();
     assert(['setup', 'connecting'].contains(status.$1));
 
     List<Input> inputs = coins;
@@ -873,8 +908,8 @@ class Fusion {
 
     // Placeholder for messages from the server.
     // `msg` can be different classes depending on which protobuf msg is sent.
-    // TODO model each possible message type, plus an error response.
-    dynamic? msg;
+    // TODO model each possible message type, plus an error response, eg. GeneratedMessage, FusionBegin, etc.
+    GeneratedMessage msg;
 
     Map<int, List<int>> tierOutputs = this.tierOutputs;
     List<int> tiersSorted = tierOutputs.keys.toList()..sort();
@@ -907,7 +942,8 @@ class Fusion {
     // Wrap it in a ClientMessage.
     ClientMessage clientMessage = ClientMessage()..joinpools = joinPools;
 
-    await send2(socketwrapper, clientMessage);
+    // Send the message to the server.
+    await send2(clientMessage);
 
     // TODO type the status variable.
     (String, String) status = ('waiting', 'Registered for tiers');
@@ -922,11 +958,11 @@ class Fusion {
     // Main loop to receive updates from the server.
     while (true) {
       print("RECEIVE LOOP 870............DEBUG");
-      GeneratedMessage msg = await recv2(
-          socketwrapper, ['tierstatusupdate', 'fusionbegin'],
+      // TODO type msg.  GeneratedMessage doesn't have a 'fusionbegin' getter which is used below.
+      msg = await recv2(['tierstatusupdate', 'fusionbegin'],
           timeout: Duration(seconds: 10));
 
-      // if (msg == null) continue;
+      /*if (msg == null) continue;*/
 
       // Check for a FusionBegin message.
       // TODO: Properly type the fieldInfoFusionBegin variable
@@ -1082,18 +1118,18 @@ class Fusion {
       } else {
         (String, String) status = ('waiting', tiersString);
       }
-    }
+    } // End of while loop.  Loop exits with a break if a FusionBegin message is received.
 
-    // Loop exits upon a break if a FusionBegin message is received.
-
-    // TODO type fieldInfoFusionBegin
-    dynamic fieldInfoFusionBegin = msg.info_.byName["fusionbegin"];
+    // Check if the field 'fusionbegin' exists in the message.
+    FieldInfo<dynamic>? fieldInfoFusionBegin = msg.info_.byName["fusionbegin"];
     if (fieldInfoFusionBegin == null) {
       throw FusionError('Expected field not found in message: fusionbegin');
     }
 
-    bool messageIsFusionBegin =
-        msg.hasField(fieldInfoFusionBegin.tagNumber) as bool;
+    // Determine if the message contains a FusionBegin message.
+    bool messageIsFusionBegin = msg.hasField(fieldInfoFusionBegin.tagNumber);
+
+    // Check if the received message is a FusionBegin message.
     if (!messageIsFusionBegin) {
       throw FusionError('Expected a FusionBegin message');
     }
@@ -1102,8 +1138,7 @@ class Fusion {
     tFusionBegin = DateTime.now();
 
     // Cast the received message to a FusionBegin message (could be handled more gracefully)
-    FusionBegin fusionBeginMsg = msg.fusionbegin
-        as FusionBegin; // TODO handle better than with just a cast
+    FusionBegin fusionBeginMsg = msg as FusionBegin;
 
     // Calculate how many seconds have passed since the stopwatch was started
     int elapsedSeconds = stopwatch.elapsedMilliseconds ~/ 1000;
@@ -1220,7 +1255,7 @@ class Fusion {
         );
 
         // Wait for 1 second before re-checking.
-        await Future.delayed(Duration(seconds: 1));
+        await Future<void>.delayed(Duration(seconds: 1));
 
         // Check the health of the CovertSubmitter and overall system.
         covert.checkOk();
@@ -1256,7 +1291,7 @@ class Fusion {
         (2 * Protocol.WARMUP_SLOP + Protocol.STANDARD_TIMEOUT).toInt();
 
     // Await the start of round message from the server
-    GeneratedMessage msg = await recv(['startround'],
+    GeneratedMessage msg = await recv2(['startround'],
         timeout: Duration(seconds: timeoutInSeconds));
 
     // Initialize the covert timer base
@@ -1375,8 +1410,13 @@ class Fusion {
     checkStop();
     checkCoins();
 
+    // Check if _socketWrapper has been initialized.
+    if (_socketWrapper == null) {
+      throw FusionError('Connection not initialized');
+    }
+
     // Send initial commitments, fees, and other data to the server
-    await send(PlayerCommit(
+    await send2(PlayerCommit(
       initialCommitments: myCommitments,
       excessFee: Int64(excessFee),
       pedersenTotalNonce: pedersenNonce.cast<int>(),
@@ -1385,7 +1425,7 @@ class Fusion {
     ));
 
     // Await blind signature responses from the server
-    msg = await recv(['blindsigresponses'],
+    msg = await recv2(['blindsigresponses'],
         timeout: Duration(seconds: Protocol.T_START_COMPS.toInt()));
 
     // Validate type and length of the received message and perform a sanity-check on it
@@ -1417,7 +1457,7 @@ class Fusion {
     if (remainingTime < 0) {
       throw FusionError('Arrived at covert-component phase too slowly.');
     }
-    await Future.delayed(Duration(seconds: remainingTime.floor()));
+    await Future<void>.delayed(Duration(seconds: remainingTime.floor()));
 
     // Our final check to leave the fusion pool, before we start telling our
     // components. This is much more annoying since it will cause the round
@@ -1454,7 +1494,7 @@ class Fusion {
     covert.scheduleSubmissions(targetDateTime, messages);
 
     // While submitting, we download the (large) full commitment list.
-    msg = await recv(['allcommitments'],
+    msg = await recv2(['allcommitments'],
         timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()));
     AllCommitments allCommitmentsMsg = msg as AllCommitments;
     List<InitialCommitment> allCommitments =
@@ -1482,7 +1522,7 @@ class Fusion {
     }
 
     // Once all components are received, the server shares them with us:
-    msg = await recv(['sharecovertcomponents'],
+    msg = await recv2(['sharecovertcomponents'],
         timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()));
 
     ShareCovertComponents shareCovertComponentsMsg =
@@ -1591,7 +1631,7 @@ class Fusion {
               Protocol.TS_EXPECTING_COVERT_COMPONENTS)
           .toInt();
       Duration timeout = Duration(milliseconds: timeoutMillis);
-      msg = await recv(['fusionresult'], timeout: timeout);
+      msg = await recv2(['fusionresult'], timeout: timeout);
 
       // Critical check on server's response timing.
       if (covertClock() > Protocol.T_EXPECTING_CONCLUSION) {
@@ -1721,7 +1761,7 @@ class Fusion {
     // The comment is asking if this call should be awaited or not,
     // depending on whether the program needs to pause execution until the data is sent.
     // TODO should this be unawaited?
-    await send(MyProofsList(
+    await send2(MyProofsList(
         encryptedProofs: encodedEncproofs, randomNumber: randomNumber));
 
     // Update the status to indicate that the program is in the process of checking proofs.
@@ -1729,7 +1769,7 @@ class Fusion {
 
     // Receive the list of proofs from the other parties
     print("receiving proofs");
-    msg = await recv(['theirproofslist'],
+    msg = await recv2(['theirproofslist'],
         timeout: Duration(seconds: (2 * Protocol.STANDARD_TIMEOUT).round()));
 
     // Initialize a list to store proofs that should be blamed for failure.
@@ -1846,7 +1886,7 @@ class Fusion {
 
     // Send the blame list to the server
     // TODO should this be unawaited?
-    await send(Blames(blames: blames));
+    await send2(Blames(blames: blames));
     print("sending blames");
 
     // Update the status to indicate that the program is waiting for the round to restart.
@@ -1855,7 +1895,7 @@ class Fusion {
     // Await the final 'restartround' message. It might take some time
     // to arrive since other players might be slow, and then the server
     // itself needs to check blockchain.
-    await recv(['restartround'],
+    await recv2(['restartround'],
         timeout: Duration(
             seconds: 2 *
                 (Protocol.STANDARD_TIMEOUT.round() +
@@ -1864,4 +1904,20 @@ class Fusion {
     // Return true to indicate successful execution of this part.
     return true;
   } // /run_round()
+}
+
+/// Custom exception class for Fusion related errors.
+///
+/// Example usage:
+/// dart /// throw FusionError('Your specific error message'); /// class FusionError implements Exception {
+class FusionError implements Exception {
+  /// The error message describing the issue.
+  final String message;
+
+  /// Constructs a new FusionError with the provided message.
+  FusionError(this.message);
+
+  /// Custom string representation of the FusionError, useful for debugging.
+  @override
+  String toString() => "FusionError: $message";
 }

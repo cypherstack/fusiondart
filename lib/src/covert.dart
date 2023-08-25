@@ -129,7 +129,11 @@ class CovertConnection {
 
   /// Waits for the connection to wake up or for a timeout.
   ///
-  /// Waits until time at which the connection should wake up [t].
+  /// This method waits for the connection to become active again
+  /// based on the given DateTime [t] or times out if [t] is null.
+  ///
+  /// Returns:
+  ///   `true` if the connection woke up; otherwise, `false`.
   Future<bool> waitWakeupOrTime(DateTime? t) async {
     if (t == null) {
       return false;
@@ -138,7 +142,7 @@ class CovertConnection {
     int remTime = t.difference(DateTime.now()).inMilliseconds;
     remTime = remTime > 0 ? remTime : 0;
 
-    await Future.delayed(Duration(milliseconds: remTime));
+    await Future<void>.delayed(Duration(milliseconds: remTime));
     wakeup.complete(true);
 
     bool wasSet = await wakeup.future;
@@ -147,12 +151,16 @@ class CovertConnection {
   }
 
   /// Sends a ping message to keep the connection alive.
+  ///
+  /// This method sends a 'Ping' message to the server to keep the connection
+  /// active. It is called at intervals to ensure that the connection doesn't time out.
   void ping() {
-    if (this.connection != null) {
-      sendPb(this.connection!, CovertMessage, Ping(),
-          timeout: Duration(seconds: 1));
+    // If the connection exists, send a 'Ping' message.
+    if (connection != null) {
+      sendPb(connection!, CovertMessage, Ping(), timeout: Duration(seconds: 1));
     }
 
+    // Reset the ping time, as a ping has just been sent.
     tPing = null;
   }
 
@@ -176,10 +184,10 @@ class CovertSlot {
 
   /// Constructor that initializes the covert slot with a given submission timeout.
   CovertSlot(this.submitTimeout) : done = true;
-  DateTime? t_submit;
+  DateTime? _tSubmit;
 
   /// Getter for the time of the last submit action.
-  DateTime? get tSubmit => t_submit;
+  DateTime? get tSubmit => _tSubmit;
 
   /// Submits the work to be done within the slot.
   ///
@@ -215,7 +223,7 @@ class CovertSlot {
     done = true;
 
     // Update the time of the last submit action.
-    t_submit = DateTime.fromMillisecondsSinceEpoch(0);
+    _tSubmit = DateTime.fromMillisecondsSinceEpoch(0);
 
     // Reset the ping time for the associated covert connection.
     // If a submission has been successfully made, no ping is needed.
@@ -224,20 +232,22 @@ class CovertSlot {
   }
 }
 
+/// Class to handle errors related to printing.
 class PrintError {
   // Declare properties here
 }
 
+/// Manages submission of covert tasks.
 class CovertSubmitter extends PrintError {
-  // Declare properties here
+  /// A list of slots that can take covert tasks.
   List<CovertSlot> slots;
   bool done = true;
-  String failure_exception = "";
-  int num_slots;
+  String? failureException;
+  int numSlots;
 
   bool stopping = false;
   Map<String, dynamic>? proxyOpts;
-  String? randtag;
+  String? randTag;
   String? destAddr;
   int? destPort;
   bool ssl = false;
@@ -249,23 +259,34 @@ class CovertSubmitter extends PrintError {
   int? randSpan;
   DateTime? stopTStart;
   List<CovertConnection> spareConnections = [];
-  String? failureException;
-  int submit_timeout = 0;
+  int submitTimeout = 0;
 
+  /// Constructor to initialize the CovertSubmitter.
+  ///
+  /// Parameters:
+  /// - [destAddr]: The destination address for the covert communication.
+  /// - [destPort]: The destination port for the covert communication.
+  /// - [ssl]: Whether to use SSL for the covert communication.
+  /// - [torHost]: The host address for the Tor proxy.
+  /// - [torPort]: The port for the Tor proxy.
+  /// - [numSlots]: The number of covert slots to use.
+  /// - [randSpan]: The random span for the covert communication.
+  /// - [submitTimeout]: The timeout for submitting tasks.
   CovertSubmitter(
-      String dest_addr,
-      int dest_port,
+      String destAddr,
+      int destPort,
       bool ssl,
-      String tor_host,
-      int tor_port,
-      this.num_slots,
+      String torHost,
+      int torPort,
+      this.numSlots,
       double randSpan, // changed from int to double
-      double submit_timeout) // changed from int to double
+      double submitTimeout) // changed from int to double
       : slots = List<CovertSlot>.generate(
-            num_slots, (index) => CovertSlot(submit_timeout.toInt())) {
+            numSlots, (index) => CovertSlot(submitTimeout.toInt())) {
     // constructor body...
   }
 
+  /// Wakes all connections for tasks.
   void wakeAll() {
     for (CovertSlot s in slots) {
       if (s.covConn != null) {
@@ -277,6 +298,10 @@ class CovertSubmitter extends PrintError {
     }
   }
 
+  /// Sets the time to stop all tasks.
+  ///
+  /// Parameters:
+  ///  - [tstart]: The start time for stopping in seconds since epoch.
   void setStopTime(int tstart) {
     stopTStart = DateTime.fromMillisecondsSinceEpoch(tstart * 1000);
     if (stopping) {
@@ -284,6 +309,10 @@ class CovertSubmitter extends PrintError {
     }
   }
 
+  /// Stops all tasks and closes the connections.
+  ///
+  /// Parameters:
+  ///   - [exception] (optional): The exception that caused the stop.
   void stop([Exception? exception]) {
     if (stopping) {
       // already requested!
@@ -297,42 +326,76 @@ class CovertSubmitter extends PrintError {
     wakeAll();
   }
 
-// PYTHON USES MULTITHREADING, WHICH ISNT IMPLEMENTED HERE YET
+  /// Schedules connections for tasks.
+  ///
+  /// This method is responsible for scheduling the connections required for covert communication.
+  /// It prepares connections needed for each covert slot, as well as handling spare connections that might be used later.
+  /// TODO implement multithreading, which ElectronCash does in Python
+  ///
+  /// Parameters:
+  /// - [tStart]: The DateTime object representing the start time for scheduling.
+  /// - [tSpan]: The Duration object representing the time span within which to schedule the connections.
+  /// - [numSpares] (optional): The number of spare connections to maintain. Default is 0.
+  /// - [connectTimeout] (optional): The timeout duration for connections in seconds. Default is 10 seconds.
+  ///
+  /// Returns:
+  ///   wvoid
   void scheduleConnections(DateTime tStart, Duration tSpan,
       {int numSpares = 0, int connectTimeout = 10}) {
+    // Prepare the list to store new connections.
     List<CovertConnection> newConns = <CovertConnection>[];
 
+    // Loop through each slot and initialize a new covert connection if none exists for that slot.
     for (int sNum = 0; sNum < slots.length; sNum++) {
       CovertSlot s = slots[sNum];
       if (s.covConn == null) {
+        // Initialize a new covert connection and associate it with the slot.
         s.covConn = CovertConnection();
         s.covConn?.slotNum = sNum;
         CovertConnection? myCovConn = s.covConn;
+
+        // Add the new connection to the list of new connections.
         if (myCovConn != null) {
           newConns.add(myCovConn);
         }
       }
     }
 
+    // Calculate the number of new spare connections needed.
     int numNewSpares = max(0, numSpares - spareConnections.length);
+
+    // Create new spare connections.
     List<CovertConnection> newSpares =
         List.generate(numNewSpares, (index) => CovertConnection());
+
+    // Update the list of spare connections.
     spareConnections = [...newSpares, ...spareConnections];
 
+    // Add new spare connections to the list of new connections.
     newConns.addAll(newSpares);
 
+    // Loop through each new connection to schedule it.
     for (CovertConnection covConn in newConns) {
+      // Assign a unique connection number for tracking.
       covConn.connNumber = countAttempted;
+
+      // Increment the total number of attempted connections.
       countAttempted++;
+
+      // Calculate the specific DateTime to establish this connection.
       DateTime connTime = tStart
           .add(Duration(seconds: (tSpan.inSeconds * randTrap(rng)).round()));
+
+      // Calculate a random delay to add to the connection time.
       double randDelay = (randSpan ?? 0) * randTrap(rng);
 
+      // Invoke the method to initiate and run the connection.
       runConnection(
           covConn, connTime.millisecondsSinceEpoch, randDelay, connectTimeout);
     }
   }
 
+  /// Schedules a task to be submitted.
   void scheduleSubmit(
       int slotNum, DateTime tStart, pb.GeneratedMessage subMsg) {
     CovertSlot slot = slots[slotNum];
@@ -341,13 +404,27 @@ class CovertSubmitter extends PrintError {
 
     slot.subMsg = subMsg;
     slot.done = false;
-    slot.t_submit = tStart;
+    slot._tSubmit = tStart;
     CovertConnection? covConn = slot.covConn;
     if (covConn != null) {
       covConn.wakeup.complete();
     }
   }
 
+  /// Schedules tasks for all available slots.
+  ///
+  /// This method schedules the submissions or ping tasks for all available covert slots.
+  /// If a slot does not have a message to submit, a ping task will be scheduled instead.
+  /// This ensures that all slots are either actively submitting a message or keeping the connection alive through a ping.
+  ///
+  /// Parameters:
+  /// - [tStart]: The DateTime object representing the start time for scheduling tasks.
+  /// - [slotMessages]: A List of messages, one for each slot, that are to be submitted.
+  ///                   These messages should be of type `pb.GeneratedMessage` or null.
+  ///
+  /// Note:
+  /// - The length of `slotMessages` must equal the number of available slots (`slots.length`).
+  /// - The method updates the `t_submit` and `subMsg` fields of each `CovertSlot` as needed.
   void scheduleSubmissions(DateTime tStart, List<dynamic> slotMessages) {
     // Convert to list (Dart does not have tuples)
     slotMessages = List.from(slotMessages);
@@ -375,13 +452,23 @@ class CovertSubmitter extends PrintError {
         } else {
           slot.subMsg = subMsg;
           slot.done = false;
-          slot.t_submit = tStart;
+          slot._tSubmit = tStart;
         }
         covConn.wakeup.complete();
       }
     }
   }
 
+  /// Runs a connection thread for the provided covert connection.
+  ///
+  /// Parameters:
+  /// - [covConn] - The CovertConnection object to be handled.
+  /// - [connTime] - The time for the connection in milliseconds since epoch.
+  /// - [randDelay] - Random delay factor to be applied.
+  /// - [connectTimeout] - Connection timeout in seconds.
+  ///
+  /// Returns:
+  ///   Future<void> - Indicates completion when done.
   Future runConnection(CovertConnection covConn, int connTime, double randDelay,
       int connectTimeout) async {
     // Main loop for connection thread
@@ -402,7 +489,7 @@ class CovertSubmitter extends PrintError {
         if (this.proxyOpts == null) {
           proxyOpts = {};
         } else {
-          final unique = 'CF${this.randtag}_${covConn.connNumber}';
+          final unique = 'CF${this.randTag}_${covConn.connNumber}';
           proxyOpts = {
             'proxy_username': unique,
             'proxy_password': unique,
@@ -516,26 +603,37 @@ class CovertSubmitter extends PrintError {
             // We failed, and there are no spares. Party is over!
 
             if (exception is Exception) {
-              this.stop(exception);
+              stop(exception);
             } else {
               // Handle the case where the exception is not an instance of Exception
             }
           }
         }
       } finally {
-        covConn.connection?.close();
+        await covConn.connection?.close();
       }
     }
   }
 
+  /// Checks for any failure exceptions and throws them if they exist.
+  ///
+  /// Returns:
+  ///   void - Throws an exception if any failure is found.
   void checkOk() {
     // Implement checkOk logic here
-    var e = failure_exception;
+    var e = failureException;
     if (e != null) {
       throw FusionError('Covert connections failed: ${e.runtimeType} $e');
     }
   }
 
+  /// Verifies all slots are connected.
+  ///
+  /// Returns:
+  ///   void
+  ///
+  /// Throws:
+  ///   FusionError if not all slots are connected.
   void checkConnected() {
     // Implement checkConnected logic here
     checkOk();
@@ -546,6 +644,13 @@ class CovertSubmitter extends PrintError {
     }
   }
 
+  /// Verifies all submissions are done.
+  ///
+  /// Returns:
+  ///   void
+  ///
+  /// Throws:
+  ///   FusionError if not all submissions are completed.
   void checkDone() {
     // Implement checkDone logic here
     this.checkOk();

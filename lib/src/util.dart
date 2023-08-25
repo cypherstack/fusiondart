@@ -325,15 +325,11 @@ class Util {
         List<int>.generate(nbytes, (i) => _random.nextInt(256)));
   }
 
-  /// Calculates the component fee based on size and feerate.
+  /// Calculates the component fee based on [size] and [feerate].
   ///
   /// The function calculates the fee required for a component of a given size
   /// when the feerate is known. The feerate should be specified in sat/kB.
   /// Fee is always rounded up to the nearest integer value.
-  ///
-  /// Parameters:
-  ///   size: The size of the component in bytes.
-  ///   feerate: The fee rate in sat/kB.
   ///
   /// Returns:
   ///   The calculated fee for the component in satoshis.
@@ -345,8 +341,17 @@ class Util {
     return ((size * feerate) + 999) ~/ 1000;
   }
 
+  /// Converts a serialized elliptic curve point to its `ECPoint` representation.
+  ///
+  /// Parameters:
+  /// - [serializedPoint] The Uint8List that represents the serialized point.
+  /// - [params] The domain parameters for the elliptic curve.
+  ///
+  /// Returns:
+  ///   The `ECPoint` object decoded from the serialized point.
   static ECPoint serToPoint(
       Uint8List serializedPoint, ECDomainParameters params) {
+    // Decode the point using the curve from parameters
     ECPoint? point = params.curve.decodePoint(serializedPoint);
     if (point == null) {
       throw FormatException('Point decoding failed');
@@ -354,33 +359,61 @@ class Util {
     return point;
   }
 
+  /// Converts an `ECPoint` to its serialized representation.
+  ///
+  /// Parameters:
+  /// - [point] The ECPoint to be serialized.
+  /// - [compress] Whether the point should be compressed.
+  ///
+  /// Returns:
+  ///   The serialized point as a `Uint8List`.
   static Uint8List pointToSer(ECPoint point, bool compress) {
     return point.getEncoded(compress);
   }
 
+  /// Generates a secure random big integer with a specified bit length.
+  ///
+  /// Parameters:
+  /// - [bitLength] The bit length of the generated big integer.
+  ///
+  /// Returns:
+  ///   A securely generated random `BigInt`.
   static BigInt secureRandomBigInt(int bitLength) {
     final random = Random.secure();
-    final bytes = (bitLength + 7) ~/ 8; // ceil division
+    final bytes = (bitLength + 7) ~/ 8; // Ceiling division.
     final Uint8List randomBytes = Uint8List(bytes);
 
+    // Populate the byte array with random values.
     for (int i = 0; i < bytes; i++) {
       randomBytes[i] = random.nextInt(256);
     }
 
+    // Convert byte array to BigInt.
     BigInt randomNumber = BigInt.parse(
         randomBytes.map((e) => e.toRadixString(16).padLeft(2, '0')).join(),
         radix: 16);
     return randomNumber;
   }
 
+  /// Combines multiple public keys into a single public key.
+  ///
+  /// Parameters:
+  /// - [pubKeys] A list of `ECPoint` representing the public keys to combine.
+  ///
+  /// Returns:
+  ///   The combined public key as an `ECPoint`.
   static ECPoint combinePubKeys(List<ECPoint> pubKeys) {
     if (pubKeys.isEmpty) throw ArgumentError('pubKeys cannot be empty');
 
+    // Initialize with the point at infinity.
     ECPoint combined = pubKeys.first.curve.infinity!;
+
+    // Combine the points.
     for (ECPoint pubKey in pubKeys) {
       combined = (combined + pubKey)!;
     }
 
+    // Validate the combined point.
     if (combined.isInfinity) {
       throw Exception('Combined point is at infinity');
     }
@@ -388,6 +421,14 @@ class Util {
     return combined;
   }
 
+  /// Checks if a given point lies on a specified elliptic curve.
+  ///
+  /// Parameters:
+  /// - [point] The `ECPoint` to be checked.
+  /// - [curve] The `ECCurve` representing the elliptic curve.
+  ///
+  /// Returns:
+  ///   `true` if the point is on the curve, `false` otherwise.
   static bool isPointOnCurve(ECPoint point, ECCurve curve) {
     // TODO validate these null assertions
     BigInt? x = point.x!.toBigInteger()!;
@@ -395,11 +436,11 @@ class Util {
     BigInt? a = curve.a!.toBigInteger()!;
     BigInt? b = curve.b!.toBigInteger()!;
 
-    // Calculate the left and right sides of the equation
+    // Calculate the left and right sides of the equation.
     BigInt? left = y * y;
     BigInt? right = (x * x * x) + (a * x) + b;
 
-    // Check if the point is on the curve
+    // Check if the point is on the curve.
     return left == right;
   }
 }
