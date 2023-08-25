@@ -256,7 +256,7 @@ class Fusion {
           covert.stop();
         }
       } finally {
-        (await connection)?.close();
+        await (connection)?.close();
       }
 
       print("RETURNING early in fuse....");

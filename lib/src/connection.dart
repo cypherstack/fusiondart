@@ -106,15 +106,15 @@ class Connection {
       } catch (e) {
         print('Error when adding to controller: $e');
       } finally {
-        controller.close();
+        await controller.close();
       }
     } on SocketException catch (e) {
       throw TimeoutException('Socket write timed out', timeout);
     }
   }
 
-  void close() {
-    socket?.close();
+  Future<dynamic>? close() {
+    return socket?.close();
   }
 
   Future<List<int>> fillBuf2(
