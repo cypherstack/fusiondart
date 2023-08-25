@@ -22,47 +22,86 @@ class Unrecoverable extends FusionError {
   Unrecoverable(String cause) : super(cause);
 }
 
+/// Checks if a specific port on a host is running a Tor service.
+///
+/// This function tries to connect to a given a [host] and [port],
+/// and then sends a "GET" request to check for the typical Tor error message.
+/// This is a simple heuristic to identify Tor.
+///
+/// Returns:
+///   A `Future` that resolves to `true` if the port appears to be running Tor,
+///   and `false` otherwise.
 Future<bool> isTorPort(String host, int port) async {
+  // Validate the port range
   if (port < 0 || port > 65535) {
     return false;
   }
 
   try {
+    // Attempt to connect to the host and port within a 100ms timeout.
     Socket sock =
         await Socket.connect(host, port, timeout: Duration(milliseconds: 100));
+
+    // Send a "GET" request to trigger the server's response.
     sock.write("GET\n");
+
+    // Wait for the first data packet from the server.
     List<int> data = await sock.first;
+
+    // Destroy the socket as it's no longer needed.
     sock.destroy();
+
+    // Decode the server's response and check if it contains the typical Tor error message.
     if (utf8.decode(data).contains("Tor is not an HTTP Proxy")) {
       return true;
     }
   } on SocketException {
+    // Catch any SocketException that occurs (e.g., timeout, host unreachable)
     return false;
   }
 
+  // Default return value if all the checks fail.
   return false;
 }
 
+/// A rate limiter for Tor connections.
+///
+/// This class maintains a queue of timestamps to keep track of the usage.
+/// It cleans up the old timestamps and limits the usage based on a lifetime value.
 class TorLimiter {
   Queue<DateTime> deque = Queue<DateTime>();
   int lifetime;
-  // Declare a lock here, may need a special Dart package for this
+
+  // Internal count to track the number of operations.
+  // Declare a lock here, may need a special Dart package for this... how about a mutex?
   int _count = 0;
 
+  /// Constructor that initializes the limiter with a given [lifetime].
   TorLimiter(this.lifetime);
 
+  /// Cleans up old timestamps from the queue.
+  /// This method is currently not implemented.
   void cleanup() {}
 
+  /// Getter for the current count of operations.
+  ///
+  /// For now, it returns a default value of zero.
   int get count {
     // return some default value for now
     return 0;
   }
 
+  /// Increases the internal count.
+  /// This method is currently not implemented.
   void bump() {}
 }
 
+// Placeholder for the value of TOR_COOLDOWN_TIME. Replace as necessary.
 TorLimiter limiter = TorLimiter(TOR_COOLDOWN_TIME);
 
+/// Generates a random number based on a trapezoidal distribution.
+///
+/// Uses a random number generator [rng].
 double randTrap(Random rng) {
   final sixth = 1.0 / 6;
   final f = rng.nextDouble();
@@ -77,14 +116,20 @@ double randTrap(Random rng) {
   }
 }
 
+/// Represents a covert connection.
+///
+/// This class maintains state information for a covert connection, including ping times and delays.
 class CovertConnection {
-  Connection? connection; // replace dynamic with the type of your connection
+  Connection? connection;
   int? slotNum;
   DateTime? tPing;
   int? connNumber;
   Completer<bool> wakeup = Completer();
   double? delay;
 
+  /// Waits for the connection to wake up or for a timeout.
+  ///
+  /// Waits until time at which the connection should wake up [t].
   Future<bool> waitWakeupOrTime(DateTime? t) async {
     if (t == null) {
       return false;
@@ -101,50 +146,79 @@ class CovertConnection {
     return wasSet;
   }
 
+  /// Sends a ping message to keep the connection alive.
   void ping() {
     if (this.connection != null) {
       sendPb(this.connection!, CovertMessage, Ping(),
           timeout: Duration(seconds: 1));
     }
 
-    this.tPing = null;
+    tPing = null;
   }
 
+  /// Indicates the connection is inactive and throws an unrecoverable error.
+  ///
+  /// This method is currently not implemented.
   void inactive() {
     throw Unrecoverable("Timed out from inactivity (this is a bug!)");
   }
 }
 
+/// Represents a slot in a covert communication setup.
+///
+/// This class maintains state information for work to be done in a given slot of a covert system.
 class CovertSlot {
   int submitTimeout;
   pb.GeneratedMessage? subMsg; // The work to be done.
   bool done; // Whether last work requested is done.
   CovertConnection?
-      covConn; // which CovertConnection is assigned to work on this slot
+      covConn; // which CovertConnection is assigned to work on this slot.
+
+  /// Constructor that initializes the covert slot with a given submission timeout.
   CovertSlot(this.submitTimeout) : done = true;
   DateTime? t_submit;
 
-  // Define a getter for tSubmit
+  /// Getter for the time of the last submit action.
   DateTime? get tSubmit => t_submit;
 
+  /// Submits the work to be done within the slot.
+  ///
+  /// This method is responsible for sending a message for the work to be
+  /// performed, waiting for a response, and then setting the state accordingly.
   Future<void> submit() async {
+    // Attempt to get the connection object from the covert connection.
     Connection? connection = covConn?.connection;
 
+    // Throw an unrecoverable exception if the connection is null.
     if (connection == null) {
       throw Unrecoverable('connection is null');
     }
 
+    // Send a Protocol Buffers message to initiate the work,
+    // and set a timeout based on the submitTimeout property.
     await sendPb(connection, CovertMessage, subMsg!,
         timeout: Duration(seconds: submitTimeout));
-    // TODO type--why can't Tuple<GeneratedMessage, String> be used?
-    var result = await recvPb(connection, CovertResponse, ['ok', 'error'],
+
+    // Receive a Protocol Buffers message as a response.
+    (GeneratedMessage, String) result = await recvPb(
+        connection, CovertResponse, ['ok', 'error'],
         timeout: Duration(seconds: submitTimeout));
 
+    // TODO make a valid error check
+    // This should throw an unrecoverable exception if an error is received, but
+    // isn't a valid check.
     if (result.$1 == 'error') {
       throw Unrecoverable('error from server: ${result.$2}');
     }
+
+    // Set the done flag to true to indicate that the work has been completed.
     done = true;
+
+    // Update the time of the last submit action.
     t_submit = DateTime.fromMillisecondsSinceEpoch(0);
+
+    // Reset the ping time for the associated covert connection.
+    // If a submission has been successfully made, no ping is needed.
     covConn?.tPing = DateTime.fromMillisecondsSinceEpoch(
         0); // if a submission is done, no ping is needed.
   }

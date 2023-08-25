@@ -50,7 +50,7 @@ class Fusion {
   late final Future<List<Address>> Function(int numberOfAddresses)
       _getUnusedReservedChangeAddresses;
 
-  /// Constructor that sets up a Fusion object
+  /// Constructor that sets up a Fusion object.
   Fusion(
       {/*required Future<Address> Function() createNewReservedChangeAddress,*/
       required Future<List<Address>> Function(int numberOfAddresses)
@@ -77,7 +77,7 @@ class Fusion {
 
   // Various state variables.
   List<Input> coins =
-      []; //"coins" and "inputs" are often synonymous in the original python code.
+      []; // "coins" and "inputs" are often synonymous in the original python code.
   List<Output> outputs = [];
   List<Address> changeAddresses = [];
   bool serverConnectedAndGreeted = false;
@@ -86,8 +86,9 @@ class Fusion {
   String stopReason = "";
   String torHost = "";
   bool serverSsl = false;
-  String serverHost = "cashfusion.stackwallet.com"; // "fusion.servo.cash"
-  int serverPort = 8787; // 8789
+  String serverHost =
+      "cashfusion.stackwallet.com"; // Alternative: `"fusion.servo.cash"`
+  int serverPort = 8787; // Use with the commented host above: `8789`
 
   int torPort = 0;
   int roundCount = 0;
@@ -106,13 +107,13 @@ class Fusion {
   int safetySumIn = 0;
   Map<int, int> safetyExcessFees = {};
   Map<int, List<int>> tierOutputs =
-      {}; // not sure if this should be using outputs class.
+      {}; // Not sure if this should be using outputs class.
 
-  int inactiveTimeLimit = 600000; // this is in ms... equates to 10 minutes.
+  int inactiveTimeLimit = 600000; // [ms] 10 minutes in milliseconds.
   int tier = 0;
   int covertPort = 0;
   bool covertSSL = false;
-  double beginTime = 0.0; //  represent time in seconds.
+  double beginTime = 0.0; // [s] Represent time in seconds.
   List<int> lastHash = <int>[];
   List<Address> reservedAddresses = <Address>[];
   int safetyExcessFee = 0;
@@ -140,6 +141,7 @@ class Fusion {
     for (final utxoInfo in utxoList) {
       coins.add(Input.fromStackUTXOData(utxoInfo));
     }
+    // TODO add validation and throw error if invalid UTXO detected
   }
 
   /// Adds a change address [address] to the `changeAddresses` list.
@@ -150,7 +152,7 @@ class Fusion {
   /// Returns:
   ///   A future that completes when the address has been added.
   Future<void> addChangeAddress(Address address) async {
-    // Add address to addresses[].
+    // Add address to List<Address> addresses[].
     changeAddresses.add(address);
   }
 
