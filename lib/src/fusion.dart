@@ -665,27 +665,45 @@ class Fusion {
     }
   }
 
+  /// Initializes communication by sending a greeting message to the server.
+  ///
+  /// Initiates the handshake by sending a `ClientHello` message to the server
+  /// using the given [socketwrapper] for communication.
+  ///
+  /// Returns:
+  ///   A `Future<void>` that completes once the handshake is successful.
+  ///
+  /// Throws:
+  ///   FusionError if there are problems with the server's configuration or if
+  ///   an unexpected message type is received.
   Future<void> greet(SocketWrapper socketwrapper) async {
+    // Create the ClientHello message with version and genesis hash.
     ClientHello clientHello = ClientHello(
         version: Uint8List.fromList(utf8.encode(Protocol.VERSION)),
         genesisHash: Util.get_current_genesis_hash());
 
+    // Wrap the ClientHello in a ClientMessage.
     ClientMessage clientMessage = ClientMessage()..clienthello = clientHello;
 
-    //deprecated
-    //Connection greet_connection_1 = Connection.withoutSocket();
     /*
-    lets move this up a level to the fusion_run and pass it in....
+    Connection greet_connection_1 = Connection.withoutSocket();
+    // Let's move this up a level to the fusion_run and pass it in...
     SocketWrapper socketwrapper = SocketWrapper(server_host, server_port);
     await socketwrapper.connect();
     */
+
+    // Send the message to the server.
     // TODO should this be unawaited?
     await send2(socketwrapper, clientMessage);
 
+    // Wait for a ServerHello message in reply.
     GeneratedMessage replyMsg = await recv2(socketwrapper, ['serverhello']);
+
+    // Process the ServerHello message.
     if (replyMsg is ServerMessage) {
       ServerHello reply = replyMsg.serverhello;
 
+      // Extract and set various server parameters.
       numComponents = reply.numComponents;
       componentFeeRate = reply.componentFeerate.toDouble();
       minExcessFee = reply.minExcessFee.toDouble();
@@ -712,22 +730,35 @@ class Fusion {
     }
   }
 
+  /// Allocates outputs for transaction components.
+  ///
+  /// Uses server parameters and local constraints to determine the number and
+  /// sizes of the outputs in a transaction through a [socketwrapper].
+  ///
+  /// Returns:
+  ///   A `Future<void>` that completes once the outputs are successfully allocated.
+  ///
+  /// Throws:
+  ///   FusionError if any constraints or limits are violated.
   Future<void> allocateOutputs(socketwrapper) async {
     print("DBUG allocateoutputs 746");
-
     print("CHECK socketwrapper 746");
+
+    // Initial sanity checks
     socketwrapper.status();
     assert(['setup', 'connecting'].contains(status.$1));
 
     List<Input> inputs = coins;
     int numInputs = inputs.length;
 
+    // Calculate limits on the number of components and outputs
     int maxComponents = min(numComponents, Protocol.MAX_COMPONENTS);
     int maxOutputs = maxComponents - numInputs;
+
+    // More sanity checks
     if (maxOutputs < 1) {
       throw FusionError('Too many inputs ($numInputs >= $maxComponents)');
     }
-
     assert(maxOutputs >= 1);
 
     int numDistinct = inputs.map((e) => e.value).toSet().length;
@@ -737,6 +768,7 @@ class Fusion {
           'Too few distinct inputs selected ($numDistinct); cannot satisfy output count constraint (>= $minOutputs, <= $maxOutputs)');
     }
 
+    // Calculate the available amount for outputs
     int sumInputsValue = inputs.map((e) => e.value).reduce((a, b) => a + b);
     int inputFees = inputs
         .map(
@@ -744,67 +776,108 @@ class Fusion {
         .reduce((a, b) => a + b);
     int availForOutputs = sumInputsValue - inputFees - minExcessFee.toInt();
 
+    // Calculate fees per output
     int feePerOutput = Util.componentFee(34, componentFeeRate.toInt());
-
     int offsetPerOutput = Protocol.MIN_OUTPUT + feePerOutput;
 
+    // Check if the selected inputs have sufficient value
     if (availForOutputs < offsetPerOutput) {
       throw FusionError('Selected inputs had too little value');
     }
 
+    // Initialize random seed for generating outputs
     Random rng = Random();
     List<int> seed = List<int>.generate(32, (_) => rng.nextInt(256));
 
+    // Allocate the outputs based on available tiers
+    // The allocated outputs and excess fees are stored in instance variables
     print("DBUG allocateoutputs 785");
     tierOutputs = {};
     Map<int, int> excessFees = <int, int>{};
+
+    // Loop through each available tier to determine the optimal fee and outputs
     for (int scale in availableTiers) {
+      // Calculate the maximum fuzz fee for this tier, which is the scale divided by 1,000,000
       int fuzzFeeMax = scale ~/ 1000000;
+
+      // Reduce the maximum allowable fuzz fee considering the minimum and maximum excess fees
+      // and the maximum limit defined in the Protocol
       int fuzzFeeMaxReduced = min(
           fuzzFeeMax,
           min(Protocol.MAX_EXCESS_FEE - minExcessFee.toInt(),
               maxExcessFee.toInt()));
 
+      // Ensure that the reduced maximum fuzz fee is non-negative
       assert(fuzzFeeMaxReduced >= 0);
+
+      // Randomly pick a fuzz fee in the range [0, fuzzFeeMaxReduced]
       int fuzzFee = rng.nextInt(fuzzFeeMaxReduced + 1);
 
+      // Reduce the available amount for outputs by the selected fuzz fee
       int reducedAvailForOutputs = availForOutputs - fuzzFee;
+
+      // If the reduced available amount for outputs is less than the offset per output, skip to the next iteration\
       if (reducedAvailForOutputs < offsetPerOutput) {
         continue;
       }
 
+      // Generate a list of random outputs for this tier
       List<int>? outputs = randomOutputsForTier(
           rng, reducedAvailForOutputs, scale, offsetPerOutput, maxOutputs);
       if (outputs != null) {
         print(outputs);
       }
+
+      // Check if the list of outputs is null or has fewer items than the minimum required number of outputs
       if (outputs == null || outputs.length < minOutputs) {
         continue;
       }
+
+      // Adjust each output value by subtracting the fee per output.
       outputs = outputs.map((o) => o - feePerOutput).toList();
 
+      // Ensure the total number of components (inputs + outputs) does not exceed the maximum limit defined in the Protocol
       assert(inputs.length + (outputs?.length ?? 0) <= Protocol.MAX_COMPONENTS);
 
+      // Store the calculated excess fee for this tier.
       excessFees[scale] = sumInputsValue - inputFees - reducedAvailForOutputs;
+
+      // Store the list of output values for this tier.
       tierOutputs[scale] = outputs!;
     }
 
     print('Possible tiers: $tierOutputs');
 
+    // Save some parameters for safety checks
     safetySumIn = sumInputsValue;
     safetyExcessFees = excessFees;
     return;
   }
 
+  /// Registers a client to a fusion server and waits for the fusion process to start.
+  ///
+  /// This method is responsible for the client-side setup and management of the
+  /// CashFusion protocol. It sends registration messages to the server,
+  /// maintains state, and listens for updates through a [socketwrapper]
+  ///
+  /// Returns:
+  ///   A Future that resolves when the fusion process starts.
+  ///
+  /// Throws:
+  ///   FusionError in case of any unexpected behavior.
   Future<void> registerAndWait(SocketWrapper socketwrapper) async {
+    // Initialize a stopwatch to measure elapsed time.
     Stopwatch stopwatch = Stopwatch()..start();
-    // TODO type
-    // msg can be different classes depending on which protobuf msg is sent.
+
+    // Placeholder for messages from the server.
+    // `msg` can be different classes depending on which protobuf msg is sent.
+    // TODO model each possible message type, plus an error response.
     dynamic? msg;
 
     Map<int, List<int>> tierOutputs = this.tierOutputs;
     List<int> tiersSorted = tierOutputs.keys.toList()..sort();
 
+    // Check if tierOutputs is empty and throw an error if so
     if (tierOutputs.isEmpty) {
       throw FusionError(
           'No outputs available at any tier (selected inputs were too small / too large).');
@@ -812,34 +885,39 @@ class Fusion {
 
     print('registering for tiers: $tiersSorted');
 
-    int selfFuse = 1; // Temporary value for now
-    List<int> cashfusionTag = [1]; // temp value for now
+    // Temporary initialization of some CashFusion parameters.
+    int selfFuse = 1; // Temporary value for now.
+    List<int> cashfusionTag = [1]; // Temporary value for now.
 
+    // Prechecks before proceeding.
     checkStop(running: false);
     checkCoins();
 
+    // Prepare tags for joining the pool.
     List<JoinPools_PoolTag> tags = [
       JoinPools_PoolTag(id: cashfusionTag, limit: selfFuse)
     ];
 
-    // Create JoinPools message
+    // Create the JoinPools message
     JoinPools joinPools =
         JoinPools(tiers: tiersSorted.map((i) => Int64(i)).toList(), tags: tags);
 
-    // Wrap it in a ClientMessage
+    // Wrap it in a ClientMessage.
     ClientMessage clientMessage = ClientMessage()..joinpools = joinPools;
 
     await send2(socketwrapper, clientMessage);
 
+    // TODO type the status variable.
     (String, String) status = ('waiting', 'Registered for tiers');
 
+    // TODO make Entry class or otherwise type this section.
     Map<dynamic, String> tiersStrings = {
-      // TODO make Entry class or otherwise type this section
       for (var entry in tierOutputs.entries)
         entry.key:
             (entry.key * 1e-8).toStringAsFixed(8).replaceAll(RegExp(r'0+$'), '')
     };
 
+    // Main loop to receive updates from the server.
     while (true) {
       print("RECEIVE LOOP 870............DEBUG");
       GeneratedMessage msg = await recv2(
@@ -848,36 +926,50 @@ class Fusion {
 
       // if (msg == null) continue;
 
-      // TODO type
+      // Check for a FusionBegin message.
+      // TODO: Properly type the fieldInfoFusionBegin variable
       FieldInfo<dynamic>? fieldInfoFusionBegin =
           msg.info_.byName["fusionbegin"];
-      if (fieldInfoFusionBegin != null &&
-          msg.hasField(fieldInfoFusionBegin.tagNumber)) {
-        print("DEBUG 867 Fusion Begin message...");
-        break;
+      if (fieldInfoFusionBegin == null) {
+        throw FusionError('Expected field not found in message: fusionbegin');
       }
 
+      // Validate that the received message is indeed a FusionBegin message.
+      bool messageIsFusionBegin = msg.hasField(fieldInfoFusionBegin.tagNumber);
+      if (messageIsFusionBegin) {
+        print("DEBUG 867 Fusion Begin message...");
+        break;
+      } /* else {
+        throw FusionError('Expected a FusionBegin message');
+      }
+      */
+
+      // Prechecks before processing the received message.
       checkStop(running: false);
       checkCoins();
 
-      // Define the bool variable
-
+      // Initialize a variable to store field information for "tierstatusupdate" in the message.
       FieldInfo<dynamic>? fieldInfo = msg.info_.byName["tierstatusupdate"];
+      // Check if the field exists in the message, if not, throw an error.
       if (fieldInfo == null) {
         throw FusionError(
             'Expected field not found in message: tierstatusupdate');
       }
 
+      // Determine if the message contains a "TierStatusUpdate"
       bool messageIsTierStatusUpdate = msg.hasField(fieldInfo.tagNumber);
       print("DEBUG 889 getting tier update.");
 
+      // If the message doesn't contain a "TierStatusUpdate", throw an error.
       if (!messageIsTierStatusUpdate) {
         throw FusionError('Expected a TierStatusUpdate message');
       }
 
+      // Initialize a map to store the statuses from the TierStatusUpdate message.
       late Map<Int64, TierStatusUpdate_TierStatus> statuses;
+      // Populate the statuses map if "TierStatusUpdate" exists in the message.
       if (messageIsTierStatusUpdate) {
-        //TierStatusUpdate tierStatusUpdate = msg.tierstatusupdate;
+        /*TierStatusUpdate tierStatusUpdate = msg.tierstatusupdate;*/
         TierStatusUpdate tierStatusUpdate =
             msg.getField(fieldInfo.tagNumber) as TierStatusUpdate;
         statuses = tierStatusUpdate.statuses;
@@ -886,10 +978,13 @@ class Fusion {
       print("DEBUG 8892 statuses: $statuses.");
       print("DEBUG 8893 statuses: ${statuses!.entries}.");
 
+      // Initialize variables to store the maximum fraction and tier numbers.
       double maxfraction = 0.0;
       List<int> maxtiers = <int>[];
       int? besttime;
       int? besttimetier;
+
+      // Loop through each entry in statuses to find the maximum fraction and best time.
       for (var entry in statuses.entries) {
         // TODO make Entry class or otherwise type this section
         double frac = ((entry.value.players.toInt())) /
@@ -902,30 +997,39 @@ class Fusion {
           maxtiers.add(entry.key.toInt());
         }
 
+        // // Check if "timeRemaining" field exists and find the smallest time.
         FieldInfo<dynamic>? fieldInfoTimeRemaining =
             entry.value.info_.byName["timeRemaining"];
-        // if (fieldInfoTimeRemaining == null) {
-        //   throw FusionError(
-        //       'Expected field not found in message: timeRemaining');
-        // }
+        /*
+        if (fieldInfoTimeRemaining == null) {
+          throw FusionError(
+              'Expected field not found in message: timeRemaining');
+        }
+        */
 
+        // Check if the field 'timeRemaining' exists in the current entry.
         if (fieldInfoTimeRemaining != null) {
+          // Confirm that the message contains the 'timeRemaining' field.
           if (entry.value.hasField(fieldInfoTimeRemaining!.tagNumber)) {
+            // Convert 'timeRemaining' to integer
             int tr = entry.value.timeRemaining.toInt();
+
+            // Update 'besttime' and 'besttimetier' if this is the first time or if 'tr' is smaller than the current 'besttime'
             if (besttime == null || tr < besttime) {
               besttime = tr;
               besttimetier = entry.key.toInt();
             }
           }
-        } else {
-          // TODO throw warning or error?
         }
+        // TODO handle else case when timeRemaining field is missing.
       }
 
+      // Initialize lists to store tiers for different display sections.
       List<String> displayBest = <String>[];
       List<String> displayMid = <String>[];
       List<String> displayQueued = <String>[];
 
+      // Populate the display lists based on the tier status.
       for (int tier in tiersSorted) {
         if (statuses.containsKey(tier)) {
           String? tierStr = tiersStrings[tier];
@@ -945,6 +1049,7 @@ class Fusion {
         }
       }
 
+      // Construct the final display string for tiers.
       List<String> parts = <String>[];
       if (displayBest.isNotEmpty || displayMid.isNotEmpty) {
         parts.add("Tiers: ${displayBest.join(', ')} ${displayMid.join(', ')}");
@@ -954,16 +1059,16 @@ class Fusion {
       }
       String tiersString = parts.join(' ');
 
+      // Determine the overall status based on the best time and maximum fraction.
       if (besttime == null) {
         if (stopwatch.elapsedMilliseconds > inactiveTimeLimit) {
           throw FusionError('stopping due to inactivity');
-        } else {
-          // debug
         }
-      } else {
-        // debug
+        // TODO handle else case
       }
+      // TODO handle else case
 
+      // Final status assignment based on calculated variables
       if (besttime != null) {
         (String, String) status =
             ('waiting', 'Starting in ${besttime}s. $tiersString');
@@ -977,6 +1082,8 @@ class Fusion {
       }
     }
 
+    // Loop exits upon a break if a FusionBegin message is received.
+
     // TODO type fieldInfoFusionBegin
     dynamic fieldInfoFusionBegin = msg.info_.byName["fusionbegin"];
     if (fieldInfoFusionBegin == null) {
@@ -989,58 +1096,87 @@ class Fusion {
       throw FusionError('Expected a FusionBegin message');
     }
 
+    // Record the time when the fusion process began
     tFusionBegin = DateTime.now();
 
+    // Cast the received message to a FusionBegin message (could be handled more gracefully)
     FusionBegin fusionBeginMsg = msg.fusionbegin
         as FusionBegin; // TODO handle better than with just a cast
 
+    // Calculate how many seconds have passed since the stopwatch was started
     int elapsedSeconds = stopwatch.elapsedMilliseconds ~/ 1000;
+
+    // Calculate the time discrepancy between the server and the client
     double clockMismatch = fusionBeginMsg.serverTime.toInt() -
         DateTime.now().millisecondsSinceEpoch / 1000;
 
+    // Check if the clock mismatch exceeds the maximum allowed discrepancy
     if (clockMismatch.abs().toDouble() > Protocol.MAX_CLOCK_DISCREPANCY) {
       throw FusionError(
           "Clock mismatch too large: ${(clockMismatch.toDouble()).toStringAsFixed(3)}.");
     }
 
+    // Retrieve the tier in which the fusion process will occur
     tier = fusionBeginMsg.tier.toInt();
+
+    // Populate covertDomainB with the received covert domain information
     if (msg is FusionBegin) {
       covertDomainB = Uint8List.fromList(msg.covertDomain);
     }
 
+    // Retrieve additional information such as port, SSL status, and server time for the fusion process
     covertPort = fusionBeginMsg.covertPort;
     covertSSL = fusionBeginMsg.covertSsl;
     beginTime = fusionBeginMsg.serverTime.toDouble();
 
+    // Calculate the initial hash value for the fusion process
     lastHash = Util.calcInitialHash(
         tier, covertDomainB, covertPort, covertSSL, beginTime);
 
+    // Retrieve the output amounts for the given tier and prepare the output addresses
     List<int>? outAmounts = tierOutputs[tier];
     List<Address> outAddrs =
         await _getUnusedReservedChangeAddresses(outAmounts?.length ?? 0);
 
+    // Populate reservedAddresses and outputs with the prepared amounts and addresses
     reservedAddresses = outAddrs;
     outputs = Util.zip(outAmounts ?? [], outAddrs)
         .map((pair) => Output(
             value: pair[0] as int, addr: Address.fromString(pair[1] as String)))
         .toList();
 
+    // Retrieve the safety excess fee for the given tier
     safetyExcessFee = safetyExcessFees[tier] ?? 0;
 
     print(
         "starting fusion rounds at tier $tier: ${coins.length} inputs and ${outputs.length} outputs");
   }
 
+  /// Starts a CovertSubmitter and schedules Tor connections.
+  ///
+  /// This method initializes a `CovertSubmitter` with the specified configuration,
+  /// schedules the connections, and continuously checks the connection status.
+  ///
+  /// Throws:
+  /// - `FusionError` if the covert domain is badly encoded or if other errors occur.
+  ///
+  /// Returns:
+  /// - A `Future<CovertSubmitter>` that resolves to the initialized `CovertSubmitter`.
   Future<CovertSubmitter> startCovert() async {
     print("DEBUG START COVERT!");
+
+    // Initialize status record/tuple
     (String, String) status = ('running', 'Setting up Tor connections');
 
+    // Decode the covert domain and validate it
     String covertDomain;
     try {
       covertDomain = utf8.decode(covertDomainB);
     } catch (e) {
       throw FusionError('badly encoded covert domain');
     }
+
+    // Create a new CovertSubmitter instance.
     CovertSubmitter covert = CovertSubmitter(
         covertDomain,
         covertPort,
@@ -1051,62 +1187,84 @@ class Fusion {
         Protocol.COVERT_SUBMIT_WINDOW,
         Protocol.COVERT_SUBMIT_TIMEOUT);
     try {
+      // Schedule Tor connections for the CovertSubmitter.
       covert.scheduleConnections(tFusionBegin,
           Duration(seconds: Protocol.COVERT_CONNECT_WINDOW.toInt()),
           numSpares: Protocol.COVERT_CONNECT_SPARES.toInt(),
           connectTimeout: Protocol.COVERT_CONNECT_TIMEOUT.toInt());
 
       print("DEBUG return early from covert");
+      // Return the CovertSubmitter instance early.
+      // TODO finish method.
       return covert;
 
-      // loop until a just a bit before we're expecting startRound, watching for status updates
+      // Loop a bit before we're expecting startRound, watching for status updates.
       final tend = tFusionBegin.add(Duration(
           seconds: (Protocol.WARMUP_TIME - Protocol.WARMUP_SLOP - 1).round()));
 
+      // Poll the status of the connections until the ending time.
       while (DateTime.now().millisecondsSinceEpoch / 1000 <
           tend.millisecondsSinceEpoch / 1000) {
+        // Count the number of established main and spare connections.
         int numConnected =
             covert.slots.where((s) => s.covConn?.connection != null).length;
-
         int numSpareConnected =
             covert.spareConnections.where((c) => c.connection != null).length;
 
+        // Update the status based on connection counts.
         (String, String) status = (
           'running',
           'Setting up Tor connections ($numConnected+$numSpareConnected out of $numComponents)'
         );
 
+        // Wait for 1 second before re-checking.
         await Future.delayed(Duration(seconds: 1));
 
+        // Check the health of the CovertSubmitter and overall system.
         covert.checkOk();
         checkStop();
         checkCoins();
       }
     } catch (e) {
+      // Stop the CovertSubmitter and re-throw the error.
       covert.stop();
       rethrow;
     }
 
+    // Return the CovertSubmitter instance.
     return covert;
   }
 
+  /// Runs a round of the Fusion protocol.
+  ///
+  /// This method takes care of various steps in the Fusion protocol round,
+  /// including receiving and validating server messages, creating commitments,
+  /// and submitting components.
+  ///
+  /// [covert] is a `CovertSubmitter` instance used for covert submissions.
+  ///
+  /// Returns: a `Future<bool>` indicating the success or failure of the round.
   Future<bool> runRound(CovertSubmitter covert) async {
     print("START OF RUN ROUND");
+
+    // Initial round status and timeout calculation
     (String, String) status =
         ('running', 'Starting round ${roundCount.toString()}');
     int timeoutInSeconds =
         (2 * Protocol.WARMUP_SLOP + Protocol.STANDARD_TIMEOUT).toInt();
+
+    // Await the start of round message from the server
     GeneratedMessage msg = await recv(['startround'],
         timeout: Duration(seconds: timeoutInSeconds));
 
-    // Record the time we got this message; it forms the basis time for all covert activities.
+    // Initialize the covert timer base
     final covertT0 = DateTime.now().millisecondsSinceEpoch / 1000;
     double covertClock() =>
         (DateTime.now().millisecondsSinceEpoch / 1000) - covertT0;
 
     final roundTime = (msg as StartRound).serverTime;
 
-    // Check the server's declared unix time, which will be committed.
+    // Validate the server's time against our local time
     final clockMismatch =
         msg.serverTime - DateTime.now().millisecondsSinceEpoch / 1000;
     if (clockMismatch.abs() > Protocol.MAX_CLOCK_DISCREPANCY) {
@@ -1114,7 +1272,7 @@ class Fusion {
           "Clock mismatch too large: ${clockMismatch.toInt().toStringAsPrecision(3)}.");
     }
 
-    // On the first startround message, check that the warmup time was within acceptable bounds.
+    // Check that the warmup time was as expected
     final lag = covertT0 -
         (tFusionBegin.millisecondsSinceEpoch / 1000) -
         Protocol.WARMUP_TIME;
@@ -1126,16 +1284,17 @@ class Fusion {
 
     print("round starting at ${DateTime.now().millisecondsSinceEpoch / 1000}");
 
+    // Calculate fees and sums for inputs and outputs
     final inputFees = coins
         .map(
             (e) => Util.componentFee(e.sizeOfInput(), componentFeeRate.toInt()))
         .reduce((a, b) => a + b);
     final outputFees =
         outputs.length * Util.componentFee(34, componentFeeRate.toInt());
-
     final sumIn = coins.map((e) => e.amount).reduce((a, b) => a + b);
     final sumOut = outputs.map((e) => e.value).reduce((a, b) => a + b);
 
+    // Calculate total and excess fee and perform safety checks
     final totalFee = sumIn - sumOut;
     final excessFee = totalFee - inputFees - outputFees;
     final safeties = [
@@ -1145,22 +1304,25 @@ class Fusion {
       totalFee <= Protocol.MAX_FEE,
     ];
 
+    // Abort the round if the safety checks fail
     if (!safeties.every((element) => element)) {
       throw Exception(
           "(BUG!) Funds re-check failed -- aborting for safety. ${safeties.toString()}");
     }
 
+    // Extract round public key and blind nonce points from the server message
     final roundPubKey = msg.roundPubkey;
-
     final blindNoncePoints = msg.blindNoncePoints;
     if (blindNoncePoints.length != numComponents) {
       throw FusionError('blind nonce miscount');
     }
 
+    // Generate components and related data
     final numBlanks = numComponents - coins.length - outputs.length;
     final List<ComponentResult> genComponentsResults =
         genComponents(numBlanks, coins, outputs, componentFeeRate.toInt());
 
+    // Initialize lists to store various parts of the component data
     final List<Uint8List> myCommitments = [];
     final List<int> myComponentSlots = [];
     final List<Uint8List> myComponents = [];
@@ -1170,6 +1332,7 @@ class Fusion {
     final List<dynamic> pedersenAmount = [];
     final List<dynamic> pedersenNonce = [];
 
+    // Populate the lists with data from the generated components
     for (ComponentResult genComponentResult in genComponentsResults) {
       myCommitments.add(genComponentResult.commitment);
       myComponentSlots.add(genComponentResult.counter);
@@ -1179,12 +1342,13 @@ class Fusion {
       pedersenAmount.add(genComponentResult.pedersenAmount);
       pedersenNonce.add(genComponentResult.pedersenNonce);
     }
+    // Sanity checks on the generated components
     assert(excessFee ==
         pedersenAmount.reduce(
             (a, b) => a + b)); // sanity check that we didn't mess up the above
     assert(myComponents.toSet().length == myComponents.length); // no duplicates
 
-    // Need to implement this!  schnorr is from EC schnorr.py
+    // Generate blind signature requests (see schnorr from Electron-Cash's schnorr.py)
     /*
     final blindSigRequests = blindNoncePoints.map((e) => Schnorr.BlindSignatureRequest(roundPubKey, e, sha256(myComponents.elementAt(e)))).toList();
     */
@@ -1198,13 +1362,18 @@ class Fusion {
           Uint8List.fromList(R), Uint8List.fromList(messageHash));
     });
 
-    // print("RETURNING EARLY FROM run round .....");
-    // return true;
+    /*
+    print("RETURNING EARLY FROM run round .....");
+    return true;
+    */
+
+    // Perform pre-submission checks and prepare a random number for later use
     final randomNumber = Util.getRandomBytes(32);
     covert.checkOk();
     checkStop();
     checkCoins();
 
+    // Send initial commitments, fees, and other data to the server
     await send(PlayerCommit(
       initialCommitments: myCommitments,
       excessFee: Int64(excessFee),
@@ -1213,9 +1382,11 @@ class Fusion {
       blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
     ));
 
+    // Await blind signature responses from the server
     msg = await recv(['blindsigresponses'],
         timeout: Duration(seconds: Protocol.T_START_COMPS.toInt()));
 
+    // Validate type and length of the received message and perform a sanity-check on it
     if (msg is BlindSigResponses) {
       BlindSigResponses typedMsg = msg;
       assert(typedMsg.scalars.length == blindSigRequests.length);
@@ -1336,7 +1507,7 @@ class Fusion {
       throw FusionError('One or more of my components missing.');
     }
 
-    // Need to implement: check the components list and see if there are enough inputs/outputs
+    // TODO check the components list and see if there are enough inputs/outputs
     // for there to be significant privacy.
 
     List<List<int>> allCommitmentsBytes = allCommitments
@@ -1345,53 +1516,67 @@ class Fusion {
     List<int> sessionHash = Util.calcRoundHash(lastHash, roundPubKey,
         roundTime.toInt(), allCommitmentsBytes, allComponents);
 
+    // Validate session hash to prevent mismatch error
     if (!ListEquality()
         .equals(shareCovertComponentsMsg.sessionHash, sessionHash)) {
       throw FusionError('Session hash mismatch (bug!)');
     }
 
+    // Handle covert signature submission.
     if (!shareCovertComponentsMsg.skipSignatures) {
       print("starting covert signature submission");
       status = ('running', 'covert submission: signatures');
 
+      // Check for duplicate server components.
       if (allComponents.toSet().length != allComponents.length) {
         throw FusionError('Server component list includes duplicates.');
       }
 
+      // Build transaction from components and session hash.
       (Transaction, List<int>) txData =
           Transaction.txFromComponents(allComponents, sessionHash);
       Transaction tx = txData!.$1;
       List<int> inputIndices = txData!.$2;
 
+      // Initialize list to store covert transaction signature messages
       List<CovertTransactionSignature?> covertTransactionSignatureMessages =
           List<CovertTransactionSignature?>.filled(myComponents.length, null);
 
+      // Combine transaction input indices and their corresponding inputs
       List<(int, Input)> myCombined = List<(int, Input)>.generate(
         inputIndices.length,
         (index) => (inputIndices[index], tx.Inputs[index]),
       );
 
+      // Sign the covert transaction.
       for (int i = 0; i < myCombined.length; i++) {
         int cIdx = myCombined[i].$1;
         Input inp = myCombined[i].$2;
 
+        // Skip if not my input.
         int myCompIdx = myComponentIndexes.indexOf(cIdx);
         if (myCompIdx == -1) continue; // not my input
 
+        // Extract public and private keys.
         String pubKey = inp.getPubKey(0); // cast/convert to PublicKey?
         String sec = inp.getPrivKey(0); // cast/convert to SecretKey?
 
+        // Calculate sighash for signing.
         List<int> preimageBytes = tx.serializePreimage(i, 0x41, useCache: true);
         crypto.Digest sighash =
             crypto.sha256.convert(crypto.sha256.convert(preimageBytes).bytes);
 
-        //var sig = schnorr.sign(sec, sighash); // Needs implementation
+        // Generate signature (dummy placeholder)
+        // TODO implement
+        // var sig = schnorr.sign(sec, sighash);
         List<int> sig = <int>[0, 1, 2, 3, 4]; // dummy placeholder
 
+        // Store the covert transaction signature
         covertTransactionSignatureMessages[myComponentSlots[myCompIdx]] =
             CovertTransactionSignature(txsignature: sig, whichInput: i);
       }
 
+      // Schedule covert submissions
       DateTime covertT0DateTime = DateTime.fromMillisecondsSinceEpoch(
           covertT0.toInt() * 1000); // covertT0 is in seconds
       covert.scheduleSubmissions(
@@ -1399,7 +1584,7 @@ class Fusion {
               .add(Duration(milliseconds: Protocol.T_START_SIGS.toInt())),
           covertTransactionSignatureMessages);
 
-      // wait for result
+      // Wait for server's fusion result within the expected time frame.
       int timeoutMillis = (Protocol.T_EXPECTING_CONCLUSION -
               Protocol.TS_EXPECTING_COVERT_COMPONENTS)
           .toInt();
@@ -1411,12 +1596,13 @@ class Fusion {
         throw FusionError('Fusion result message arrived too slowly.');
       }
 
+      // Verify if the covert operation was successful.
       covert.checkDone();
       FusionResult fusionResultMsg = msg as FusionResult;
       if (fusionResultMsg.ok) {
         List<List<int>> allSigs = msg.txsignatures;
 
-        // assemble the transaction.
+        // Assemble and complete the transaction.
         if (allSigs.length != tx.Inputs.length) {
           throw FusionError('Server gave wrong number of signatures.');
         }
@@ -1430,6 +1616,7 @@ class Fusion {
           inp.signatures = [sig + '41'];
         }
 
+        // Finalize transaction details and update wallet label
         assert(tx.isComplete());
         String txHex = tx.serialize();
 
@@ -1443,6 +1630,7 @@ class Fusion {
 
         Util.updateWalletLabel(txId, label);
       } else {
+        // If not successful, identify bad components.
         badComponents = msg.badComponents.toSet();
         if (badComponents.intersection(myComponentIndexes.toSet()).isNotEmpty) {
           print(
@@ -1451,24 +1639,28 @@ class Fusion {
         }
       }
     } else {
-      // skip_signatures True
-      Set<int> badComponents = Set<int>();
+      // Case where 'skip_signatures' is True.
+      Set<int> badComponents = <int>{};
     }
 
-    // ### Blame phase ###
+    // Begin Blame phase logic.
 
+    // Set the time when this phase of the protocol should stop.
     covert.setStopTime((covertT0 + Protocol.T_START_CLOSE_BLAME).floor());
 
-    print("sending proofs");
+    // Update status to indicate that proofs are being sent.
     status = ('running', 'round failed - sending proofs');
+    print("sending proofs");
 
-    // create a list of commitment indexes, but leaving out mine.
+    // Create a list of commitment indexes, but leaving out mine.
     List<int> othersCommitmentIdxes = [];
     for (int i = 0; i < allCommitments.length; i++) {
       if (!myCommitmentIndexes.contains(i)) {
         othersCommitmentIdxes.add(i);
       }
     }
+
+    // Ensure that the count is accurate.
     int N = othersCommitmentIdxes.length;
     assert(N == allCommitments.length - myCommitments.length);
     if (N == 0) {
@@ -1476,68 +1668,90 @@ class Fusion {
           "Fusion failed with only me as player -- I can only blame myself.");
     }
 
-    // where should I send my proofs?
+    // Determine to whom the proofs should be sent.
     List<InitialCommitment> dstCommits = [];
     for (int i = 0; i < myCommitments.length; i++) {
       dstCommits.add(allCommitments[
           othersCommitmentIdxes[Util.randPosition(randomNumber, N, i)]]);
     }
 
-    // generate the encrypted proofs
+    // Generate the encrypted proofs.
     List<String> encproofs = List<String>.filled(myCommitments.length, '');
 
+    // Parameters for elliptic curve cryptography.
     ECDomainParameters params = ECDomainParameters('secp256k1');
+
+    // Loop through all the destination commitments to generate encrypted proofs.
     for (int i = 0; i < dstCommits.length; i++) {
       InitialCommitment msg = dstCommits[i];
       Proof proof = myProofs[i];
       proof.componentIdx = myComponentIndexes[i];
 
+      // Decode the communication key from its byte form.
       ECPoint? communicationKeyPointMaybe =
           params.curve.decodePoint(Uint8List.fromList(msg.communicationKey));
+
+      // Error handling in case the decoding fails.
       if (communicationKeyPointMaybe == null) {
-        // handle the error case here, e.g., throw an exception or skip this iteration.
         continue;
       }
       ECPoint communicationKeyPoint = communicationKeyPointMaybe;
 
       try {
+        // Encrypt the proof using the communication key.
         Uint8List encryptedData = await encrypt(
             proof.writeToBuffer(), communicationKeyPoint,
             padToLength: 80);
         encproofs[i] = String.fromCharCodes(encryptedData);
       } on EncryptionFailed {
         // The communication key was bad (probably invalid x coordinate).
-        // We will just send a blank. They can't even blame us since there is no private key! :)
+        // We will just send a blank.  They can't even blame us since there is no private key! :)
         continue;
       }
     }
 
+    // Convert the list of encrypted proofs (strings) to a list of Uint8List
+    // so that they can be transmitted.
     List<Uint8List> encodedEncproofs =
         encproofs.map((e) => Uint8List.fromList(e.codeUnits)).toList();
+
+    // Send the encrypted proofs and the random number used to the server.
+    // The comment is asking if this call should be awaited or not,
+    // depending on whether the program needs to pause execution until the data is sent.
     // TODO should this be unawaited?
     await send(MyProofsList(
         encryptedProofs: encodedEncproofs, randomNumber: randomNumber));
 
+    // Update the status to indicate that the program is in the process of checking proofs.
     status = ('running', 'round failed - checking proofs');
 
+    // Receive the list of proofs from the other parties
     print("receiving proofs");
     msg = await recv(['theirproofslist'],
         timeout: Duration(seconds: (2 * Protocol.STANDARD_TIMEOUT).round()));
 
+    // Initialize a list to store proofs that should be blamed for failure.
     List<Blames_BlameProof> blames = [];
 
+    // Initialize a counter to keep track of the number of valid input components found.
     int countInputs = 0;
 
+    // Cast the received message to TheirProofsList for type safety.
     TheirProofsList proofsList = msg as TheirProofsList;
 
+    // Declare variables to hold the private key and initial commitment for each proof.
     List<int>? privKey;
     InitialCommitment commitmentBlob;
+
+    // Iterate over each received proof to validate or blame them.
     for (var i = 0; i < proofsList.proofs.length; i++) {
       TheirProofsList_RelayedProof rp = msg.proofs[i];
       try {
+        // Obtain private key and commitment information for the current proof.
         privKey = privKeys[rp.dstKeyIdx];
         commitmentBlob = allCommitments[rp.srcCommitmentIdx];
       } on RangeError catch (e) {
+        // If the indices are invalid, throw an error.
         throw FusionError("Server relayed bad proof indices");
       }
 
@@ -1545,45 +1759,52 @@ class Fusion {
       Uint8List proofBlob;
 
       try {
+        // Decrypt the received proof using the private key.
         BigInt eccPrivateKey =
             Util.parseBigIntFromBytes(Uint8List.fromList(privKey));
         ECPrivateKey privateKey = ECPrivateKey(eccPrivateKey, params);
 
+        // Decrypt the proof, storing the decrypted data and the symmetric key used.
         (Uint8List, Uint8List) result =
             await decrypt(Uint8List.fromList(rp.encryptedProof), privateKey);
-        proofBlob = result.$1; // First item is the decrypted data
-        sKey = result.$2; // Second item is the symmetric key
+        proofBlob = result.$1; // First item is the decrypted data.
+        sKey = result.$2; // Second item is the symmetric key.
       } on Exception catch (e) {
+        // If decryption fails, add the proof to the blame list.
         print("found an undecryptable proof");
         blames.add(Blames_BlameProof(
             whichProof: i, privkey: privKey, blameReason: 'undecryptable'));
         continue;
       }
 
+      // Parsing the received commitment.
       InitialCommitment commitment = InitialCommitment();
       try {
         commitment.mergeFromBuffer(
-            commitmentBlob as List<int>); // Method to parse protobuf data
+            commitmentBlob as List<int>); // Method to parse protobuf data.
       } on FormatException catch (e) {
+        // If the commitment data is invalid, throw an error.
         throw FusionError("Server relayed bad commitment");
       }
 
       InputComponent? inpComp;
 
       try {
-        // Convert allComponents to List<Uint8List>
+        // Validate the proof internally, adding it to the list of validated proofs if it's valid.
+        // Convert allComponents to List<Uint8List>, badComponents to List<int>, and round componentFeeRate.
         List<Uint8List> allComponentsUint8 = allComponents
             .map((component) => Uint8List.fromList(component))
             .toList();
         // Convert badComponents to List<int>
         List<int> badComponentsList = badComponents.toList();
-        // Convert componentFeeRate to int if it's double
+        // Convert componentFeeRate to int if it's double.
         int componentFeerateInt = componentFeeRate
-            .round(); // or use .toInt() if you want to truncate instead of rounding
+            .round(); // or use .toInt() if you want to truncate instead of rounding.
 
         InputComponent? inpComp = validateProofInternal(proofBlob, commitment,
             allComponentsUint8, badComponentsList, componentFeerateInt);
       } on Exception catch (e) {
+        // If the proof is invalid, add it to the blame list.
         print("found an erroneous proof: ${e.toString()}");
         Blames_BlameProof blameProof = Blames_BlameProof();
         blameProof.whichProof = i;
@@ -1593,12 +1814,15 @@ class Fusion {
         continue;
       }
 
+      // If inpComp is not null, this means the proof was valid.
       // TODO null safety feedback messages for inpComp
       if (inpComp != null) {
         countInputs++;
         try {
+          // Perform additional validation by checking against the blockchain
           Util.checkInputElectrumX(inpComp);
         } on Exception catch (e) {
+          // If the input component doesn't match the blockchain, add the proof to the blame list.
           print(
               "found a bad input [${rp.srcCommitmentIdx}]: $e (${inpComp.prevTxid.reversed.toList().toHex()}:${inpComp.prevIndex})");
 
@@ -1610,6 +1834,7 @@ class Fusion {
           blameProof.needLookupBlockchain = true;
           blames.add(blameProof);
         } catch (e) {
+          // If we can't check against the blockchain for some reason, log a message.
           print(
               "verified an input internally, but was unable to check it against blockchain: ${e}");
         }
@@ -1617,10 +1842,12 @@ class Fusion {
     }
     print("checked ${msg.proofs.length} proofs, $countInputs of them inputs");
 
-    print("sending blames");
+    // Send the blame list to the server
     // TODO should this be unawaited?
     await send(Blames(blames: blames));
+    print("sending blames");
 
+    // Update the status to indicate that the program is waiting for the round to restart.
     status = ('running', 'awaiting restart');
 
     // Await the final 'restartround' message. It might take some time
@@ -1631,6 +1858,8 @@ class Fusion {
             seconds: 2 *
                 (Protocol.STANDARD_TIMEOUT.round() +
                     Protocol.BLAME_VERIFY_TIME.round())));
+
+    // Return true to indicate successful execution of this part.
     return true;
   } // /run_round()
 }
