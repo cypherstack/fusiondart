@@ -72,8 +72,8 @@ class Fusion {
   String txId = ""; // Holds a transaction ID.
 
   // Various state variables.
-  List<Input> coins =
-      []; // "coins" and "inputs" are often synonymous in the original python code.
+  Set<Input> coins =
+      {}; // "coins" and "inputs" are often synonymous in the original python code.
   List<Output> outputs = [];
   List<Address> changeAddresses = [];
 
@@ -145,9 +145,11 @@ class Fusion {
   Future<void> addCoinsFromWallet(
     List<(String txid, int vout, int value)> utxoList,
   ) async {
+    // TODO sanity check the state of `coins` before adding to it.
+
     // Convert each UTXO info to an Input and add to 'coins'.
     for (final utxoInfo in utxoList) {
-      coins.add(Input.fromStackUTXOData(utxoInfo));
+      coins.add(Input.fromWallet(utxoInfo));
     }
     // TODO add validation and throw error if invalid UTXO detected
   }
@@ -380,7 +382,7 @@ class Fusion {
   ///
   /// Resets the internal coin list, effectively removing all stored coins.
   void clearCoins() {
-    coins = [];
+    coins = {};
   }
 
   /// Adds new coins to the internal `coins` list.
@@ -516,7 +518,7 @@ class Fusion {
   /// Returns:
   ///   A list of `ComponentResult` objects containing all the components needed for the transaction.
   static List<ComponentResult> genComponents(
-      int numBlanks, List<Input> inputs, List<Output> outputs, int feerate) {
+      int numBlanks, Set<Input> inputs, List<Output> outputs, int feerate) {
     // Sanity check
     assert(numBlanks >= 0);
 
@@ -856,7 +858,7 @@ class Fusion {
     _socketWrapper!.status();
     assert(['setup', 'connecting'].contains(status.$1));
 
-    List<Input> inputs = coins;
+    Set<Input> inputs = coins;
     int numInputs = inputs.length;
 
     // Calculate limits on the number of components and outputs.
@@ -865,6 +867,10 @@ class Fusion {
 
     // More sanity checks.
     if (maxOutputs < 1) {
+      // TODO remove debugging message.
+      for (var input in inputs) {
+        print(input.toString());
+      }
       throw FusionError('Too many inputs ($numInputs >= $maxComponents)');
     }
     assert(maxOutputs >= 1);

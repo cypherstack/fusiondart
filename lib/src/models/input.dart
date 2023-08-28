@@ -89,13 +89,13 @@ class Input {
   ///
   /// Returns:
   ///   The Input object.
-  static Input fromStackUTXOData(
+  static Input fromWallet(
     (String txId, int vout, int value) utxoInfo,
   ) {
     return Input(
       prevTxid: utf8.encode(utxoInfo.$1), // Convert txId to a List<int>
       prevIndex: utxoInfo.$2,
-      pubKey: utf8.encode('0000'), // Placeholder
+      pubKey: utf8.encode('0000'), // Placeholder TODO fix
       amount: utxoInfo.$3,
     );
   }
