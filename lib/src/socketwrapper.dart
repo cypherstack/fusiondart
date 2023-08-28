@@ -34,11 +34,11 @@ class SocketWrapper {
     }
 
     // Register an event handler for socket close event.
-    await _socket?.done.then((_) {
+    unawaited(_socket?.done.then((_) {
       print('... Socket has been closed');
       // Override the socket with a null value.
       _socket = null;
-    });
+    }));
 
     // Register an error handler
     _socket?.handleError((error) {
