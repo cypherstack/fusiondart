@@ -37,7 +37,7 @@ class Fusion {
 
   /// Constructor that sets up a Fusion object.
   Fusion(
-      {required Future<Address> Function() createNewReservedChangeAddress,
+      {/*required Future<Address> Function() createNewReservedChangeAddress,*/
       required Future<List<Address>> Function(int numberOfAddresses)
           getUnusedReservedChangeAddresses}); /*{
     initializeConnection(host, port);
@@ -1221,8 +1221,12 @@ class Fusion {
     // Record the time when the fusion process began
     tFusionBegin = DateTime.now();
 
+    if (msg is! ServerMessage) {
+      throw FusionError('Expected a ServerMessage');
+    }
+
     // Cast the received message to a FusionBegin message (could be handled more gracefully)
-    FusionBegin fusionBeginMsg = msg as FusionBegin;
+    FusionBegin fusionBeginMsg = msg.fusionbegin;
 
     // Calculate how many seconds have passed since the stopwatch was started
     int elapsedSeconds = stopwatch.elapsedMilliseconds ~/ 1000;
@@ -1241,9 +1245,7 @@ class Fusion {
     tier = fusionBeginMsg.tier.toInt();
 
     // Populate covertDomainB with the received covert domain information
-    if (msg is FusionBegin) {
-      covertDomainB = Uint8List.fromList(msg.covertDomain);
-    }
+    covertDomainB = Uint8List.fromList(fusionBeginMsg.covertDomain);
 
     // Retrieve additional information such as port, SSL status, and server time for the fusion process
     covertPort = fusionBeginMsg.covertPort;
