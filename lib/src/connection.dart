@@ -6,13 +6,23 @@ import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 
-/*
-This file might need some fixing up because each time we call fillBuf, we're trying to
-remove data from a buffer but its a local copy , might not actually
-remove the data from the socket buffer.  We may need a wrapper class for the buffer??
- */
+// TODO
+// This file might need some fixing up because each time we call fillBuf, we're trying to
+// remove data from a buffer but its a local copy , might not actually
+// remove the data from the socket buffer.  We may need a wrapper class for the buffer??
 
-// Asynchronous function to open a new connection
+/// Asynchronous function to open a new connection
+///
+/// Parameters:
+/// - [host]: The host to connect to.
+/// - [port]: The port to connect to.
+/// - [connTimeout] (optional): The connection timeout duration.
+/// - [defaultTimeout] (optional): The default timeout duration.
+/// - [ssl] (optional): Whether to use SSL.
+/// - [socksOpts] (optional): Socks options.
+///
+/// Returns:
+///  A Future<Connection> object.
 Future<Connection> openConnection(
   String host,
   int port, {
@@ -40,6 +50,12 @@ Future<Connection> openConnection(
 }
 
 /// Class to handle a connection.
+///
+/// This class is used to send and receive messages over a socket.
+///
+/// Attributes:
+/// - [timeout]: The timeout duration.
+/// - [socket]: The socket object.
 class Connection {
   // Default timeout of 1 second.
   Duration timeout = Duration(seconds: 1);
@@ -403,6 +419,9 @@ class Connection {
 } // end of Connection class.
 
 /// Class to handle a bad frame error.
+///
+/// Attributes:
+/// - [message]: The error message String.
 class BadFrameError extends Error {
   /// The error message String.
   final String message;

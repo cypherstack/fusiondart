@@ -20,10 +20,12 @@ class ValidationError implements Exception {
 int componentContrib(pb.Component component, int feerate) {
   if (component.hasInput()) {
     Input inp = Input.fromInputComponent(component.input);
-    return inp.amount.toInt() - Util.componentFee(inp.sizeOfInput(), feerate);
+    return inp.amount.toInt() -
+        Utilities.componentFee(inp.sizeOfInput(), feerate);
   } else if (component.hasOutput()) {
     Output out = Output.fromOutputComponent(component.output);
-    return -out.amount.toInt() - Util.componentFee(out.sizeOfOutput(), feerate);
+    return -out.amount.toInt() -
+        Utilities.componentFee(out.sizeOfOutput(), feerate);
   } else if (component.hasBlank()) {
     return 0;
   } else {
@@ -109,11 +111,12 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   Uint8List pointsum;
   // Verify pedersen commitment
   try {
-    pointsum = Commitment.add_points(commitMessages
+    pointsum = Commitment.addPoints(commitMessages
         .map((m) => Uint8List.fromList(m.amountCommitment))
         .toList());
     claimedCommit = setup.commit(BigInt.from(msg.excessFee.toInt()),
-        nonce: Util.bytesToBigInt(Uint8List.fromList(msg.pedersenTotalNonce)));
+        nonce: Utilities.bytesToBigInt(
+            Uint8List.fromList(msg.pedersenTotalNonce)));
 
     check(pointsum == claimedCommit.pointPUncompressed,
         "pedersen commitment mismatch");
@@ -127,10 +130,10 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
 
 (String, int) checkCovertComponent(
     pb.CovertComponent msg, ECPoint roundPubkey, int componentFeerate) {
-  Uint8List messageHash = Util.sha256(Uint8List.fromList(msg.component));
+  Uint8List messageHash = Utilities.sha256(Uint8List.fromList(msg.component));
 
   check(msg.signature.length == 64, "bad message signature");
-  check(Util.schnorrVerify(roundPubkey, msg.signature, messageHash),
+  check(Utilities.schnorrVerify(roundPubkey, msg.signature, messageHash),
       "bad message signature");
 
   // TODO type
@@ -159,10 +162,11 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
     dynamic out = cmsg.output;
     Address addr;
     // Basically just checks if its ok address. should throw error if not.
-    addr = Util.getAddressFromOutputScript(out.scriptpubkey as Uint8List);
+    addr = Utilities.getAddressFromOutputScript(out.scriptpubkey as Uint8List);
 
     check(
-        (out.amount >= Util.dustLimit(out.scriptpubkey.length as int) as bool),
+        (out.amount >= Utilities.dustLimit(out.scriptpubkey.length as int)
+            as bool),
         "dust output");
     sortKey =
         'o${out.amount.toString()}${String.fromCharCodes(out.scriptpubkey as Iterable<int>)}${String.fromCharCodes(cmsg.saltCommitment as Iterable<int>)}';
@@ -210,14 +214,14 @@ pb.InputComponent? validateProofInternal(
 
   check(msg.salt.length == 32, "salt wrong length");
   check(
-    Util.sha256(msg.salt as Uint8List) == comp.saltCommitment,
+    Utilities.sha256(msg.salt as Uint8List) == comp.saltCommitment,
     "salt commitment mismatch",
   );
 
   // TODO validate
   Iterable<int> iterableSalt = msg.salt as Iterable<int>;
   check(
-    Util.sha256(Uint8List.fromList([...iterableSalt, ...componentBlob])) ==
+    Utilities.sha256(Uint8List.fromList([...iterableSalt, ...componentBlob])) ==
         commitment.saltedComponentHash,
     "salted component hash mismatch",
   );
@@ -228,7 +232,7 @@ pb.InputComponent? validateProofInternal(
 
   Commitment claimedCommit = setup.commit(
     BigInt.from(contrib),
-    nonce: Util.bytesToBigInt(msg.pedersenNonce as Uint8List),
+    nonce: Utilities.bytesToBigInt(msg.pedersenNonce as Uint8List),
   );
 
   check(
@@ -266,12 +270,12 @@ Future<dynamic> validateBlame(
     Uint8List privkey = Uint8List.fromList(blame.privkey);
     check(privkey.length == 32, 'bad blame privkey');
     String privkeyHexStr =
-        Util.bytesToHex(privkey); // Convert bytes to hex string.
+        Utilities.bytesToHex(privkey); // Convert bytes to hex string.
     BigInt privkeyBigInt =
         BigInt.parse(privkeyHexStr, radix: 16); // Convert hex string to BigInt.
     ECPrivateKey privateKey =
         ECPrivateKey(privkeyBigInt, params); // Create ECPrivateKey
-    List<String> pubkeys = Util.pubkeysFromPrivkey(privkeyHexStr);
+    List<String> pubkeys = Utilities.pubkeysFromPrivkey(privkeyHexStr);
     check(destCommit.communicationKey == pubkeys[1], 'bad blame privkey');
     try {
       Encrypt.decrypt(encProof, privateKey);

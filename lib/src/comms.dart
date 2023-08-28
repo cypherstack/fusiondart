@@ -12,8 +12,7 @@ typedef PbCreateFunc = GeneratedMessage Function();
 
 /// A mapping of Protobuf message types to their respective factory functions.
 ///
-/// This map allows us to instantiate a new Protobuf message object
-/// given its type.
+/// This map allows us to instantiate a new Protobuf message object given its type.
 Map<Type, PbCreateFunc> pbClassCreators = {
   CovertResponse: () => CovertResponse(),
   ClientMessage: () => ClientMessage(),
@@ -47,15 +46,15 @@ Map<Type, PbCreateFunc> pbClassCreators = {
   CovertMessage: () => CovertMessage(),
 };
 
-/// Sends a Protobuf message over a connection.
+/// Sends a Protobuf message [subMsg] of `Type` [pbClass] over a [connection].
 ///
 /// [DEPRECATED]
 ///
 /// Parameters:
-/// - `connection`: The connection object through which the message will be sent.
-/// - `pbClass`: The Protobuf class type to send.
-/// - `subMsg`: The specific Protobuf message to send.
-/// - `timeout`: (Optional) The time duration to wait before timing out.
+/// - [connection]: The connection object through which the message will be sent.
+/// - [pbClass]: The Protobuf class type to send.
+/// - [subMsg]: The specific Protobuf message to send.
+/// - [timeout]: (Optional) The time duration to wait before timing out.
 ///
 /// Returns:
 ///   A Future<void> object.
@@ -241,7 +240,6 @@ Future<(GeneratedMessage, String)> recvPb(
     throw FusionError(
         'None of the expected fields found in the received message');
   } catch (e) {
-    // Handle different exceptions here.
     if (e is SocketException) {
       throw FusionError('Connection closed by remote');
     } else if (e is InvalidProtocolBufferException) {

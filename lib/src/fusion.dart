@@ -26,6 +26,7 @@ import 'package:pointycastle/export.dart';
 import 'package:protobuf/protobuf.dart';
 
 /// Fusion class is responsible for coordinating the CashFusion transaction process.
+///
 /// It maintains the state and controls the flow of a fusion operation.
 class Fusion {
   // Private late finals used for dependency injection.
@@ -168,11 +169,11 @@ class Fusion {
   /// This method orchestrates the entire lifecycle of a CashFusion operation.
   ///
   /// Returns:
-  ///   A future that completes when the fusion operation is finished.
+  ///   A `Future<void>` that resolves when the fusion operation is finished.
   ///
   /// Throws:
-  ///   FusionError: If any step in the fusion operation fails.
-  ///   Exception: For general exceptions.
+  /// - FusionError: If any step in the fusion operation fails.
+  /// - Exception: For general exceptions.
   Future<void> fuse() async {
     print("DEBUG FUSION 223...fusion run....");
     try {
@@ -278,7 +279,7 @@ class Fusion {
           break; // not an error
         }
 
-        if (Util.walletHasTransaction(txId)) {
+        if (Utilities.walletHasTransaction(txId)) {
           break;
         }
 
@@ -313,13 +314,20 @@ class Fusion {
   /// Sends a status update to the server. The purpose and behavior of this method
   /// depend on the application's requirements.
   ///
-  /// TODO
+  /// TODO implement.
   void notifyServerStatus(bool b, {(String, String)? status}) {}
 
   /// Stops the current operation with optional String [reason] (default: "stopped")
   /// and bool [notIfRunning] (default: false).
   ///
   /// If an operation is in progress, stops it for the given reason.
+  ///
+  /// Parameters:
+  /// - [reason] (optional): The reason for stopping the operation.
+  /// - [notIfRunning] (optional): If true, the operation will not be stopped if it is running.
+  ///
+  /// Returns:
+  ///  void
   void stop([String reason = "stopped", bool notIfRunning = false]) {
     if (stopping) {
       return;
@@ -342,6 +350,15 @@ class Fusion {
   /// This function is periodically called to determine whether the system should
   /// halt its operation.  Optional bool [running] indicates if the system is currently
   /// running (default is true).
+  ///
+  /// Parameters:
+  /// - [running] (optional): Indicates if the system is currently running.
+  ///
+  /// Returns:
+  /// `void`
+  ///
+  /// Throws:
+  /// - FusionError: If the system should stop.
   void checkStop({bool running = true}) {
     // Gets called occasionally from fusion thread to allow a stop point.
     if (stopping || (!running && stoppingIfNotRunning)) {
@@ -352,6 +369,8 @@ class Fusion {
   /// Checks the status of the coins in the wallet.
   ///
   /// Verifies the integrity and validity of the coins stored in the internal wallet.
+  ///
+  /// TODO implement.
   void checkCoins() {
     // Implement by calling wallet layer to check the coins are ok.
     return;
@@ -375,7 +394,7 @@ class Fusion {
   ///
   /// Updates the UI to reflect changes in the internal list of coins.
   ///
-  /// TODO
+  /// TODO implement.
   void notifyCoinsUI() {
     return;
   }
@@ -387,7 +406,7 @@ class Fusion {
   /// Returns:
   ///   A boolean flag indicating the wallet's capability to participate in fusion operations.
   ///
-  /// TODO
+  /// TODO implement
   static bool walletCanFuse() {
     // TODO Implement logic here to return false if the wallet can't fuse (if it's read only or non P2PKH)
     return true;
@@ -401,10 +420,15 @@ class Fusion {
   /// Returns:
   ///   A non-zero random double value.
   static double nextDoubleNonZero(Random rng) {
+    // Start with 0.0.
     double value = 0.0;
+
+    // Generate a random double value between 0.0 and 1.0 until the value is not 0.0.
     while (value == 0.0) {
       value = rng.nextDouble();
     }
+
+    // Return the non-zero random double value.
     return value;
   }
 
@@ -435,7 +459,7 @@ class Fusion {
       double val = -lambd * log(nextDoubleNonZero(rng));
       remaining -= (val.ceil() + offset);
       if (remaining < 0) {
-        didBreak = true; // If you break, set this flag to true
+        didBreak = true; // If you break, set this flag to true.
         break;
       }
       values.add(val);
@@ -448,7 +472,7 @@ class Fusion {
 
     if (values.isEmpty) {
       // Our first try put us over the limit, so we have nothing to work with.
-      // (most likely, scale was too large)
+      // (most likely, scale was too large).
       return [];
     }
 
@@ -458,7 +482,7 @@ class Fusion {
     // input amount exactly. We perform rounding in cumulative space so that the
     // sum is exact, and the rounding is distributed fairly.
 
-    // Dart equivalent of itertools.accumulate
+    // Dart equivalent of itertools.accumulate.
     List<double> cumsum = [];
     double sum = 0;
     for (double value in values) {
@@ -493,60 +517,89 @@ class Fusion {
   ///   A list of `ComponentResult` objects containing all the components needed for the transaction.
   static List<ComponentResult> genComponents(
       int numBlanks, List<Input> inputs, List<Output> outputs, int feerate) {
+    // Sanity check
     assert(numBlanks >= 0);
 
     List<(Component, int)> components = [];
 
-    // Set up Pedersen setup instance
+    // Set up Pedersen setup instance.
     Uint8List hBytes = Uint8List.fromList(
         [0x02] + 'CashFusion gives us fungibility.'.codeUnits);
+
+    // Use secp256k1 curve
     ECDomainParameters params = ECDomainParameters('secp256k1');
+
+    // Decode point
     ECPoint? hMaybe = params.curve.decodePoint(hBytes);
+
+    // Check if point is null
     if (hMaybe == null) {
       throw Exception('Failed to decode point');
     }
+
+    // Set point
     ECPoint H = hMaybe;
+
+    // Set up Pedersen setup
     PedersenSetup setup = PedersenSetup(H);
 
+    // Generate components
     for (Input input in inputs) {
-      int fee = Util.componentFee(input.sizeOfInput(), feerate);
+      // Calculate fee
+      int fee = Utilities.componentFee(input.sizeOfInput(), feerate);
 
+      // Create input component
       Component comp = Component();
       comp.input = InputComponent(
           prevTxid: Uint8List.fromList(input.prevTxid.reversed.toList()),
           prevIndex: input.prevIndex,
           pubkey: input.pubKey,
           amount: Int64(input.amount));
+
+      // Add component and fee to list
       components.add((comp, input.amount - fee));
     }
 
+    // Generate components for outputs
     for (Output output in outputs) {
+      // Calculate fee
       List<int> script = output.addr.toScript();
-      int fee = Util.componentFee(output.sizeOfOutput(), feerate);
 
+      // Calculate fee
+      int fee = Utilities.componentFee(output.sizeOfOutput(), feerate);
+
+      // Create output component
       Component comp = Component();
       comp.output =
           OutputComponent(scriptpubkey: script, amount: Int64(output.value));
+
+      // Add component and fee to list
       components.add((comp, -output.value - fee));
     }
 
+    // Generate components for blanks
     for (int i = 0; i < numBlanks; i++) {
       Component comp = Component();
       comp.blank = BlankComponent();
       components.add((comp, 0));
     }
 
+    // Initialize result list
     List<ComponentResult> resultList = [];
 
+    // Generate components
     components.asMap().forEach((cnum, componentRecord) {
-      Uint8List salt = Util.tokenBytes(32);
-      componentRecord.$1.saltCommitment = Util.sha256(salt);
+      // Generate salt
+      Uint8List salt = Utilities.tokenBytes(32);
+      componentRecord.$1.saltCommitment = Utilities.sha256(salt);
       Uint8List compser = componentRecord.$1.writeToBuffer();
 
-      (Uint8List, Uint8List) keyPair = Util.genKeypair();
+      // Generate keypair
+      (Uint8List, Uint8List) keyPair = Utilities.genKeypair();
       Uint8List privateKey = keyPair.$1;
       Uint8List pubKey = keyPair.$2;
 
+      // Generate amount commitment
       Commitment commitmentInstance =
           setup.commit(BigInt.from(componentRecord.$2));
       Uint8List amountCommitment = commitmentInstance.pointPUncompressed;
@@ -558,10 +611,11 @@ class Fusion {
       // Generating initial commitment
       InitialCommitment commitment = InitialCommitment(
           saltedComponentHash:
-              Util.sha256(Uint8List.fromList([...compser, ...salt])),
+              Utilities.sha256(Uint8List.fromList([...compser, ...salt])),
           amountCommitment: amountCommitment,
           communicationKey: pubKey);
 
+      // Write commitment to buffer
       Uint8List commitser = commitment.writeToBuffer();
 
       // Generating proof
@@ -591,29 +645,35 @@ class Fusion {
   ///   A future that completes with the received `GeneratedMessage`.
   ///
   /// Throws:
-  ///   FusionError if the connection is not initialized or a server error occurs.
+  /// - FusionError: if the connection is not initialized or a server error occurs.
   Future<GeneratedMessage> recv2(List<String> expectedMsgNames,
       {Duration? timeout}) async {
+    // Check if connection has been initialized
     if (connection == null) {
       throw FusionError('Connection not initialized');
     }
 
+    // Check if _socketWrapper has been initialized
     if (_socketWrapper == null) {
       throw FusionError('Socket wrapper not initialized');
     }
     // This throw could be removed if it's an issue
 
+    // Receive the message from the server.
     (GeneratedMessage, String) result = await recvPb2(
         _socketWrapper!, connection!, ServerMessage, expectedMsgNames,
         timeout: timeout);
 
+    // Extract the message and message type.
     GeneratedMessage submsg = result.$1;
     String mtype = result.$2;
 
+    // Check if the message type is an error.
     if (mtype == 'error') {
       throw FusionError('server error: ${result.$1.toString()}');
     }
 
+    // Return the message.
     return submsg;
   }
 
@@ -621,32 +681,36 @@ class Fusion {
   ///
   /// [DEPRECATED]
   ///
-  /// TODO rename or remove
+  /// TODO rename or remove.
   ///
   /// Returns:
   ///   A future that completes with the received `GeneratedMessage`.
   ///
   /// Throws:
-  ///   FusionError if the connection is not initialized or a server error occurs.
+  /// - FusionError: if the connection is not initialized or a server error occurs.
   Future<GeneratedMessage> recv(List<String> expectedMsgNames,
       {Duration? timeout}) async {
     // DEPRECATED
-    // TODO remove usages of this function
+    // TODO remove usages of this function.
     if (connection == null) {
       throw FusionError('Connection not initialized');
     }
 
+    // Get the message from the server.
     (GeneratedMessage, String) result = await recvPb(
         connection!, ServerMessage, expectedMsgNames,
         timeout: timeout);
 
+    // Extract the message and message type.
     GeneratedMessage submsg = result.$1;
     String mtype = result.$2;
 
+    // Check if the message type is an error.
     if (mtype == 'error') {
       throw FusionError('server error: ${submsg.toString()}');
     }
 
+    // Return the message.
     return submsg;
   }
 
@@ -659,12 +723,14 @@ class Fusion {
   /// Takes a `GeneratedMessage` object [submsg] and sends it to the server. Optionally,
   /// a [timeout] can be specified.
   Future<void> send(GeneratedMessage submsg, {Duration? timeout}) async {
+    // Check if connection has been initialized.
     if (connection == null) {
       throw FusionError('Connection not initialized');
     }
-    // Previously this code just printed an error; if it's an issue, comment out the throw
+    // Previously this code just printed an error; if it's an issue, comment out the throw.
 
-    await sendPb(connection!, ClientMessage, submsg, timeout: timeout);
+    // Send the message to the server.
+    return await sendPb(connection!, ClientMessage, submsg, timeout: timeout);
   }
 
   /// Sends a message to the server with the modern API (vs. `send()`).
@@ -681,6 +747,9 @@ class Fusion {
   ///
   /// Returns:
   ///   A future that completes when the message has been sent.
+  ///
+  /// Throws:
+  /// - FusionError: if the connection is not initialized.
   Future<void> send2(GeneratedMessage submsg, {Duration? timeout}) async {
     // Check if _socketWrapper has been initialized
     if (_socketWrapper == null) {
@@ -693,7 +762,7 @@ class Fusion {
     }
 
     // Send the message to the server.
-    await sendPb2(_socketWrapper!, connection!, ClientMessage, submsg,
+    return await sendPb2(_socketWrapper!, connection!, ClientMessage, submsg,
         timeout: timeout);
   }
 
@@ -712,7 +781,7 @@ class Fusion {
     // Create the ClientHello message with version and genesis hash.
     ClientHello clientHello = ClientHello(
         version: Uint8List.fromList(utf8.encode(Protocol.VERSION)),
-        genesisHash: Util.getCurrentGenesisHash());
+        genesisHash: Utilities.getCurrentGenesisHash());
 
     // Wrap the ClientHello in a ClientMessage.
     ClientMessage clientMessage = ClientMessage()..clienthello = clientHello;
@@ -760,6 +829,8 @@ class Fusion {
       throw Exception(
           'Received unexpected message type: ${replyMsg.runtimeType}');
     }
+
+    return;
   }
 
   /// Allocates outputs for transaction components.
@@ -771,7 +842,7 @@ class Fusion {
   ///   A `Future<void>` that completes once the outputs are successfully allocated.
   ///
   /// Throws:
-  ///   FusionError if any constraints or limits are violated.
+  /// - FusionError: if any constraints or limits are violated.
   Future<void> allocateOutputs() async {
     print("DBUG allocateoutputs 746");
     print("CHECK socketwrapper 746");
@@ -781,23 +852,24 @@ class Fusion {
       throw FusionError('Connection not initialized');
     }
 
-    // Initial sanity checks
+    // Initial sanity checks.
     _socketWrapper!.status();
     assert(['setup', 'connecting'].contains(status.$1));
 
     List<Input> inputs = coins;
     int numInputs = inputs.length;
 
-    // Calculate limits on the number of components and outputs
+    // Calculate limits on the number of components and outputs.
     int maxComponents = min(numComponents, Protocol.MAX_COMPONENTS);
     int maxOutputs = maxComponents - numInputs;
 
-    // More sanity checks
+    // More sanity checks.
     if (maxOutputs < 1) {
       throw FusionError('Too many inputs ($numInputs >= $maxComponents)');
     }
     assert(maxOutputs >= 1);
 
+    // Calculate the number of distinct inputs.
     int numDistinct = inputs.map((e) => e.value).toSet().length;
     int minOutputs = max(Protocol.MIN_TX_COMPONENTS - numDistinct, 1);
     if (maxOutputs < minOutputs) {
@@ -805,67 +877,70 @@ class Fusion {
           'Too few distinct inputs selected ($numDistinct); cannot satisfy output count constraint (>= $minOutputs, <= $maxOutputs)');
     }
 
-    // Calculate the available amount for outputs
+    // Calculate the available amount for outputs.
     int sumInputsValue = inputs.map((e) => e.value).reduce((a, b) => a + b);
     int inputFees = inputs
-        .map(
-            (e) => Util.componentFee(e.sizeOfInput(), componentFeeRate.toInt()))
+        .map((e) =>
+            Utilities.componentFee(e.sizeOfInput(), componentFeeRate.toInt()))
         .reduce((a, b) => a + b);
     int availForOutputs = sumInputsValue - inputFees - minExcessFee.toInt();
 
-    // Calculate fees per output
-    int feePerOutput = Util.componentFee(34, componentFeeRate.toInt());
+    // Calculate fees per output.
+    int feePerOutput = Utilities.componentFee(34, componentFeeRate.toInt());
     int offsetPerOutput = Protocol.MIN_OUTPUT + feePerOutput;
 
-    // Check if the selected inputs have sufficient value
+    // Check if the selected inputs have sufficient value.
     if (availForOutputs < offsetPerOutput) {
       throw FusionError('Selected inputs had too little value');
     }
 
-    // Initialize random seed for generating outputs
+    // Initialize random seed for generating outputs.
     Random rng = Random();
     List<int> seed = List<int>.generate(32, (_) => rng.nextInt(256));
 
-    // Allocate the outputs based on available tiers
-    // The allocated outputs and excess fees are stored in instance variables
+    // Allocate the outputs based on available tiers.
+    //
+    // The allocated outputs and excess fees are stored in instance variables.
     print("DBUG allocateoutputs 785");
     tierOutputs = {};
     Map<int, int> excessFees = <int, int>{};
 
-    // Loop through each available tier to determine the optimal fee and outputs
+    // Loop through each available tier to determine the optimal fee and outputs.
     for (int scale in availableTiers) {
-      // Calculate the maximum fuzz fee for this tier, which is the scale divided by 1,000,000
+      // Calculate the maximum fuzz fee for this tier, which is the scale divided by 1,000,000.
       int fuzzFeeMax = scale ~/ 1000000;
 
-      // Reduce the maximum allowable fuzz fee considering the minimum and maximum excess fees
-      // and the maximum limit defined in the Protocol
+      // Reduce the maximum allowable fuzz fee considering the minimum and maximum
+      // excess fees and the maximum limit defined in the Protocol.
       int fuzzFeeMaxReduced = min(
           fuzzFeeMax,
           min(Protocol.MAX_EXCESS_FEE - minExcessFee.toInt(),
               maxExcessFee.toInt()));
 
-      // Ensure that the reduced maximum fuzz fee is non-negative
+      // Ensure that the reduced maximum fuzz fee is non-negative.
       assert(fuzzFeeMaxReduced >= 0);
 
-      // Randomly pick a fuzz fee in the range [0, fuzzFeeMaxReduced]
+      // Randomly pick a fuzz fee in the range `[0, fuzzFeeMaxReduced]`.
       int fuzzFee = rng.nextInt(fuzzFeeMaxReduced + 1);
 
-      // Reduce the available amount for outputs by the selected fuzz fee
+      // Reduce the available amount for outputs by the selected fuzz fee.
       int reducedAvailForOutputs = availForOutputs - fuzzFee;
 
-      // If the reduced available amount for outputs is less than the offset per output, skip to the next iteration\
+      // If the reduced available amount for outputs is less than the offset per
+      // output, skip to the next iteration.
       if (reducedAvailForOutputs < offsetPerOutput) {
         continue;
       }
 
-      // Generate a list of random outputs for this tier
+      // Generate a list of random outputs for this tier.
       List<int>? outputs = randomOutputsForTier(
           rng, reducedAvailForOutputs, scale, offsetPerOutput, maxOutputs);
       if (outputs != null) {
         print(outputs);
       }
 
-      // Check if the list of outputs is null or has fewer items than the minimum required number of outputs
+      // Check if the list of outputs is null or has fewer items than the minimum
+      // required number of outputs.
       if (outputs == null || outputs.length < minOutputs) {
         continue;
       }
@@ -873,7 +948,8 @@ class Fusion {
       // Adjust each output value by subtracting the fee per output.
       outputs = outputs.map((o) => o - feePerOutput).toList();
 
-      // Ensure the total number of components (inputs + outputs) does not exceed the maximum limit defined in the Protocol
+      // Ensure the total number of components (inputs + outputs) does not exceed
+      // the maximum limit defined in the Protocol.
       assert(inputs.length + (outputs?.length ?? 0) <= Protocol.MAX_COMPONENTS);
 
       // Store the calculated excess fee for this tier.
@@ -885,7 +961,7 @@ class Fusion {
 
     print('Possible tiers: $tierOutputs');
 
-    // Save some parameters for safety checks
+    // Save some parameters for safety checks.
     safetySumIn = sumInputsValue;
     safetyExcessFees = excessFees;
     return;
@@ -901,20 +977,24 @@ class Fusion {
   ///   A Future that resolves when the fusion process starts.
   ///
   /// Throws:
-  ///   FusionError in case of any unexpected behavior.
+  /// - FusionError: in case of any unexpected behavior.
   Future<void> registerAndWait(SocketWrapper socketwrapper) async {
     // Initialize a stopwatch to measure elapsed time.
     Stopwatch stopwatch = Stopwatch()..start();
 
     // Placeholder for messages from the server.
-    // `msg` can be different classes depending on which protobuf msg is sent.
-    // TODO model each possible message type, plus an error response, eg. GeneratedMessage, FusionBegin, etc.
+    //
+    // This used to be `dynamic`, but then recv and recv2 were changed to return
+    // a GeneratedMessage.
     GeneratedMessage msg;
 
+    // Initialize a map to store the outputs for each tier.
     Map<int, List<int>> tierOutputs = this.tierOutputs;
+
+    // Sort the tiers in ascending order.
     List<int> tiersSorted = tierOutputs.keys.toList()..sort();
 
-    // Check if tierOutputs is empty and throw an error if so
+    // Check if tierOutputs is empty and throw an error if so.
     if (tierOutputs.isEmpty) {
       throw FusionError(
           'No outputs available at any tier (selected inputs were too small / too large).');
@@ -935,7 +1015,7 @@ class Fusion {
       JoinPools_PoolTag(id: cashfusionTag, limit: selfFuse)
     ];
 
-    // Create the JoinPools message
+    // Create the JoinPools message.
     JoinPools joinPools =
         JoinPools(tiers: tiersSorted.map((i) => Int64(i)).toList(), tags: tags);
 
@@ -1025,8 +1105,12 @@ class Fusion {
       // Loop through each entry in statuses to find the maximum fraction and best time.
       for (var entry in statuses.entries) {
         // TODO make Entry class or otherwise type this section
+
+        // Calculate the fraction of players to minimum players.
         double frac = ((entry.value.players.toInt())) /
             ((entry.value.minPlayers.toInt()));
+
+        // Update 'maxfraction' and 'maxtiers' if the current fraction is greater than or equal to the current 'maxfraction'.
         if (frac >= maxfraction) {
           if (frac > maxfraction) {
             maxfraction = frac;
@@ -1167,7 +1251,7 @@ class Fusion {
     beginTime = fusionBeginMsg.serverTime.toDouble();
 
     // Calculate the initial hash value for the fusion process
-    lastHash = Util.calcInitialHash(
+    lastHash = Utilities.calcInitialHash(
         tier, covertDomainB, covertPort, covertSSL, beginTime);
 
     // Retrieve the output amounts for the given tier and prepare the output addresses
@@ -1177,7 +1261,7 @@ class Fusion {
 
     // Populate reservedAddresses and outputs with the prepared amounts and addresses
     reservedAddresses = outAddrs;
-    outputs = Util.zip(outAmounts ?? [], outAddrs)
+    outputs = Utilities.zip(outAmounts ?? [], outAddrs)
         .map((pair) => Output(
             value: pair[0] as int, addr: Address.fromString(pair[1] as String)))
         .toList();
@@ -1324,11 +1408,11 @@ class Fusion {
 
     // Calculate fees and sums for inputs and outputs
     final inputFees = coins
-        .map(
-            (e) => Util.componentFee(e.sizeOfInput(), componentFeeRate.toInt()))
+        .map((e) =>
+            Utilities.componentFee(e.sizeOfInput(), componentFeeRate.toInt()))
         .reduce((a, b) => a + b);
     final outputFees =
-        outputs.length * Util.componentFee(34, componentFeeRate.toInt());
+        outputs.length * Utilities.componentFee(34, componentFeeRate.toInt());
     final sumIn = coins.map((e) => e.amount).reduce((a, b) => a + b);
     final sumOut = outputs.map((e) => e.value).reduce((a, b) => a + b);
 
@@ -1406,7 +1490,7 @@ class Fusion {
     */
 
     // Perform pre-submission checks and prepare a random number for later use
-    final randomNumber = Util.getRandomBytes(32);
+    final randomNumber = Utilities.getRandomBytes(32);
     covert.checkOk();
     checkStop();
     checkCoins();
@@ -1556,7 +1640,7 @@ class Fusion {
     List<List<int>> allCommitmentsBytes = allCommitments
         .map((commitment) => commitment.writeToBuffer().toList())
         .toList();
-    List<int> sessionHash = Util.calcRoundHash(lastHash, roundPubKey,
+    List<int> sessionHash = Utilities.calcRoundHash(lastHash, roundPubKey,
         roundTime.toInt(), allCommitmentsBytes, allComponents);
 
     // Validate session hash to prevent mismatch error
@@ -1664,14 +1748,14 @@ class Fusion {
         String txHex = tx.serialize();
 
         txId = tx.txid();
-        String sumInStr = Util.formatSatoshis(sumIn, numZeros: 8);
+        String sumInStr = Utilities.formatSatoshis(sumIn, numZeros: 8);
         String feeStr = totalFee.toString();
         String feeLoc = 'fee';
 
         String label =
             "CashFusion ${coins.length}⇢${outputs.length}, ${sumInStr} BCH (−${feeStr} sats ${feeLoc})";
 
-        Util.updateWalletLabel(txId, label);
+        Utilities.updateWalletLabel(txId, label);
       } else {
         // If not successful, identify bad components.
         badComponents = msg.badComponents.toSet();
@@ -1715,7 +1799,7 @@ class Fusion {
     List<InitialCommitment> dstCommits = [];
     for (int i = 0; i < myCommitments.length; i++) {
       dstCommits.add(allCommitments[
-          othersCommitmentIdxes[Util.randPosition(randomNumber, N, i)]]);
+          othersCommitmentIdxes[Utilities.randPosition(randomNumber, N, i)]]);
     }
 
     // Generate the encrypted proofs.
@@ -1804,7 +1888,7 @@ class Fusion {
       try {
         // Decrypt the received proof using the private key.
         BigInt eccPrivateKey =
-            Util.parseBigIntFromBytes(Uint8List.fromList(privKey));
+            Utilities.parseBigIntFromBytes(Uint8List.fromList(privKey));
         ECPrivateKey privateKey = ECPrivateKey(eccPrivateKey, params);
 
         // Decrypt the proof, storing the decrypted data and the symmetric key used.
@@ -1863,7 +1947,7 @@ class Fusion {
         countInputs++;
         try {
           // Perform additional validation by checking against the blockchain
-          Util.checkInputElectrumX(inpComp);
+          Utilities.checkInputElectrumX(inpComp);
         } on Exception catch (e) {
           // If the input component doesn't match the blockchain, add the proof to the blame list.
           print(

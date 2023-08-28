@@ -9,7 +9,7 @@ import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
 
 /// A utility class that provides various helper functions.
-class Util {
+class Utilities {
   /// Checks the input for ElectrumX server.
   ///
   /// Parameters:
@@ -28,24 +28,26 @@ class Util {
   /// Returns:
   ///   A random position calculated from the seed and counter.
   static int randPosition(Uint8List seed, int numPositions, int counter) {
-    // counter to bytes
+    // Counter to bytes.
     Uint8List counterBytes = Uint8List(4);
     ByteData counterByteData = ByteData.sublistView(counterBytes);
     counterByteData.setInt32(0, counter, Endian.big);
 
-    // hash the seed and counter
+    // Hash the seed and counter.
     crypto.Digest digest = crypto.sha256.convert([...seed, ...counterBytes]);
 
-    // take the first 8 bytes
+    // Take the first 8 bytes.
     List<int> first8Bytes = digest.bytes.take(8).toList();
     int int64 = ByteData.sublistView(Uint8List.fromList(first8Bytes))
         .getUint64(0, Endian.big);
 
-    // perform the modulo operation
+    // Perform the modulo operation.
     return ((int64 * numPositions) >> 64).toInt();
   }
 
   /// Generates public keys from a given private key.
+  ///
+  /// TODO implement.
   ///
   /// Parameters:
   /// - [privkey] A private key in String format.
@@ -59,6 +61,8 @@ class Util {
 
   /// Determines the dust limit based on the length of the transaction.
   ///
+  /// TODO implement.
+  ///
   /// Parameters:
   /// - [length] The length of the transaction.
   ///
@@ -70,6 +74,8 @@ class Util {
   }
 
   /// Extracts the address from an output script.
+  ///
+  /// TODO implement.
   ///
   /// Parameters:
   /// - [scriptpubkey] The output script in Uint8List format.
@@ -84,6 +90,8 @@ class Util {
   }
 
   /// Verifies a Schnorr signature.
+  ///
+  /// TODO implement.
   ///
   /// Parameters:
   /// - [pubkey] The public key as an ECPoint.
@@ -100,6 +108,8 @@ class Util {
 
   /// Formats a given number of satoshis.
   ///
+  /// TODO implement.
+  ///
   /// Parameters:
   /// - [sats] The number of satoshis to format.
   /// - [numZeros] The number of zeros for formatting (optional).
@@ -113,6 +123,8 @@ class Util {
 
   /// Updates the wallet label for a given transaction ID.
   ///
+  /// TODO implement.
+  ///
   /// Parameters:
   /// - [txid] The transaction ID.
   /// - [label] The new label for the transaction.
@@ -120,7 +132,7 @@ class Util {
     // TODO implement; call the wallet layer.
   }
 
-  /// Generates a random sequence of bytes of a given length.
+  /// Generates a random sequence of bytes of a given [length].
   ///
   /// Parameters:
   /// - [length] The length of the byte sequence.
@@ -136,11 +148,11 @@ class Util {
     return bytes;
   }
 
-  /// Zips two lists together.
+  /// Zips two lists [list1] and [list2] together.
   ///
   /// Parameters:
-  /// - [list1] The first list.
-  /// - [list2] The second list.
+  /// - [list1] The first `List`.
+  /// - [list2] The second `List`.
   ///
   /// Returns:
   ///   A list of lists, each containing one element from each input list.

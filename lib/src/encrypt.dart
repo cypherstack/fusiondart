@@ -24,18 +24,21 @@ class DecryptionFailed implements Exception {}
 ///
 /// Returns:
 ///   A Future that resolves to the encrypted message as a Uint8List.
+///
+/// Throws:
+/// - EncryptionFailed: if the encryption fails for any reason.
 Future<Uint8List> encrypt(Uint8List message, ECPoint pubKey,
     {int? padToLength}) async {
   // Initialize public point from the public key
   ECPoint pubPoint;
   try {
-    pubPoint = Util.serToPoint(pubKey.getEncoded(true), params);
+    pubPoint = Utilities.serToPoint(pubKey.getEncoded(true), params);
   } catch (_) {
-    throw EncryptionFailed(); // If serialization to point fails, throw encryption failed exception
+    throw EncryptionFailed(); // If serialization to point fails, throw encryption failed exception.
   }
 
-  // Generate secure random nonce
-  BigInt nonceSec = Util.secureRandomBigInt(params.n.bitLength);
+  // Generate secure random nonce.
+  BigInt nonceSec = Utilities.secureRandomBigInt(params.n.bitLength);
 
   // Calculate G * nonceSec
   ECPoint? GTimesNonceSec = params.G * nonceSec;
@@ -44,7 +47,7 @@ Future<Uint8List> encrypt(Uint8List message, ECPoint pubKey,
   }
 
   // Serialize G_times_nonceSec to bytes
-  Uint8List noncePub = Util.pointToSer(GTimesNonceSec, true);
+  Uint8List noncePub = Utilities.pointToSer(GTimesNonceSec, true);
 
   // Calculate public point * nonceSec
   ECPoint? pubPointTimesNonceSec = pubPoint * nonceSec;
@@ -53,16 +56,17 @@ Future<Uint8List> encrypt(Uint8List message, ECPoint pubKey,
         'Multiplication of pubPoint with nonceSec resulted in null');
   }
 
-  // Create a SHA-256 hash as the symmetric key
-  List<int> key =
-      crypto.sha256.convert(Util.pointToSer(pubPointTimesNonceSec, true)).bytes;
+  // Create a SHA-256 hash as the symmetric key.
+  List<int> key = crypto.sha256
+      .convert(Utilities.pointToSer(pubPointTimesNonceSec, true))
+      .bytes;
 
-  // Prepare plaintext with message length prepended
+  // Prepare plaintext with message length prepended.
   Uint8List plaintext = Uint8List(4 + message.length)
     ..buffer.asByteData().setUint32(0, message.length, Endian.big)
     ..setRange(4, 4 + message.length, message);
 
-  // Handle padding for AES encryption
+  // Handle padding for AES encryption.
   if (padToLength == null) {
     padToLength = ((plaintext.length + 15) ~/ 16) *
         16; // Round up to nearest 16 bytes for AES block size.
@@ -111,50 +115,53 @@ Future<Uint8List> encrypt(Uint8List message, ECPoint pubKey,
 ///
 /// Returns:
 ///   A Future that resolves to the decrypted message as a Uint8List.
+///
+/// Throws:
+/// - DecryptionFailed: if the decryption fails for any reason.
 Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
-  // Check if the incoming data has a minimum length to contain all the elements
+  // Check if the incoming data has a minimum length to contain all the elements.
   if (data.length < 33 + 16 + 16) {
     throw DecryptionFailed();
   }
 
-  // Extract the actual ciphertext from the data (skipping nonce and MAC)
+  // Extract the actual ciphertext from the data (skipping nonce and MAC).
   Uint8List ciphertext = data.sublist(33, data.length - 16);
 
-  // Check if the ciphertext's length is a multiple of the AES block size
+  // Check if the ciphertext's length is a multiple of the AES block size.
   if (ciphertext.length % 16 != 0) {
     throw DecryptionFailed();
   }
 
-  // Initialize the secret key and cipher
+  // Initialize the secret key and cipher.
   final secretKey = SecretKey(key);
   final cipher = AesCbc.with128bits(macAlgorithm: Hmac.sha256());
 
-  // Create a random nonce
+  // Create a random nonce.
   final nonce = Uint8List(16);
 
-  // Initialize the SecretBox with the ciphertext, MAC and nonce
+  // Initialize the SecretBox with the ciphertext, MAC and nonce.
   final secretBox = SecretBox(ciphertext,
       mac: Mac(data.sublist(data.length - 16)), nonce: nonce);
 
-  // Perform the decryption
+  // Perform the decryption.
   final plaintext = await cipher.decrypt(secretBox, secretKey: secretKey);
 
-  // Check if the decrypted plaintext has at least 4 bytes (for the length field)
+  // Check if the decrypted plaintext has at least 4 bytes (for the length field).
   if (plaintext.length < 4) {
     throw DecryptionFailed();
   }
 
-  // Convert plaintext to ByteData to read the length field
+  // Convert plaintext to ByteData to read the length field.
   Uint8List uint8list = Uint8List.fromList(plaintext);
   ByteData byteData = ByteData.sublistView(uint8list);
   int msgLength = byteData.getUint32(0, Endian.big);
 
-  // Check if the length field in the decrypted message matches the actual message length
+  // Check if the length field in the decrypted message matches the actual message length.
   if (msgLength + 4 > plaintext.length) {
     throw DecryptionFailed();
   }
 
-  // Extract and return the actual message from the decrypted plaintext
+  // Extract and return the actual message from the decrypted plaintext.
   return Uint8List.fromList(plaintext.sublist(4, 4 + msgLength));
 }
 
@@ -166,6 +173,10 @@ Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
 ///
 /// Returns:
 ///   A Future that resolves to a tuple containing the decrypted message and the symmetric key used for decryption, both as Uint8Lists.
+///
+/// Throws:
+/// - DecryptionFailed: if the decryption fails for any reason.
+/// - Exception: if the private key or nonce point is null.
 Future<(Uint8List, Uint8List)> decrypt(
     Uint8List data, ECPrivateKey privkey) async {
   // Ensure the encrypted data is of the minimum required length.
@@ -178,14 +189,14 @@ Future<(Uint8List, Uint8List)> decrypt(
 
   // Attempt to deserialize the nonce point.
   try {
-    noncePoint = Util.serToPoint(noncePub, params);
+    noncePoint = Utilities.serToPoint(noncePub, params);
   } catch (_) {
     throw DecryptionFailed();
   }
 
   // TODO double check if this is correct according to the Python in Electron-Cash
 
-  // Initialize the EC parameters
+  // Initialize the EC parameters.
   ECPoint G = params.G;
   final List<int> key;
 
@@ -196,7 +207,7 @@ Future<(Uint8List, Uint8List)> decrypt(
     ECPoint? point = (G * privkey.d)! + noncePoint;
 
     // Generate the symmetric key using the SHA-256 hash of the computed point.
-    key = crypto.sha256.convert(Util.pointToSer(point!, true)).bytes;
+    key = crypto.sha256.convert(Utilities.pointToSer(point!, true)).bytes;
     // Use the symmetric key to decrypt the data.
     Uint8List decryptedData =
         await decryptWithSymmkey(data, Uint8List.fromList(key));
@@ -204,7 +215,7 @@ Future<(Uint8List, Uint8List)> decrypt(
     // Return the decrypted data and the symmetric key used for decryption.
     return (decryptedData, Uint8List.fromList(key));
   } else {
-    // Handle the situation where privkey.d or noncePoint is null
+    // Handle the situation where privkey.d or noncePoint is null.
     throw Exception("FIXME"); // TODO
   }
 }
