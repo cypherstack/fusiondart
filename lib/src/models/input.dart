@@ -146,4 +146,19 @@ class Input {
     // Return true if all signatures are verified.
     return true;
   }
+
+  /// Overrides the toString method to provide detailed information about the instance.
+  ///
+  /// Returns:
+  ///   A string representing the state of this `Input` object.
+  @override
+  String toString() {
+    return 'Input {'
+        ' prevTxid: ${hex.encode(prevTxid)},'
+        ' prevIndex: $prevIndex,'
+        ' pubKey: ${hex.encode(pubKey)},'
+        ' amount: $amount,'
+        ' signatures: $signatures'
+        ' }';
+  }
 }
