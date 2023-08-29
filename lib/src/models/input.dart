@@ -80,7 +80,7 @@ class Input {
     );
   }
 
-  /// Factory method to create an Input object from a tuple of UTXO data.
+  /// Factory method to create an Input object from a Record of UTXO data.
   ///
   /// TODO implement pubKey.
   ///

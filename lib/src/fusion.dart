@@ -30,14 +30,22 @@ import 'package:protobuf/protobuf.dart';
 /// It maintains the state and controls the flow of a fusion operation.
 class Fusion {
   // Private late finals used for dependency injection.
-  /*late final Future<Address> Function() _createNewReservedChangeAddress;*/
   // Disabled because _getUnusedReservedChangeAddresses fulfills all requirements.
+  late final Future<List<Address>> Function() _getAddresses;
+  late final Future<List<Input>> Function(String address) _getInputsByAddress;
+  late final Future<Set<Transaction>> Function(String address)
+      _getTransactionsByAddress;
+  /*late final Future<Address> Function() _createNewReservedChangeAddress;*/
   late final Future<List<Address>> Function(int numberOfAddresses)
       _getUnusedReservedChangeAddresses;
 
   /// Constructor that sets up a Fusion object.
   Fusion(
-      {/*required Future<Address> Function() createNewReservedChangeAddress,*/
+      {required Future<List<Address>> Function() getAddresses,
+      required Future<List<Input>> Function(String address) getInputsByAddress,
+      required Future<Set<Transaction>> Function(String address)
+          getTransactionsByAddress,
+      /*required Future<Address> Function() createNewReservedChangeAddress,*/
       required Future<List<Address>> Function(int numberOfAddresses)
           getUnusedReservedChangeAddresses}); /*{
     initializeConnection(host, port);
@@ -108,19 +116,37 @@ class Fusion {
   List<int> myComponentIndexes = []; // Holds the indexes for the components.
   List<int> myCommitmentIndexes = []; // Holds the indexes for the commitments.
   Set<int> badComponents = {}; // The indexes of bad components.
-      []; // Holds the indexes for the commitments belonging to this client.
-  Set<int> badComponents =
-      {}; // Holds the indexes of bad components for this client.
+
+  static const int COINBASE_MATURITY = 100; // Maturity for coinbase UTXOs.
+  // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash/bitcoin.py#L65
+  static const int DEFAULT_MAX_COINS = 20; // Outputs to allocate for fusion.
+  // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/plugin.py#L68
+  static const double KEEP_LINKED_PROBABILITY = 0.1; // Allowed linkability.
+  // For semi-linked addresses (that share txids in their history), allow linking them with this probability.
+  // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/plugin.py#L62
+  static const COIN_FRACTION_FUDGE_FACTOR = 10; // Heuristic factor
+  // Guess that expected number of coins in wallet in equilibrium is = (this number) / fraction
+  // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/plugin.py#L60
+  int localHeight = 0; // TODO replace with blockchain height getter.
+  bool autofuseCoinbase = false; // TODO link to a setting in the wallet.
+  // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/conf.py#L68
 
   SocketWrapper? _socketWrapper;
 
   /// Method to initialize Fusion instance with necessary wallet methods.
   /// The methods injected here are used for various operations throughout the fusion process.
   void initFusion({
+    required Future<List<Address>> Function() getAddresses,
+    required Future<List<Input>> Function(String address) getInputsByAddress,
+    required Future<Set<Transaction>> Function(String address)
+        getTransactionsByAddress,
     // required Future<Address> Function() createNewReservedChangeAddress,
     required Future<List<Address>> Function(int numberOfAddresses)
         getUnusedReservedChangeAddresses,
   }) {
+    _getAddresses = getAddresses;
+    _getInputsByAddress = getInputsByAddress;
+    _getTransactionsByAddress = getTransactionsByAddress;
     // _createNewReservedChangeAddress = createNewReservedChangeAddress;
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
   }
@@ -826,6 +852,252 @@ class Fusion {
     return;
   }
 
+  /// Selects coins for fusion.
+  ///
+  /// Takes a set of `Input` objects [_coins] and returns a Record containing
+  /// a list of eligible inputs, a list of ineligible inputs, the sum of the
+  /// values of the eligible buckets, a boolean flag indicating if there are
+  /// unconfirmed coins, and a boolean flag indicating if there are coinbase
+  /// coins.
+  ///
+  /// Parameters:
+  /// - [_coins]: The set of coins from which to select.
+  ///
+  /// Returns:
+  ///   A `Future<(
+  ///   List<(String, List<Input>)>, // Eligible
+  ///   List<(String, List<Input>)>, // Ineligible
+  ///   int, // sumValue
+  ///   bool, // hasUnconfirmed
+  ///   bool // hasCoinbase
+  ///   )>` that completes with a Record containing the eligible inputs, ineligible inputs,
+  ///   sum of the values of the eligible buckets, a boolean flag indicating if there are
+  ///   unconfirmed coins, and a boolean flag indicating if there are coinbase coins.
+  Future<
+      (
+        List<(String, List<Input>)>, // Eligible
+        List<(String, List<Input>)>, // Ineligible
+        int, // sumValue
+        bool, // hasUnconfirmed
+        bool // hasCoinbase
+      )> selectCoins(Set<Input> _coins) async {
+    Set<(String, List<Input>)> eligible = {}; // List of eligible inputs.
+    Set<(String, List<Input>)> ineligible = {}; // List of ineligible inputs.
+    bool hasUnconfirmed = false; // Are there unconfirmed coins?
+    bool hasCoinbase = false; // Are there coinbase coins?
+    int sumValue = 0; // Sum of the values of the eligible `Input`s.
+    int mincbheight = localHeight + COINBASE_MATURITY;
+
+    // Loop through the addresses in the wallet.
+    for (Address address in await _getAddresses()) {
+      // Get the coins for the address.
+      List<Input> acoins = await _getInputsByAddress(address.addr);
+
+      // Check if the address has any coins.
+      if (acoins.isEmpty) continue;
+
+      // Bool flag to indicate if the address is good (eligible).
+      bool good = true;
+
+      // TODO check if address is frozen
+      /*
+      if (wallet.frozenAddresses.contains(address)) {
+        good = false;
+      }
+      */
+
+      // Loop through the coins and check for eligibility.
+      for (var i = 0; i < acoins.length; i++) {
+        // Get the coin.
+        var c = acoins[i];
+
+        // Add the amount to the sum.
+        sumValue += c.amount;
+
+        // TODO check for tokens, maturity, etc.
+        /*
+        good = good &&
+            (i < 3 &&
+                c['token_data'] == null &&
+                c['slp_token'] == null &&
+                !c['is_frozen_coin'] &&
+                (!c['coinbase'] || c['height'] <= mincbheight)); // where `int mincbheight = localHeight + COINBASE_MATURITY;`
+
+        if (c['height'] <= 0) {
+          good = false;
+          hasUnconfirmed = true;
+        }
+
+        hasCoinbase = hasCoinbase || c['coinbase'];
+        */
+      }
+      if (good) {
+        // Add the address and coins to the eligible list.
+        eligible.add((address.addr, acoins));
+      } else {
+        // Add the address and coins to the ineligible list.
+        ineligible.add((address.addr, acoins));
+      }
+    }
+
+    // Return the Record.
+    return (
+      eligible.toList(),
+      ineligible.toList(),
+      sumValue,
+      hasUnconfirmed,
+      hasCoinbase
+    );
+  }
+
+  /// Selects random coins for fusion.
+  ///
+  /// Takes a double [fraction] and a list of eligible buckets [eligible] and returns a list of
+  /// random coins.
+  ///
+  /// Parameters:
+  /// - [fraction]: The fraction of eligible `Input`s to select.
+  /// - [eligible]: The list of eligible `Input`s.
+  ///
+  /// Returns:
+  ///   A `Future<Set<Input>>` that completes with a list of random coins.
+  Future<Set<Input>> selectRandomCoins(
+      double fraction, List<(String, List<Input>)> eligible) async {
+    // Shuffle the eligible buckets.
+    var addrCoins = List<(String, List<Input>)>.from(eligible);
+    addrCoins.shuffle();
+
+    // Initialize the result set.
+    Set<String> resultTxids = {};
+
+    // Initialize the result list.
+    Set<Input> result = {};
+
+    // Counts the number of coins in the result so far.
+    int numCoins = 0;
+
+    // Counts the number of attempts to select coins.
+    int numAttempts = 0;
+
+    // Selection loop.
+    while (true) {
+      // Loop through each coin and check it.
+      for (var record in addrCoins) {
+        // Get the address and coins.
+        var addr = record.$1;
+        var acoins = record.$2;
+
+        // Check if we have enough coins.
+        if (numCoins >= DEFAULT_MAX_COINS) {
+          // We have enough coins, so break.
+          break;
+        } else if (numCoins + acoins.length > DEFAULT_MAX_COINS) {
+          // We have too many coins, so truncate the coins.
+          continue;
+        }
+
+        // Check if we should skip this bucket.
+        if (Random().nextDouble() > fraction) {
+          continue;
+        }
+
+        // Semi-linkage check
+        //
+        // We consider all txids involving the address, historical and current.
+
+        // Get the transactions for the address.
+        Set<Transaction> ctxs = await _getTransactionsByAddress(addr);
+
+        // Extract the txids from the transactions.
+        Set<String> ctxids = ctxs.map((tx) {
+          return tx.txid();
+        }).toSet();
+
+        // Check if there are any collisions.
+        var collisions = ctxids.intersection(resultTxids);
+
+        // Check if we should skip this bucket.
+        //
+        // Note each collision gives a separate chance of discarding this bucket.
+        if (Random().nextDouble() >
+            pow(KEEP_LINKED_PROBABILITY, collisions.length)) {
+          continue;
+        }
+
+        // Add the coins and txids to the result.
+        numCoins += acoins.length;
+        result.addAll(acoins);
+        resultTxids.addAll(ctxids);
+      }
+
+      // Check if we have enough coins.
+      //
+      // If we don't and if we've tried to select coins randomly over 100 times,
+      // then we'll try the first bucket which has coins.
+      if (result.isEmpty && numAttempts > 100) {
+        try {
+          // Try to find a bucket with coins.
+          var res = addrCoins.firstWhere((record) => record.$2.isNotEmpty).$2;
+          result = res.toSet();
+        } catch (e) {
+          // Handle exception where all eligible buckets were cleared
+          throw FusionError('No coins available');
+        }
+      } else {
+        // We have enough coins, so break the selection loop.
+        break;
+      }
+
+      numAttempts++;
+    }
+
+    // Return the result.
+    return result;
+  }
+
+  /// Gets the fraction parameter used to help select coins.
+  ///
+  /// Takes an integer [sumValue] and returns a double representing the fraction
+  /// of coins to select.
+  ///
+  /// TODO implement custom modes.
+  ///
+  /// Parameters:
+  /// - [sumValue]: The sum of the values of the eligible buckets.
+  ///
+  /// Returns:
+  ///  A double representing the fraction of coins to select.
+  double getFraction(int sumValue) {
+    String mode = 'normal'; // TODO get from wallet configuration
+    // 'normal', 'consolidate', 'fan-out', etc.
+    double fraction = 0.1;
+
+    // TODO implement custom modes.
+    /*
+    if (mode == 'custom') {
+      String selectType = walletConf.selector[0];
+      double selectAmount = walletConf.selector[1];
+
+      if (selectType == 'size' && sumValue.toInt() != 0) {
+        fraction = COIN_FRACTION_FUDGE_FACTOR * selectAmount / sumValue;
+      } else if (selectType == 'count' && selectAmount.toInt() != 0) {
+        fraction = COIN_FRACTION_FUDGE_FACTOR / selectAmount;
+      } else if (selectType == 'fraction') {
+        fraction = selectAmount;
+      }
+      // Note: fraction at this point could be <0 or >1 but doesn't matter.
+    } else */
+    if (mode == 'consolidate') {
+      fraction = 1.0;
+    } else if (mode == 'normal') {
+      fraction = 0.5;
+    } else if (mode == 'fan-out') {
+      fraction = 0.1;
+    }
+
+    return fraction;
+  }
+
   /// Allocates outputs for transaction components.
   ///
   /// Uses server parameters and local constraints to determine the number and
@@ -849,10 +1121,34 @@ class Fusion {
     _socketWrapper!.status();
     assert(['setup', 'connecting'].contains(status.$1));
 
-    // TODO coin selection
+    // Get the coins.
+    (
+      List<(String, List<Input>)>, // Eligible
+      List<(String, List<Input>)>, // Ineligible
+      int, // sumValue
+      bool, // hasUnconfirmed
+      bool // hasCoinbase _selections = await selectCoins(_inputs);
+    ) _selections = await selectCoins(coins);
 
-    Set<Input> inputs = coins;
-    int numInputs = inputs.length;
+    // Initialize the eligible set.
+    Set<Input> eligible = {};
+
+    // Loop through each key-value pair in the Map to extract Inputs and put them in the Set
+    for ((String, List<Input>) inputList in _selections.$1) {
+      for (Input input in inputList.$2) {
+        if (!eligible.contains(input)) {
+          // Shouldn't this be accomplished by the Set?
+          eligible.add(input);
+        }
+      }
+    }
+
+    // Select random coins from the eligible set.
+    Set<Input> inputs =
+        await selectRandomCoins(getFraction(_selections.$3), _selections.$1);
+    /*await selectRandomCoins(
+            numComponents / eligible.length, _selections.$1);*/
+    int numInputs = inputs.length; // Number of inputs selected.
 
     // Calculate limits on the number of components and outputs.
     int maxComponents = min(numComponents, Protocol.MAX_COMPONENTS);
