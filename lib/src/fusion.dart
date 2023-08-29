@@ -1555,8 +1555,7 @@ class Fusion {
     // Populate reservedAddresses and outputs with the prepared amounts and addresses
     reservedAddresses = outAddrs;
     outputs = Utilities.zip(outAmounts ?? [], outAddrs)
-        .map((pair) => Output(
-            value: pair[0] as int, addr: Address.fromString(pair[1] as String)))
+        .map((pair) => Output(value: pair[0] as int, addr: pair[1] as Address))
         .toList();
 
     // Retrieve the safety excess fee for the given tier
