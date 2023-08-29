@@ -31,7 +31,7 @@ import 'package:protobuf/protobuf.dart';
 class Fusion {
   // Private late finals used for dependency injection.
   /*late final Future<Address> Function() _createNewReservedChangeAddress;*/
-  // Disabled because _getUnusedReservedChangeAddresses fulfills all requirements
+  // Disabled because _getUnusedReservedChangeAddresses fulfills all requirements.
   late final Future<List<Address>> Function(int numberOfAddresses)
       _getUnusedReservedChangeAddresses;
 
@@ -53,40 +53,33 @@ class Fusion {
   // TODO parameterize; should these be fed in as parameters upon construction/instantiation?
   bool serverSsl = false;
 
-  // Defines the host address for the CashFusion server.
+  String serverHost = "cashfusion.stackwallet.com"; // CashFusion server host.
   // Alternative host: `"fusion.servo.cash"`.
-  String serverHost = "cashfusion.stackwallet.com";
-  // Specifies the port number for the server.
+
+  int serverPort = 8787; // Server port.
   // For use with the alternative host above, use `8789`.
-  int serverPort = 8787;
 
-  String torHost = ""; // Defines the host address for the Tor connection.
+  String torHost = ""; // Tor SOCKS5 proxy host.
   // Could use InternetAddress.looopbackIPv4 or InternetAddress.loopbackIPv6
-  int torPort = 0; // Specifies the port number for the Tor connection.
+  int torPort = 0; // Tor SOCKS5 proxy port.
 
-  int covertPort = 0; // Port number for the covert connection.
-  bool covertSSL =
-      false; // Specifies if SSL is enabled for the covert connection.
+  int covertPort = 0; // Covert connection port.
+  bool covertSSL = false; // Use SSL for covert connection?
 
   int roundCount = 0; // Tracks the number of CashFusion rounds.
   String txId = ""; // Holds a transaction ID.
 
   // Various state variables.
-  Set<Input> coins =
-      {}; // "coins" and "inputs" are often synonymous in the original python code.
+  Set<Input> coins = {}; // "coins"≈"inputs" in the python source.
   List<Output> outputs = [];
   List<Address> changeAddresses = [];
 
-  bool serverConnectedAndGreeted =
-      false; // Flag to indicate if the server connection has been established and greeted.
-  bool stopping =
-      false; // Flag to indicate if the CashFusion operation should stop.
-  bool stoppingIfNotRunning =
-      false; // Flag to indicate if the operation should stop if it's not running.
+  bool serverConnectedAndGreeted = false; // Have we connected to the server?
+  bool stopping = false; // Should fusion stop?
+  bool stoppingIfNotRunning = false; // Should fusion stop if it's not running?
   String stopReason = ""; // Specifies the reason for stopping the operation.
 
-  (String, String) status =
-      ("", ""); // Holds the current status of the operation as a Record.
+  (String, String) status = ("", ""); // Holds the current status as a Record.
   Connection? connection; // Holds the active Connection object.
 
   int numComponents = 0; // Tracks the number of components.
@@ -98,8 +91,7 @@ class Fusion {
   int maxOutputs = 0; // Maximum number of outputs allowed.
   int safetySumIn = 0; // The sum of all inputs, used for safety checks.
   Map<int, int> safetyExcessFees = {}; // Holds safety excess fees.
-  Map<int, List<int>> tierOutputs =
-      {}; // Associates CashFusion tiers with their corresponding outputs.
+  Map<int, List<int>> tierOutputs = {}; // Associates tiers with outputs.
   // Not sure if this should be using the Output model.
 
   int inactiveTimeLimit = 600000; // [ms] 10 minutes in milliseconds.
@@ -108,15 +100,14 @@ class Fusion {
   List<int> lastHash = <int>[]; // Holds the last hash used in a fusion.
   List<Address> reservedAddresses = <Address>[]; // List of reserved addresses.
   int safetyExcessFee = 0; // Safety excess fee for the operation.
-  DateTime tFusionBegin =
-      DateTime.now(); // The timestamp when the CashFusion operation started.
+  DateTime tFusionBegin = DateTime.now(); // The timestamp when Fusion began.
   Uint8List covertDomainB = Uint8List(0); // Holds the covert domain in bytes.
 
   List<int>? txInputIndices; // Indices for transaction inputs.
   Transaction tx = Transaction(); // Holds the current Transaction object.
-  List<int> myComponentIndexes =
-      []; // Holds the indexes for the components belonging to this client.
-  List<int> myCommitmentIndexes =
+  List<int> myComponentIndexes = []; // Holds the indexes for the components.
+  List<int> myCommitmentIndexes = []; // Holds the indexes for the commitments.
+  Set<int> badComponents = {}; // The indexes of bad components.
       []; // Holds the indexes for the commitments belonging to this client.
   Set<int> badComponents =
       {}; // Holds the indexes of bad components for this client.
@@ -421,7 +412,7 @@ class Fusion {
   ///
   /// Returns:
   ///   A non-zero random double value.
-  static double nextDoubleNonZero(Random rng) {
+  static double nextNonZeroDouble(Random rng) {
     // Start with 0.0.
     double value = 0.0;
 
@@ -458,7 +449,7 @@ class Fusion {
 
     // Generate random values.
     for (int i = 0; i < maxCount + 1; i++) {
-      double val = -lambd * log(nextDoubleNonZero(rng));
+      double val = -lambd * log(nextNonZeroDouble(rng));
       remaining -= (val.ceil() + offset);
       if (remaining < 0) {
         didBreak = true; // If you break, set this flag to true.
@@ -858,6 +849,8 @@ class Fusion {
     _socketWrapper!.status();
     assert(['setup', 'connecting'].contains(status.$1));
 
+    // TODO coin selection
+
     Set<Input> inputs = coins;
     int numInputs = inputs.length;
 
@@ -867,10 +860,6 @@ class Fusion {
 
     // More sanity checks.
     if (maxOutputs < 1) {
-      // TODO remove debugging message.
-      for (var input in inputs) {
-        print(input.toString());
-      }
       throw FusionError('Too many inputs ($numInputs >= $maxComponents)');
     }
     assert(maxOutputs >= 1);
@@ -971,7 +960,7 @@ class Fusion {
     safetySumIn = sumInputsValue;
     safetyExcessFees = excessFees;
     return;
-  }
+  } // End of `allocateOutputs()`.
 
   /// Registers a client to a fusion server and waits for the fusion process to start.
   ///
@@ -1761,7 +1750,7 @@ class Fusion {
         String feeLoc = 'fee';
 
         String label =
-            "CashFusion ${coins.length}⇢${outputs.length}, ${sumInStr} BCH (−${feeStr} sats ${feeLoc})";
+            "CashFusion ${coins.length}⇢${outputs.length}, $sumInStr BCH (−$feeStr sats $feeLoc)";
 
         Utilities.updateWalletLabel(txId, label);
       } else {
