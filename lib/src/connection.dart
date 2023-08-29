@@ -128,7 +128,7 @@ class Connection {
       await socketwrapper.send(frame);
       // TODO should this be unawaited?
     } on SocketException catch (e) {
-      throw TimeoutException('Socket write timed out', timeout);
+      throw TimeoutException('Socket write timed out ($e)', timeout);
     }
   }
 
@@ -177,7 +177,7 @@ class Connection {
         await controller.close();
       }
     } on SocketException catch (e) {
-      throw TimeoutException('Socket write timed out', timeout);
+      throw TimeoutException('Socket write timed out ($e)', timeout);
     }
   }
 
@@ -265,7 +265,7 @@ class Connection {
           subscription?.cancel();
         }
       },
-      onError: (e) {
+      onError: (dynamic e) {
         subscription?.cancel();
         if (e is Exception) {
           throw e;

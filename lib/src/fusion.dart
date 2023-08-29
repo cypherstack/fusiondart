@@ -301,7 +301,7 @@ class Fusion {
       if (status.$1 != 'complete') {
         for (Output output in outputs) {
           // TODO implement
-          // Util.unreserve_change_address(output.addr);
+          /*Util.unreserve_change_address(output.addr);*/
         }
         if (!serverConnectedAndGreeted) {
           notifyServerStatus(false, status: status);
@@ -364,7 +364,7 @@ class Fusion {
   void checkStop({bool running = true}) {
     // Gets called occasionally from fusion thread to allow a stop point.
     if (stopping || (!running && stoppingIfNotRunning)) {
-      throw FusionError(stopReason ?? 'Unknown stop reason');
+      throw FusionError(stopReason);
     }
   }
 
@@ -956,13 +956,13 @@ class Fusion {
 
       // Ensure the total number of components (inputs + outputs) does not exceed
       // the maximum limit defined in the Protocol.
-      assert(inputs.length + (outputs?.length ?? 0) <= Protocol.MAX_COMPONENTS);
+      assert(inputs.length + (outputs.length) <= Protocol.MAX_COMPONENTS);
 
       // Store the calculated excess fee for this tier.
       excessFees[scale] = sumInputsValue - inputFees - reducedAvailForOutputs;
 
       // Store the list of output values for this tier.
-      tierOutputs[scale] = outputs!;
+      tierOutputs[scale] = outputs;
     }
 
     print('Possible tiers: $tierOutputs');
@@ -1138,7 +1138,7 @@ class Fusion {
         // Check if the field 'timeRemaining' exists in the current entry.
         if (fieldInfoTimeRemaining != null) {
           // Confirm that the message contains the 'timeRemaining' field.
-          if (entry.value.hasField(fieldInfoTimeRemaining!.tagNumber)) {
+          if (entry.value.hasField(fieldInfoTimeRemaining.tagNumber)) {
             // Convert 'timeRemaining' to integer
             int tr = entry.value.timeRemaining.toInt();
 
@@ -1448,7 +1448,7 @@ class Fusion {
     }
 
     // Generate components and related data
-    final numBlanks = numComponents - coins.length - outputs.length;
+    int numBlanks = numComponents - coins.length - outputs.length;
     final List<ComponentResult> genComponentsResults =
         genComponents(numBlanks, coins, outputs, componentFeeRate.toInt());
 
@@ -1748,7 +1748,7 @@ class Fusion {
           if (sig.length != 64) {
             throw FusionError('server relayed bad signature');
           }
-          inp.signatures = [sig + '41'];
+          inp.signatures = ['${sig}41'];
         }
 
         // Finalize transaction details and update wallet label
@@ -1950,6 +1950,7 @@ class Fusion {
       }
 
       // If inpComp is not null, this means the proof was valid.
+      // TODO inpComp can't be null, so this logic will never run!  Make sure to change to a valid check!
       // TODO null safety feedback messages for inpComp
       if (inpComp != null) {
         countInputs++;
