@@ -638,7 +638,7 @@ class CovertSubmitter extends PrintError {
   /// Verifies all slots are connected.
   ///
   /// Returns:
-  ///   void
+  ///   `void`
   ///
   /// Throws:
   ///  - FusionError: if not all slots are connected.

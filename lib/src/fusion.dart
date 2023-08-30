@@ -979,10 +979,18 @@ class Fusion {
     // Counts the number of coins in the result so far.
     int numCoins = 0;
 
+// Counts the number of attempts to select coins.
+    int maxAttempts = 100;
+
     // Counts the number of attempts to select coins.
     int numAttempts = 0;
 
     // Selection loop.
+    //
+    // This was added because the original code was failing to select a bucket
+    // with coins when the number of coins was low.  This loop will try to select
+    // a bucket with coins if the number of coins is low and we've tried to select
+    // coins randomly over 100 (maxAttempts) times.
     while (true) {
       // Loop through each coin and check it.
       for (var record in addrCoins) {
@@ -1037,7 +1045,7 @@ class Fusion {
       //
       // If we don't and if we've tried to select coins randomly over 100 times,
       // then we'll try the first bucket which has coins.
-      if (result.isEmpty && numAttempts > 100) {
+      if (result.isEmpty && numAttempts > maxAttempts) {
         try {
           // Try to find a bucket with coins.
           var res = addrCoins.firstWhere((record) => record.$2.isNotEmpty).$2;
@@ -1046,7 +1054,7 @@ class Fusion {
           // Handle exception where all eligible buckets were cleared
           throw FusionError('No coins available');
         }
-      } else {
+      } else if (result.isNotEmpty) {
         // We have enough coins, so break the selection loop.
         break;
       }
@@ -1609,10 +1617,12 @@ class Fusion {
           numSpares: Protocol.COVERT_CONNECT_SPARES.toInt(),
           connectTimeout: Protocol.COVERT_CONNECT_TIMEOUT.toInt());
 
+      /*
       print("DEBUG return early from covert");
       // Return the CovertSubmitter instance early.
       // TODO finish method.
       return covert;
+      */
 
       // Loop a bit before we're expecting startRound, watching for status updates.
       final tend = tFusionBegin.add(Duration(
