@@ -15,12 +15,19 @@ and the Flutter guide for
 
 A Dart package for interacting with CashFusion servers.
 
+# WARNGING
+
+ - Do not test this with a wallet with significant funds.
+ - Do not test this with a wallet with tokens.
+
+These actions may result in loss of funds, tokens, or both.
+
 ## Features
 
- - [ ] Connect to CashFusion servers
- - [ ] Create CashFusion sessions
- - [ ] Join CashFusion sessions
- - [ ] Send and receive CashFusion messages
+ - [x] Connect to a CashFusion server
+ - [x] Create CashFusion sessions
+ - [x] Join CashFusion sessions
+ - [x] Send and receive CashFusion messages
  - [ ] Send and receive CashFusion transactions
  - [ ] Send and receive CashFusion status updates
  - [ ] Send and receive CashFusion errors

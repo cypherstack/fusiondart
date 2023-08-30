@@ -860,6 +860,8 @@ class Fusion {
   /// unconfirmed coins, and a boolean flag indicating if there are coinbase
   /// coins.
   ///
+  /// TODO utilize a response class.
+  ///
   /// Parameters:
   /// - [_coins]: The set of coins from which to select.
   ///
@@ -915,6 +917,7 @@ class Fusion {
         sumValue += c.amount;
 
         // TODO check for tokens, maturity, etc.
+        // TODO DO NOT TEST THIS WITH A WALLET WITH TOKENS OR YOU MAY LOSE THEM !!!
         /*
         good = good &&
             (i < 3 &&
