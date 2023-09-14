@@ -11,7 +11,7 @@ import 'package:fusiondart/src/socketwrapper.dart';
 // remove data from a buffer but its a local copy , might not actually
 // remove the data from the socket buffer.  We may need a wrapper class for the buffer??
 
-/// Asynchronous function to open a new connection
+/// Asynchronous function to open a new connection.
 ///
 /// Parameters:
 /// - [host]: The host to connect to.
