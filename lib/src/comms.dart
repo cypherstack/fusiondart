@@ -46,9 +46,9 @@ Map<Type, PbCreateFunc> pbClassCreators = {
   CovertMessage: () => CovertMessage(),
 };
 
-/// Sends a Protobuf message [subMsg] of `Type` [pbClass] over a [connection].
+/// Sends a Protobuf message [subMsg] of type [pbClass] over a [connection].
 ///
-/// [DEPRECATED]
+/// [DEPRECATED], use sendPb2 instead.  TODO remove this function.
 ///
 /// Parameters:
 /// - [connection]: The connection object through which the message will be sent.
@@ -92,6 +92,11 @@ Future<void> sendPb(
 
 /// Sends a Protobuf message over a connection.
 ///
+/// This function is used to send a Protobuf message over a connection.  It is
+/// similar to sendPb, but it also takes a SocketWrapper object.  This is
+/// necessary for the case where we have multiple connections to the same
+/// server, and we need to send a message over a specific connection.
+///
 /// Parameters:
 /// - `connection`: The connection object through which the message will be sent.
 /// - `pbClass`: The Protobuf class type to send.
@@ -107,16 +112,20 @@ Future<void> sendPb2(SocketWrapper socketwrapper, Connection connection,
     Type pbClass, GeneratedMessage subMsg,
     {Duration? timeout}) async {
   // Construct the outer message with the submessage.
-
   if (pbClassCreators[pbClass] == null) {
     print('pbClassCreators[pbClass] is null');
     // TODO should we throw an exception here?
     return;
   }
 
+  // Construct the outer message by merging it with the submessage.
   GeneratedMessage pbMessage = pbClassCreators[pbClass]!()
     ..mergeFromMessage(subMsg);
+
+  // Convert the Protobuf message to bytes.
   final msgBytes = pbMessage.writeToBuffer();
+
+  // Send the message through the connection.
   try {
     await connection.sendMessageWithSocketWrapper(socketwrapper, msgBytes,
         timeout: timeout);
@@ -130,6 +139,11 @@ Future<void> sendPb2(SocketWrapper socketwrapper, Connection connection,
 }
 
 /// Receives a protocol buffer message from the server with additional socket information.
+///
+/// This function is used to receive a protocol buffer message from the server.  It is
+/// similar to recvPb, but it also takes a SocketWrapper object.  This is
+/// necessary for the case where we have multiple connections to the same
+/// server, and we need to receive a message over a specific connection.
 ///
 /// Parameters:
 /// - [socketwrapper] SocketWrapper instance for the connection.
@@ -170,6 +184,7 @@ Future<(GeneratedMessage, String)> recvPb2(SocketWrapper socketwrapper,
         throw FusionError('Expected field not found in message: $name');
       }
 
+      // Check if the field is present in the message.
       if (pbMessage.hasField(fieldInfo.tagNumber)) {
         return (pbMessage, name);
       }
@@ -195,6 +210,11 @@ Future<(GeneratedMessage, String)> recvPb2(SocketWrapper socketwrapper,
 }
 
 /// Receives a protocol buffer message from the server.
+///
+/// This function is used to receive a protocol buffer message from the server.
+/// It is similar to recvPb2, but it does not take a SocketWrapper object.
+///
+/// [DEPRECATED], use recvPb2 instead.  TODO remove this function.
 ///
 /// Parameters:
 /// - [connection] Connection instance to the server.
@@ -232,6 +252,7 @@ Future<(GeneratedMessage, String)> recvPb(
         throw FusionError('Expected field not found in message: $name');
       }
 
+      // Check if the field is present in the message.
       if (pbMessage.hasField(fieldInfo.tagNumber)) {
         return (pbMessage, name);
       }
