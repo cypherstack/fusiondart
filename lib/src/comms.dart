@@ -214,8 +214,6 @@ Future<(GeneratedMessage, String)> recvPb2(SocketWrapper socketwrapper,
 /// This function is used to receive a protocol buffer message from the server.
 /// It is similar to recvPb2, but it does not take a SocketWrapper object.
 ///
-/// [DEPRECATED], use recvPb2 instead.  TODO remove this function.
-///
 /// Parameters:
 /// - [connection] Connection instance to the server.
 /// - [pbClass] The protocol buffer message type to be received.

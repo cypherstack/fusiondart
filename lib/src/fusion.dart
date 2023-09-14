@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -38,6 +39,8 @@ class Fusion {
   /*late final Future<Address> Function() _createNewReservedChangeAddress;*/
   late final Future<List<Address>> Function(int numberOfAddresses)
       _getUnusedReservedChangeAddresses;
+  late final Future<({InternetAddress host, int port})> Function()
+  _getSocksProxyAddress;
 
   /// Constructor that sets up a Fusion object.
   Fusion(
@@ -47,7 +50,9 @@ class Fusion {
           getTransactionsByAddress,
       /*required Future<Address> Function() createNewReservedChangeAddress,*/
       required Future<List<Address>> Function(int numberOfAddresses)
-          getUnusedReservedChangeAddresses}); /*{
+          getUnusedReservedChangeAddresses,
+      required Future<({InternetAddress host, int port})> Function() getSocksProxyAddress,
+      }); /*{
     initializeConnection(host, port);
   }
 
@@ -117,6 +122,8 @@ class Fusion {
   List<int> myCommitmentIndexes = []; // Holds the indexes for the commitments.
   Set<int> badComponents = {}; // The indexes of bad components.
 
+  ({InternetAddress host, int port})? proxyInfo; // Holds the proxy information.
+
   static const int COINBASE_MATURITY = 100; // Maturity for coinbase UTXOs.
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash/bitcoin.py#L65
   static const int DEFAULT_MAX_COINS = 20; // Outputs to allocate for fusion.
@@ -143,12 +150,15 @@ class Fusion {
     // required Future<Address> Function() createNewReservedChangeAddress,
     required Future<List<Address>> Function(int numberOfAddresses)
         getUnusedReservedChangeAddresses,
+    required Future<({InternetAddress host, int port})> Function()
+        getSocksProxyAddress,
   }) {
     _getAddresses = getAddresses;
     _getInputsByAddress = getInputsByAddress;
     _getTransactionsByAddress = getTransactionsByAddress;
     // _createNewReservedChangeAddress = createNewReservedChangeAddress;
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
+    _getSocksProxyAddress = getSocksProxyAddress;
   }
 
   /// Adds Unspent Transaction Outputs (UTXOs) from [utxoList] to the `coins` list as `Input`s.
@@ -199,7 +209,6 @@ class Fusion {
       try {
         // Check compatibility  - This was done in python version to see if fast libsec installed.
         // For now , in dart, just pass this test.
-        ;
       } on Exception catch (e) {
         // handle exception, rethrow as a custom FusionError
         throw FusionError("Incompatible: $e");
@@ -226,7 +235,7 @@ class Fusion {
         print(e);
       }
 
-      // Connect to server
+      // Connect to server.
       status = ("connecting", "");
       try {
         connection = await openConnection(serverHost, serverPort,
@@ -238,8 +247,9 @@ class Fusion {
             'Could not connect to $sslstr$serverHost:$serverPort');
       }
 
-      // Once connection is successful, wrap operations inside this block
-      // Within this block, version checks, downloads server params, handles coins and runs rounds
+      // Once connection is successful, wrap operations inside this block.
+      //
+      // Within this block, version checks, downloads server params, handles coins and runs rounds.
       try {
         _socketWrapper = SocketWrapper(serverHost, serverPort);
 
@@ -1592,10 +1602,17 @@ class Fusion {
     // Initialize status record/tuple
     (String, String) status = ('running', 'Setting up Tor connections');
 
+    // Get the Tor host and port from the wallet configuration.
+    ({InternetAddress host, int port}) proxyInfo = await _getSocksProxyAddress();
+
+    // Set the covertPort.
+    covertPort = proxyInfo.port;
+
     // Decode the covert domain and validate it
     String covertDomain;
     try {
-      covertDomain = utf8.decode(covertDomainB);
+      // covertDomain = utf8.decode(covertDomainB);
+      covertDomain = proxyInfo.host.address; // TODO make sure this is correct.
     } catch (e) {
       throw FusionError('badly encoded covert domain');
     }

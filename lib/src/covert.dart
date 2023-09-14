@@ -147,7 +147,7 @@ class CovertSlot {
         connection, CovertResponse, ['ok', 'error'],
         timeout: Duration(seconds: submitTimeout));
 
-    // TODO make sure this is a valid error check
+    // TODO make sure this is a valid error check.
     if (result.$1.toString() == 'error') {
       throw Unrecoverable('error from server: ${result.$2}');
     }
