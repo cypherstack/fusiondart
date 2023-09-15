@@ -40,19 +40,20 @@ class Fusion {
   late final Future<List<Address>> Function(int numberOfAddresses)
       _getUnusedReservedChangeAddresses;
   late final Future<({InternetAddress host, int port})> Function()
-  _getSocksProxyAddress;
+      _getSocksProxyAddress;
 
   /// Constructor that sets up a Fusion object.
-  Fusion(
-      {required Future<List<Address>> Function() getAddresses,
-      required Future<List<Input>> Function(String address) getInputsByAddress,
-      required Future<Set<Transaction>> Function(String address)
-          getTransactionsByAddress,
-      /*required Future<Address> Function() createNewReservedChangeAddress,*/
-      required Future<List<Address>> Function(int numberOfAddresses)
-          getUnusedReservedChangeAddresses,
-      required Future<({InternetAddress host, int port})> Function() getSocksProxyAddress,
-      }); /*{
+  Fusion({
+    required Future<List<Address>> Function() getAddresses,
+    required Future<List<Input>> Function(String address) getInputsByAddress,
+    required Future<Set<Transaction>> Function(String address)
+        getTransactionsByAddress,
+    /*required Future<Address> Function() createNewReservedChangeAddress,*/
+    required Future<List<Address>> Function(int numberOfAddresses)
+        getUnusedReservedChangeAddresses,
+    required Future<({InternetAddress host, int port})> Function()
+        getSocksProxyAddress,
+  }); /*{
     initializeConnection(host, port);
   }
 
@@ -1533,11 +1534,12 @@ class Fusion {
     // Record the time when the fusion process began
     tFusionBegin = DateTime.now();
 
+    // Check if the received message is a ServerMessage.
     if (msg is! ServerMessage) {
       throw FusionError('Expected a ServerMessage');
     }
 
-    // Cast the received message to a FusionBegin message (could be handled more gracefully)
+    // Retrieve the FusionBegin message from the ServerMessage.
     FusionBegin fusionBeginMsg = msg.fusionbegin;
 
     // Calculate how many seconds have passed since the stopwatch was started
@@ -1603,16 +1605,17 @@ class Fusion {
     (String, String) status = ('running', 'Setting up Tor connections');
 
     // Get the Tor host and port from the wallet configuration.
-    ({InternetAddress host, int port}) proxyInfo = await _getSocksProxyAddress();
+    ({InternetAddress host, int port}) proxyInfo =
+        await _getSocksProxyAddress();
 
-    // Set the covertPort.
-    covertPort = proxyInfo.port;
+    // Set the Tor host and port.
+    torHost = proxyInfo.host.address; // TODO make sure this is correct.
+    torPort = proxyInfo.port;
 
-    // Decode the covert domain and validate it
+    // Decode the covert domain and validate it.
     String covertDomain;
     try {
-      // covertDomain = utf8.decode(covertDomainB);
-      covertDomain = proxyInfo.host.address; // TODO make sure this is correct.
+      covertDomain = utf8.decode(covertDomainB);
     } catch (e) {
       throw FusionError('badly encoded covert domain');
     }
@@ -1706,12 +1709,21 @@ class Fusion {
     double covertClock() =>
         (DateTime.now().millisecondsSinceEpoch / 1000) - covertT0;
 
-    final roundTime = (msg as StartRound).serverTime;
+    // Check if the received message is a ServerMessage.
+    if (msg is! ServerMessage) {
+      throw FusionError('Expected a ServerMessage');
+    }
+
+    // Retrieve the StartRound message from the ServerMessage.
+    StartRound startRoundMsg = msg.startround;
+
+    Int64 roundTime = startRoundMsg.serverTime;
 
     // Validate the server's time against our local time
-    final clockMismatch =
-        msg.serverTime - DateTime.now().millisecondsSinceEpoch / 1000;
-    if (clockMismatch.abs() > Protocol.MAX_CLOCK_DISCREPANCY) {
+    final clockMismatch = roundTime -
+        Int64((DateTime.now().millisecondsSinceEpoch / 1000).round());
+
+    if (clockMismatch.abs() > Int64(Protocol.MAX_CLOCK_DISCREPANCY.toInt())) {
       throw FusionError(
           "Clock mismatch too large: ${clockMismatch.toInt().toStringAsPrecision(3)}.");
     }
@@ -1755,8 +1767,8 @@ class Fusion {
     }
 
     // Extract round public key and blind nonce points from the server message
-    final roundPubKey = msg.roundPubkey;
-    final blindNoncePoints = msg.blindNoncePoints;
+    final roundPubKey = startRoundMsg.roundPubkey;
+    final blindNoncePoints = startRoundMsg.blindNoncePoints;
     if (blindNoncePoints.length != numComponents) {
       throw FusionError('blind nonce miscount');
     }
