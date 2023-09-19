@@ -85,17 +85,17 @@ class Input {
   /// TODO implement pubKey.
   ///
   /// Parameters:
-  /// - [utxoInfo]: The tuple containing UTXO data.
+  /// - [utxoInfo]: The record containing UTXO data.
   ///
   /// Returns:
   ///   The Input object.
   static Input fromWallet(
-    (String txId, int vout, int value) utxoInfo,
+    (String txId, int vout, int value, List<int> pubKey) utxoInfo,
   ) {
     return Input(
-      prevTxid: utf8.encode(utxoInfo.$1), // Convert txId to a List<int>
+      prevTxid: utf8.encode(utxoInfo.$1), // Convert txId to a List<int>.
       prevIndex: utxoInfo.$2,
-      pubKey: utf8.encode('0000'), // Placeholder TODO fix
+      pubKey: utxoInfo.$4,
       amount: utxoInfo.$3,
     );
   }

@@ -171,7 +171,7 @@ class Fusion {
   /// Returns:
   ///   Future<void> Returns a future that completes when the coins have been added.
   Future<void> addCoinsFromWallet(
-    List<(String txid, int vout, int value)> utxoList,
+    List<(String txid, int vout, int value, List<int> pubKey)> utxoList,
   ) async {
     // TODO sanity check the state of `coins` before adding to it.
 
