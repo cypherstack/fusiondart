@@ -990,7 +990,7 @@ class Fusion {
     // Counts the number of coins in the result so far.
     int numCoins = 0;
 
-// Counts the number of attempts to select coins.
+    // Counts the number of attempts to select coins.
     int maxAttempts = 100;
 
     // Counts the number of attempts to select coins.
