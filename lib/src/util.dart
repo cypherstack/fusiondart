@@ -82,8 +82,10 @@ class Utilities {
   ///
   /// Returns:
   ///   The extracted Address.
-  Address getAddressFromOutputScript(Uint8List scriptPubKey) {
+  static Address getAddressFromOutputScript(Uint8List scriptPubKey) {
     // Throw exception if this is not a standard P2PKH address.
+    //
+    // TODO use one of the libraries we already have for this.
     if (scriptPubKey.length == 25 &&
             scriptPubKey[0] == 0x76 && // OP_DUP
             scriptPubKey[1] == 0xa9 && // OP_HASH160

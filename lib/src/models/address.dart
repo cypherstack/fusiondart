@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
+
+import '../util.dart';
 
 /// A class representing a cryptocurrency address (Bitcoin Cash specifically for
 /// CashFusion).
@@ -33,12 +36,9 @@ class Address {
   Address._create({required this.addr});
 
   /// Creates an Address from a script public key
-  ///
-  /// TODO implement.
   static Address fromScriptPubKey(List<int> scriptPubKey) {
-    // Placeholder code, 'addr' should be computed from 'scriptPubKey'
-    String addr = "";
-    return Address(addr: addr);
+    return Utilities.getAddressFromOutputScript(
+        Uint8List.fromList(scriptPubKey));
   }
 
   /// Public constructor for testing. Calls private constructor `_create`.
