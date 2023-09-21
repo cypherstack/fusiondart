@@ -15,16 +15,16 @@ import '../util.dart';
 /// - [publicKey] (optional): The public key as a List<int>.
 /// - [derivationPath] (optional): The derivation path as a DerivationPath.
 class Address {
-  // The address as a String.
-  //
-  // This is the only required parameter for the constructor. Can be used with
-  // _db.getAddress to get any of the other parameters below.
+  /// The address as a String.
+  ///
+  /// This is the only required parameter for the constructor. Can be used with
+  /// _db.getAddress to get any of the other parameters below.
   final String addr;
 
-  // The public key as a List<int>
+  /// The public key as a List<int>
   late List<int>? publicKey;
 
-  // The derivation path as a DerivationPath
+  /// The derivation path as a DerivationPath
   late DerivationPath? derivationPath;
 
   /// Constructor for Address.
@@ -34,7 +34,7 @@ class Address {
     this.derivationPath,
   });
 
-  // Private constructor used for creating an Address from a String.
+  /// Private constructor used for creating an Address from a String.
   Address._create({required this.addr});
 
   /// Creates an Address from a script public key
@@ -49,12 +49,12 @@ class Address {
   }
 
   /// Converts the Address to its script form
-  List<int> toScript(Address addr) {
-    if (addr.publicKey == null) {
+  List<int> toScript() {
+    if (publicKey == null) {
       throw Exception("Address must have a public key");
     }
 
-    return btc.pubkeyToOutputScript(Uint8List.fromList(addr.publicKey!),
+    return btc.pubkeyToOutputScript(Uint8List.fromList(publicKey!),
         bitcoincash); // The bitcoincash network is defined in util.dart.;
   }
 
