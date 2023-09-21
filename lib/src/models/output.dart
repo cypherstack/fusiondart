@@ -4,16 +4,16 @@ import 'package:fusiondart/src/models/address.dart';
 /// Class that represents an output in a transaction.
 ///
 /// Attributes:
-/// - [value]: The value of the output in satoshis.
+/// - [value]: The value of the output in satoshis as an int.
 /// - [addr]: The `Address` object representing the destination address.
 class Output {
-  // Value of the output in satoshis.
+  /// Value of the output in satoshis.
   int value;
 
-  // Destination address.
+  /// Destination address.
   Address addr;
 
-  // Initialized to 0, to be set later if needed.
+  /// Initialized to 0, to be set later if needed.
   int amount = 0;
 
   /// Constructor for the Output class.

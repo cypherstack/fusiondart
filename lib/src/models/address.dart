@@ -3,6 +3,8 @@ import 'dart:convert';
 /// A class representing a cryptocurrency address (Bitcoin Cash specifically for
 /// CashFusion).
 ///
+/// TODO implement fromScriptPubKey.
+///
 /// Attributes:
 /// - [addr]: The address as a String.
 /// - [publicKey] (optional): The public key as a List<int>.
@@ -32,7 +34,7 @@ class Address {
 
   /// Creates an Address from a script public key
   ///
-  /// TODO implement
+  /// TODO implement.
   static Address fromScriptPubKey(List<int> scriptPubKey) {
     // Placeholder code, 'addr' should be computed from 'scriptPubKey'
     String addr = "";

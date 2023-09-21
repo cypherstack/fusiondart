@@ -9,22 +9,38 @@ import 'package:fusiondart/src/models/transaction.dart';
 
 /// Class that represents an input in a transaction.
 ///
-/// Attributes:
-/// - [prevTxid]: The previous transaction id as a list of integers.
-/// - [prevIndex]: The previous index number.
+/// An input is a reference to an output of a previous transaction.
+///
+/// The input contains the following fields:
+/// - [txid]: The transaction id as a list of integers.
+/// - [index]: The index number of the output (vout).
 /// - [pubKey]: The public key as a list of integers.
-/// - [amount]: The amount of cryptocurrency in this input.
+/// - [amount]: The amount of cryptocurrency in this input as an integer.
+/// - [signatures]: List of signatures for the input.  This is not a required
+///  field in the input.
+///
+/// TODO: getPubKey and getPrivKey.
 class Input {
-  List<int> prevTxid;
-  int prevIndex;
+  /// The transaction id as a list of integers.
+  List<int> txid;
+
+  /// The index number of the output (vout).
+  int index;
+
+  /// The public key as a list of integers.
   List<int> pubKey;
-  int amount;
+
+  /// The amount of cryptocurrency in this input as an integer.
+  int amount; // Using an int will impact portability to cryptocurrencies with smaller units.
+
+  /// List of signatures for the input.
   List<String> signatures = [];
+  // Signatures are added in the `sign` method and verified in the `verify` method.
 
   /// Constructor for Input class.
   Input(
-      {required this.prevTxid,
-      required this.prevIndex,
+      {required this.txid,
+      required this.index,
       required this.pubKey,
       required this.amount});
 
@@ -73,16 +89,14 @@ class Input {
   ///   The Input object.
   static Input fromInputComponent(InputComponent inputComponent) {
     return Input(
-      prevTxid: inputComponent.prevTxid, // Make sure the types are matching
-      prevIndex: inputComponent.prevIndex.toInt(),
+      txid: inputComponent.prevTxid, // Make sure the types are matching
+      index: inputComponent.prevIndex.toInt(),
       pubKey: inputComponent.pubkey,
       amount: inputComponent.amount.toInt(),
     );
   }
 
   /// Factory method to create an Input object from a Record of UTXO data.
-  ///
-  /// TODO implement pubKey.
   ///
   /// Parameters:
   /// - [utxoInfo]: The record containing UTXO data.
@@ -93,8 +107,8 @@ class Input {
     (String txId, int vout, int value, List<int> pubKey) utxoInfo,
   ) {
     return Input(
-      prevTxid: utf8.encode(utxoInfo.$1), // Convert txId to a List<int>.
-      prevIndex: utxoInfo.$2,
+      txid: utf8.encode(utxoInfo.$1), // Convert txId to a List<int>.
+      index: utxoInfo.$2,
       pubKey: utxoInfo.$4,
       amount: utxoInfo.$3,
     );
@@ -154,8 +168,8 @@ class Input {
   @override
   String toString() {
     return 'Input {'
-        ' prevTxid: ${hex.encode(prevTxid)},'
-        ' prevIndex: $prevIndex,'
+        ' prevTxid: ${hex.encode(txid)},'
+        ' prevIndex: $index,'
         ' pubKey: ${hex.encode(pubKey)},'
         ' amount: $amount,'
         ' signatures: $signatures'

@@ -581,8 +581,8 @@ class Fusion {
       // Create input component
       Component comp = Component();
       comp.input = InputComponent(
-          prevTxid: Uint8List.fromList(input.prevTxid.reversed.toList()),
-          prevIndex: input.prevIndex,
+          prevTxid: Uint8List.fromList(input.txid.reversed.toList()),
+          prevIndex: input.index,
           pubkey: input.pubKey,
           amount: Int64(input.amount));
 

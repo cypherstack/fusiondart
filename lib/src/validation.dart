@@ -145,7 +145,7 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   if (cmsg.hasInput() as bool) {
     // TODO type
     dynamic inp = cmsg.input;
-    check(inp.prevTxid.length == 32, "bad txid");
+    check(inp.txid.length == 32, "bad txid");
     check(
         (inp.pubkey.length == 33 &&
                 (inp.pubkey[0] == 2 || inp.pubkey[0] == 3)) ||
@@ -156,7 +156,7 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
           'cmsg.saltCommitment is not Iterable<int> in checkCovertComponent');
     }
     sortKey =
-        'i${String.fromCharCodes(inp.prevTxid.reversed as Iterable<int>)}${inp.prevIndex.toString()}${String.fromCharCodes(cmsg.saltCommitment as Iterable<int>)}';
+        'i${String.fromCharCodes(inp.txid.reversed as Iterable<int>)}${inp.index.toString()}${String.fromCharCodes(cmsg.saltCommitment as Iterable<int>)}';
   } else if (cmsg.hasOutput() as bool) {
     // TODO type
     dynamic out = cmsg.output;
