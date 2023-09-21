@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bitcoindart/bitcoindart.dart' as btc;
+
 import '../util.dart';
 
 /// A class representing a cryptocurrency address (Bitcoin Cash specifically for
@@ -47,10 +49,13 @@ class Address {
   }
 
   /// Converts the Address to its script form
-  ///
-  /// TODO implement
-  List<int> toScript() {
-    return [];
+  List<int> toScript(Address addr) {
+    if (addr.publicKey == null) {
+      throw Exception("Address must have a public key");
+    }
+
+    return btc.pubkeyToOutputScript(Uint8List.fromList(addr.publicKey!),
+        bitcoincash); // The bitcoincash network is defined in util.dart.;
   }
 
   /// Returns a JSON-String representation of the Address for easier debugging.
