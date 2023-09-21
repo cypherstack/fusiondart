@@ -5,10 +5,10 @@ import 'dart:typed_data';
 import 'package:bitcoindart/bitcoindart.dart' as btc;
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/fusion.pb.dart';
+import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
-
-import 'models/address.dart';
+import 'package:pointycastle/ecc/curves/secp256k1.dart';
 
 /// A utility class that provides various helper functions.
 class Utilities {
@@ -49,16 +49,34 @@ class Utilities {
 
   /// Generates public keys from a given private key.
   ///
-  /// TODO implement.
+  /// TODO make sure this return different public keys.
   ///
   /// Parameters:
   /// - [privkey] A private key in String format.
   ///
   /// Returns:
   ///   A list of public keys.
-  static List<String> pubkeysFromPrivkey(String privkey) {
+  static List<String> pubkeysFromPrivkey(String privKey) {
     // This is a placeholder implementation.
-    return ['public_key1_dummy', 'public_key2_dummy'];
+    return [privateKeyToPublicKey(privKey), privateKeyToPublicKey(privKey)];
+  }
+
+  /// Returns the public key from a given private key.
+  ///
+  /// TODO use ones of the libraries we already have for this.
+  static String privateKeyToPublicKey(String privKey) {
+    final secp256k1 = ECCurve_secp256k1();
+    final bigIntPrivateKey = BigInt.parse(privKey, radix: 16);
+
+    final private = ECPrivateKey(bigIntPrivateKey, secp256k1);
+    final Q = secp256k1.G *
+        private
+            .d; // This performs the elliptic curve multiplication to generate the public key.
+    // final ecPublicKey = ECPublicKey(Q, secp256k1);
+
+    // Convert the public key's Q value (ECPoint) to a byte array (Uint8List).
+    final publicKeyCompressed = Uint8List.fromList(Q!.getEncoded(true));
+    return utf8.decode(publicKeyCompressed);
   }
 
   /// Determines the dust limit based on the length of the transaction.

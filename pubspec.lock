@@ -33,6 +33,23 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.11.0"
+  bech32:
+    dependency: transitive
+    description:
+      path: "."
+      ref: b6d2a5b4cd17311d917787c0f9505f04932659b1
+      resolved-ref: b6d2a5b4cd17311d917787c0f9505f04932659b1
+      url: "https://github.com/cypherstack/bech32.git"
+    source: git
+    version: "0.2.1"
+  bip32:
+    dependency: transitive
+    description:
+      name: bip32
+      sha256: "54787cd7a111e9d37394aabbf53d1fc5e2e0e0af2cd01c459147a97c0e3f8a97"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   bip340:
     dependency: "direct main"
     description:
@@ -41,6 +58,24 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.0"
+  bip39:
+    dependency: transitive
+    description:
+      path: "."
+      ref: "0cd6d54e2860bea68fc50c801cb9db2a760192fb"
+      resolved-ref: "0cd6d54e2860bea68fc50c801cb9db2a760192fb"
+      url: "https://github.com/cypherstack/stack-bip39.git"
+    source: git
+    version: "1.0.6"
+  bitcoindart:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: af6d6c27edfe2e7cc35772ed2684eb4cc826f0e4
+      resolved-ref: af6d6c27edfe2e7cc35772ed2684eb4cc826f0e4
+      url: "https://github.com/cypherstack/bitcoindart.git"
+    source: git
+    version: "3.0.1"
   boolean_selector:
     dependency: transitive
     description:
@@ -49,6 +84,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
+  bs58check:
+    dependency: transitive
+    description:
+      name: bs58check
+      sha256: c4a164d42b25c2f6bc88a8beccb9fc7d01440f3c60ba23663a20a70faf484ea9
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
   collection:
     dependency: "direct main"
     description:
@@ -129,6 +172,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
+  hex:
+    dependency: transitive
+    description:
+      name: hex
+      sha256: "4e7cd54e4b59ba026432a6be2dd9d96e4c5205725194997193bf871703b82c4a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.0"
   http_multi_server:
     dependency: transitive
     description:
