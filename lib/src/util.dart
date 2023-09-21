@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:bitcoindart/bitcoindart.dart' as btc;
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/fusion.pb.dart';
-import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
+
+import 'models/address.dart';
 
 /// A utility class that provides various helper functions.
 class Utilities {
@@ -75,18 +77,38 @@ class Utilities {
 
   /// Extracts the address from an output script.
   ///
-  /// TODO implement.
-  ///
   /// Parameters:
-  /// - [scriptpubkey] The output script in Uint8List format.
+  /// - [scriptPubKey] The output script in Uint8List format.
   ///
   /// Returns:
   ///   The extracted Address.
-  static Address getAddressFromOutputScript(Uint8List scriptpubkey) {
-    // TODO implement; dummy implementation.
-    // Throw exception if this is not a standard P2PKH address!
+  Address getAddressFromOutputScript(Uint8List scriptPubKey) {
+    // Throw exception if this is not a standard P2PKH address.
+    if (scriptPubKey.length == 25 &&
+            scriptPubKey[0] == 0x76 && // OP_DUP
+            scriptPubKey[1] == 0xa9 && // OP_HASH160
+            scriptPubKey[2] == 0x14 && // 20 bytes to push
+            scriptPubKey[23] == 0x88 && // OP_EQUALVERIFY
+            scriptPubKey[24] == 0xac // OP_CHECKSIG
+        ) {
+      // This is a P2PKH script.
 
-    return Address.fromString('dummy_address');
+      // Extract the public key.
+      Uint8List pubKey = scriptPubKey.sublist(3, 23);
+
+      // Use bitcoindart to return the encoded address.
+      return Address(
+          addr: btc
+              .P2PKH(
+                  data: btc.PaymentData(
+                    pubkey: pubKey,
+                  ),
+                  network: bitcoincash)
+              .toString());
+    } else {
+      throw Exception(
+          'fusiondart getAddressFromOutputScript: Not a P2PKH script.');
+    }
   }
 
   /// Verifies a Schnorr signature.
@@ -174,17 +196,17 @@ class Utilities {
   ///   The calculated hash as a List<int>.
   static List<int> calcInitialHash(int tier, Uint8List covertDomainB,
       int covertPort, bool covertSsl, double beginTime) {
-    // Converting int to bytes in BigEndian order
+    // Converting int to bytes in BigEndian order.
     ByteData tierBytes = ByteData(8)..setInt64(0, tier, Endian.big);
     ByteData covertPortBytes = ByteData(4)..setInt32(0, covertPort, Endian.big);
     ByteData beginTimeBytes = ByteData(8)
       ..setInt64(0, beginTime.toInt(), Endian.big);
 
-    // Define constants
+    // Define constants.
     const version = Protocol.VERSION;
     const cashFusionSession = "Cash Fusion Session";
 
-    // Creating the list of bytes
+    // Creating the list of bytes.
     List<int> elements = [];
     elements.addAll(utf8.encode(cashFusionSession));
     elements.addAll(utf8.encode(version));
@@ -194,7 +216,7 @@ class Utilities {
     elements.add(covertSsl ? 1 : 0);
     elements.addAll(beginTimeBytes.buffer.asInt8List());
 
-    // Hashing the concatenated elements
+    // Hashing the concatenated elements.
     crypto.Digest digest = crypto.sha256.convert(elements);
 
     return digest.bytes;
@@ -239,8 +261,9 @@ class Utilities {
   }
 
   static Uint8List getCurrentGenesisHash() {
+    // TODO feed in from wallet.
     String genesis =
-        "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
+        "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"; // Bitcoin genesis hash
     List<int> _lastGenesisHash = hexToBytes(genesis).reversed.toList();
     return Uint8List.fromList(_lastGenesisHash);
   }
@@ -552,3 +575,12 @@ extension HexEncoding on List<int> {
     return map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 }
+
+// Bitcoincash Network
+final bitcoincash = btc.NetworkType(
+    messagePrefix: '\x18Bitcoin Signed Message:\n',
+    bech32: 'bc',
+    bip32: btc.Bip32Type(public: 0x0488b21e, private: 0x0488ade4),
+    pubKeyHash: 0x00,
+    scriptHash: 0x05,
+    wif: 0x80);
