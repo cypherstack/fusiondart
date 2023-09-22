@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:bip340/bip340.dart' as bip340;
 import 'package:bitcoindart/bitcoindart.dart' as btc;
+import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/fusion.pb.dart';
 import 'package:fusiondart/src/models/address.dart';
@@ -143,9 +145,11 @@ class Utilities {
   /// Returns:
   ///   True if the verification succeeds, otherwise false.
   static bool schnorrVerify(
-      ECPoint pubkey, List<int> signature, Uint8List messageHash) {
-    // TODO implement; dummy implementation.
-    return true;
+      ECPoint pubKey, List<int> signature, Uint8List messageHash) {
+    return bip340.verify(
+        hex.encode(pubKey.getEncoded(false)), // false indicates uncompressed.
+        hex.encode(messageHash),
+        hex.encode(signature));
   }
 
   /// Formats a given number of satoshis.

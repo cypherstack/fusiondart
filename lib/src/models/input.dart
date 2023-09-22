@@ -7,13 +7,13 @@ import 'package:convert/convert.dart';
 import 'package:fusiondart/src/fusion.pb.dart';
 import 'package:fusiondart/src/models/transaction.dart';
 
-/// Class that represents an input in a transaction.
+/// Input component class.
 ///
-/// An input is a reference to an output of a previous transaction.
+/// Based on the protobuf definition of an InputComponent.
 ///
 /// The input contains the following fields:
-/// - [txid]: The transaction id as a list of integers.
-/// - [index]: The index number of the output (vout).
+/// - [prevTxid]: The transaction id as a list of integers.
+/// - [prevIndex]: The index number of the output (vout).
 /// - [pubKey]: The public key as a list of integers.
 /// - [amount]: The amount of cryptocurrency in this input as an integer.
 /// - [signatures]: List of signatures for the input.  This is not a required
@@ -22,10 +22,10 @@ import 'package:fusiondart/src/models/transaction.dart';
 /// TODO: getPubKey and getPrivKey.
 class Input {
   /// The transaction id as a list of integers.
-  List<int> txid;
+  List<int> prevTxid;
 
   /// The index number of the output (vout).
-  int index;
+  int prevIndex;
 
   /// The public key as a list of integers.
   List<int> pubKey;
@@ -39,8 +39,8 @@ class Input {
 
   /// Constructor for Input class.
   Input(
-      {required this.txid,
-      required this.index,
+      {required this.prevTxid,
+      required this.prevIndex,
       required this.pubKey,
       required this.amount});
 
@@ -89,8 +89,8 @@ class Input {
   ///   The Input object.
   static Input fromInputComponent(InputComponent inputComponent) {
     return Input(
-      txid: inputComponent.prevTxid, // Make sure the types are matching
-      index: inputComponent.prevIndex.toInt(),
+      prevTxid: inputComponent.prevTxid, // Make sure the types are matching
+      prevIndex: inputComponent.prevIndex.toInt(),
       pubKey: inputComponent.pubkey,
       amount: inputComponent.amount.toInt(),
     );
@@ -107,8 +107,8 @@ class Input {
     (String txId, int vout, int value, List<int> pubKey) utxoInfo,
   ) {
     return Input(
-      txid: utf8.encode(utxoInfo.$1), // Convert txId to a List<int>.
-      index: utxoInfo.$2,
+      prevTxid: utf8.encode(utxoInfo.$1), // Convert txId to a List<int>.
+      prevIndex: utxoInfo.$2,
       pubKey: utxoInfo.$4,
       amount: utxoInfo.$3,
     );
@@ -168,8 +168,8 @@ class Input {
   @override
   String toString() {
     return 'Input {'
-        ' prevTxid: ${hex.encode(txid)},'
-        ' prevIndex: $index,'
+        ' prevTxid: ${hex.encode(prevTxid)},'
+        ' prevIndex: $prevIndex,'
         ' pubKey: ${hex.encode(pubKey)},'
         ' amount: $amount,'
         ' signatures: $signatures'

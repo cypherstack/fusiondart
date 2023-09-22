@@ -1,7 +1,11 @@
 import 'package:fusiondart/src/fusion.pb.dart';
 import 'package:fusiondart/src/models/address.dart';
 
-/// Class that represents an output in a transaction.
+/// Output component class
+///
+/// Based on the protobuf definition of an OutputComponent.
+///
+/// TODO: compared to the protobuf, where'd OutputComponent's scriptpubkey go?
 ///
 /// Attributes:
 /// - [value]: The value of the output in satoshis as an int.
