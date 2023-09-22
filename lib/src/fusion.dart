@@ -86,7 +86,8 @@ class Fusion {
   String txId = ""; // Holds a transaction ID.
 
   // Various state variables.
-  Set<Input> coins = {}; // "coins"≈"inputs" in the python source.
+  List<Input> coins = []; // "coins"≈"inputs" in the python source.
+  List<Input> inputs = [];
   List<Output> outputs = [];
   List<Address> changeAddresses = [];
 
@@ -412,7 +413,7 @@ class Fusion {
   ///
   /// Resets the internal coin list, effectively removing all stored coins.
   void clearCoins() {
-    coins = {};
+    coins = [];
   }
 
   /// Adds new coins to the internal `coins` list.
@@ -553,7 +554,7 @@ class Fusion {
   /// Returns:
   ///   A list of `ComponentResult` objects containing all the components needed for the transaction.
   static List<ComponentResult> genComponents(
-      int numBlanks, Set<Input> inputs, List<Output> outputs, int feerate) {
+      int numBlanks, List<Input> inputs, List<Output> outputs, int feerate) {
     // Sanity check.
     assert(numBlanks >= 0);
 
@@ -901,9 +902,9 @@ class Fusion {
         int, // sumValue.
         bool, // hasUnconfirmed.
         bool // hasCoinbase.
-      )> selectCoins(Set<Input> _coins) async {
-    Set<(String, List<Input>)> eligible = {}; // List of eligible inputs.
-    Set<(String, List<Input>)> ineligible = {}; // List of ineligible inputs.
+      )> selectCoins(List<Input> _coins) async {
+    List<(String, List<Input>)> eligible = []; // List of eligible inputs.
+    List<(String, List<Input>)> ineligible = []; // List of ineligible inputs.
     bool hasUnconfirmed = false; // Are there unconfirmed coins?
     bool hasCoinbase = false; // Are there coinbase coins?
     int sumValue = 0; // Sum of the values of the eligible `Input`s.
@@ -982,8 +983,8 @@ class Fusion {
   /// - [eligible]: The list of eligible `Input`s.
   ///
   /// Returns:
-  ///   A `Future<Set<Input>>` that completes with a list of random coins.
-  Future<Set<Input>> selectRandomCoins(
+  ///   A `Future<List<Input>>` that completes with a list of random coins.
+  Future<List<Input>> selectRandomCoins(
       double fraction, List<(String, List<Input>)> eligible) async {
     // Shuffle the eligible buckets.
     var addrCoins = List<(String, List<Input>)>.from(eligible);
@@ -993,7 +994,7 @@ class Fusion {
     Set<String> resultTxids = {};
 
     // Initialize the result list.
-    Set<Input> result = {};
+    List<Input> result = [];
 
     // Counts the number of coins in the result so far.
     int numCoins = 0;
@@ -1068,7 +1069,7 @@ class Fusion {
         try {
           // Try to find a bucket with coins.
           var res = addrCoins.firstWhere((record) => record.$2.isNotEmpty).$2;
-          result = res.toSet();
+          result = res.toList();
         } catch (e) {
           // Handle exception where all eligible buckets were cleared.
           throw FusionError('No coins available');
@@ -1161,7 +1162,7 @@ class Fusion {
     ) _selections = await selectCoins(coins);
 
     // Initialize the eligible set.
-    Set<Input> eligible = {};
+    List<Input> eligible = [];
 
     // Loop through each key-value pair in the Map to extract Inputs and put them in the Set.
     for ((String, List<Input>) inputList in _selections.$1) {
@@ -1174,7 +1175,7 @@ class Fusion {
     }
 
     // Select random coins from the eligible set.
-    Set<Input> inputs =
+    inputs =
         await selectRandomCoins(getFraction(_selections.$3), _selections.$1);
     /*await selectRandomCoins(
             numComponents / eligible.length, _selections.$1);*/
@@ -1756,7 +1757,7 @@ class Fusion {
     final outputFees =
         outputs.length * Utilities.componentFee(34, componentFeeRate.toInt());
     // 34 is the size of a P2PKH output.
-    int sumIn = coins.map((e) => e.amount).reduce((int a, int b) => a + b);
+    int sumIn = inputs.map((e) => e.amount).reduce((int a, int b) => a + b);
     int sumOut = outputs.map((e) => e.value).reduce((int a, int b) => a + b);
 
     // Calculate total and excess fee and perform safety checks.
