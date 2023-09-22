@@ -3,7 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:bip340/bip340.dart' as bip340;
-import 'package:bitcoindart/bitcoindart.dart' as btc;
+import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/fusion.pb.dart';
@@ -122,12 +122,8 @@ class Utilities {
 
       // Use bitcoindart to return the encoded address.
       return Address(
-          addr: btc
-              .P2PKH(
-                  data: btc.PaymentData(
-                    pubkey: pubKey,
-                  ),
-                  network: bitcoincash)
+          addr: coinlib.P2PKH
+              .fromPublicKey(coinlib.ECPublicKey.fromHex(hex.encode(pubKey)))
               .toString());
     } else {
       throw Exception(
@@ -601,12 +597,3 @@ extension HexEncoding on List<int> {
     return map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 }
-
-// Bitcoincash Network
-final bitcoincash = btc.NetworkType(
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    bech32: 'bc',
-    bip32: btc.Bip32Type(public: 0x0488b21e, private: 0x0488ade4),
-    pubKeyHash: 0x00,
-    scriptHash: 0x05,
-    wif: 0x80);

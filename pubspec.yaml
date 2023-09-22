@@ -15,10 +15,7 @@ dependencies:
   fixnum: ^1.1.0
   pointycastle: ^3.7.3
   protobuf: ^2.0.0
-  bitcoindart:
-    git:
-      url: https://github.com/cypherstack/bitcoindart.git
-      ref: af6d6c27edfe2e7cc35772ed2684eb4cc826f0e4
+  coinlib: ^1.0.0
 
 dev_dependencies:
   lints: ^2.0.0

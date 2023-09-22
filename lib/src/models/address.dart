@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:bitcoindart/bitcoindart.dart' as btc;
-
-import '../util.dart';
+import 'package:coinlib/coinlib.dart' as coinlib;
+import 'package:convert/convert.dart';
+import 'package:fusiondart/src/util.dart';
 
 /// A class representing a cryptocurrency address (Bitcoin Cash specifically for
 /// CashFusion).
@@ -54,8 +54,15 @@ class Address {
       throw Exception("Address must have a public key");
     }
 
-    return btc.pubkeyToOutputScript(Uint8List.fromList(publicKey!),
-        bitcoincash); // The bitcoincash network is defined in util.dart.;
+    coinlib.ECPublicKey ecPublicKey =
+        coinlib.ECPublicKey.fromHex(hex.encode(Uint8List.fromList(publicKey!)));
+
+    coinlib.P2PKHAddress p2pkhAddress = coinlib.P2PKHAddress.fromPublicKey(
+        ecPublicKey,
+        version: coinlib.NetworkParams.mainnet.p2pkhPrefix);
+
+    return p2pkhAddress.program.script
+        .compiled; // The bitcoincash network is defined in util.dart.;
   }
 
   /// Returns a JSON-String representation of the Address for easier debugging.

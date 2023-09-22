@@ -160,9 +160,9 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   } else if (cmsg.hasOutput() as bool) {
     // TODO type
     dynamic out = cmsg.output;
-    Address addr;
     // Basically just checks if its ok address. should throw error if not.
-    addr = Utilities.getAddressFromOutputScript(out.scriptpubkey as Uint8List);
+    Address addr =
+        Utilities.getAddressFromOutputScript(out.scriptpubkey as Uint8List);
 
     check(
         (out.amount >= Utilities.dustLimit(out.scriptpubkey.length as int)
