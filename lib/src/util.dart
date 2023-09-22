@@ -83,7 +83,7 @@ class Utilities {
 
   /// Determines the dust limit based on the length of the transaction.
   ///
-  /// TODO implement.
+  /// See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/util.py#L70
   ///
   /// Parameters:
   /// - [length] The length of the transaction.
@@ -91,8 +91,10 @@ class Utilities {
   /// Returns:
   ///   The calculated dust limit.
   static int dustLimit(int length) {
-    // TODO implement; dummy implementation.
-    return 500;
+    return 3 * (length + 148);
+    // length represents the size of the transaction in bytes.  148 bytes are
+    // added to the length to account for the size of the input script, which is
+    // 148 bytes for a compressed input.
   }
 
   /// Extracts the address from an output script.
