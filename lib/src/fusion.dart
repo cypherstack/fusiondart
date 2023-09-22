@@ -36,7 +36,7 @@ class Fusion {
   // Disabled because _getUnusedReservedChangeAddresses fulfills all requirements.
   late final Future<List<Address>> Function() _getAddresses;
   late final Future<List<Input>> Function(String address) _getInputsByAddress;
-  late final Future<Set<Transaction>> Function(String address)
+  late final Future<List<Transaction>> Function(String address)
       _getTransactionsByAddress;
   /*late final Future<Address> Function() _createNewReservedChangeAddress;*/
   late final Future<List<Address>> Function(int numberOfAddresses)
@@ -48,7 +48,7 @@ class Fusion {
   Fusion({
     required Future<List<Address>> Function() getAddresses,
     required Future<List<Input>> Function(String address) getInputsByAddress,
-    required Future<Set<Transaction>> Function(String address)
+    required Future<List<Transaction>> Function(String address)
         getTransactionsByAddress,
     /*required Future<Address> Function() createNewReservedChangeAddress,*/
     required Future<List<Address>> Function(int numberOfAddresses)
@@ -148,7 +148,7 @@ class Fusion {
   void initFusion({
     required Future<List<Address>> Function() getAddresses,
     required Future<List<Input>> Function(String address) getInputsByAddress,
-    required Future<Set<Transaction>> Function(String address)
+    required Future<List<Transaction>> Function(String address)
         getTransactionsByAddress,
     // required Future<Address> Function() createNewReservedChangeAddress,
     required Future<List<Address>> Function(int numberOfAddresses)
@@ -1036,7 +1036,7 @@ class Fusion {
         // We consider all txids involving the address, historical and current.
 
         // Get the transactions for the address.
-        Set<Transaction> ctxs = await _getTransactionsByAddress(addr);
+        List<Transaction> ctxs = await _getTransactionsByAddress(addr);
 
         // Extract the txids from the transactions.
         Set<String> ctxids = ctxs.map((tx) {
