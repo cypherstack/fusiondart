@@ -174,13 +174,27 @@ class Fusion {
   /// Returns:
   ///   Future<void> Returns a future that completes when the coins have been added.
   Future<void> addCoinsFromWallet(
-    List<(String txid, int vout, int value, List<int> pubKey)> utxoList,
+    List<
+            ({
+              String txid,
+              int vout,
+              int value,
+              List<int> pubKey,
+            })>
+        utxoList,
   ) async {
     // TODO sanity check the state of `coins` before adding to it.
 
     // Convert each UTXO info to an Input and add to 'coins'.
     for (final utxoInfo in utxoList) {
-      coins.add(Input.fromWallet(utxoInfo));
+      coins.add(
+        Input.fromWallet(
+          txId: utxoInfo.txid,
+          vout: utxoInfo.vout,
+          value: utxoInfo.value,
+          pubKey: utxoInfo.pubKey,
+        ),
+      );
     }
     // TODO add validation and throw error if invalid UTXO detected
   }

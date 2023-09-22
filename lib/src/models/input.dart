@@ -132,14 +132,18 @@ class Input {
   ///
   /// Returns:
   ///   The Input object.
-  static Input fromWallet(
-    (String txId, int vout, int value, List<int> pubKey) utxoInfo,
-  ) {
+  static Input fromWallet({
+    required String txId,
+    required int vout,
+    required int value,
+    required List<int> pubKey,
+  }) {
     return Input(
-      prevTxid: utf8.encode(utxoInfo.$1), // Convert txId to a List<int>.
-      prevIndex: utxoInfo.$2,
-      pubKey: utxoInfo.$4,
-      amount: utxoInfo.$3,
+      // TODO: Are raw bytes wanted here or hex?
+      prevTxid: utf8.encode(txId), // Convert txId to a List<int>.
+      prevIndex: vout,
+      pubKey: pubKey,
+      amount: value,
     );
   }
 
