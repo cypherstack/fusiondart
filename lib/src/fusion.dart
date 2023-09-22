@@ -2038,11 +2038,7 @@ class Fusion {
             crypto.sha256.convert(crypto.sha256.convert(preimageBytes).bytes);
 
         // Generate 32 random bytes for a bip340 signature.
-        Uint8List aux = Uint8List(32);
-        Random random = Random.secure();
-        for (int i = 0; i < 32; i++) {
-          aux[i] = random.nextInt(256);
-        }
+        Uint8List aux = Utilities.getRandomBytes(32);
 
         // Generate signature.
         List<int> sig = utf8.encode(

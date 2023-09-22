@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:bip340/bip340.dart' as bip340;
 import 'package:convert/convert.dart';
 import 'package:fusiondart/src/fusion.pb.dart';
 import 'package:fusiondart/src/models/transaction.dart';
+import 'package:fusiondart/src/util.dart';
 
 /// Input component class.
 ///
@@ -126,11 +126,7 @@ class Input {
     String message = tx.txid();
 
     // Generate 32 random bytes for auxiliary data.
-    Uint8List aux = Uint8List(32);
-    Random random = Random.secure();
-    for (int i = 0; i < 32; i++) {
-      aux[i] = random.nextInt(256);
-    }
+    Uint8List aux = Utilities.getRandomBytes(32);
 
     // Sign the message.
     String signature = bip340.sign(privateKey, message, hex.encode(aux));
