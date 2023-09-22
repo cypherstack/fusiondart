@@ -29,6 +29,17 @@ class Input {
 
   /// The public key as a list of integers.
   List<int> pubKey;
+  // What we really need is a List<List<int> pubKey> pubKeys...
+
+  /// A list of public keys as lists of integers.
+  List<List<int>> pubKeys = [];
+  // This isn't used yet, but it's used in the python.
+  // This is where it's accessed:
+  // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L971
+  // This is where it's set:
+  // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L347
+  // The problem with this is that we need a class which encompasses multiple
+  // Inputs, or...
 
   /// The amount of cryptocurrency in this input as an integer.
   int amount; // Using an int will impact portability to cryptocurrencies with smaller units.
@@ -48,23 +59,39 @@ class Input {
   ///
   /// Assumes that the public key length is within the valid range for push opcodes.
   ///
+  /// See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/util.py#L51-L55.
+  ///
   /// Returns:
   ///   The size of the input.
   int sizeOfInput() {
+    // Sizes of inputs after signing:
+    // 32 + 8 + 1 + 1 + [length of sig] + 1 + [length of pubkey]
+    // = 141 for compressed pubkeys, 173 for uncompressed.
     assert(1 < pubKey.length &&
-        pubKey.length < 76); // need to assume regular push opcode
-    return 108 + pubKey.length;
+        pubKey.length < 76); // 76 bytes is the max length of a push opcode.
+    return 108 + pubKey.length; // 108 bytes for the rest of the input.
   }
 
   /// Returns the value amount of the Input.
   ///
   /// Returns:
-  ///   The value amount of the Input.
+  ///   The value amount of the Input as an int.
   int get value {
     return amount;
   }
 
   /// Placeholder for getting public key based on an index.
+  ///
+  /// This function is confusing because in the python code, the public key is
+  /// selected from a list of public keys.  We don't have that list.
+  ///
+  /// See
+  /// https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L971C44-L971C44
+  /// where keypairs is
+  /// https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L301
+  /// and set in
+  /// https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L339
+  /// https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L346
   ///
   /// TODO implement.
   String getPubKey(int pubkeyIndex) {
@@ -73,6 +100,8 @@ class Input {
   }
 
   /// Placeholder for getting private key based on an index.
+  ///
+  /// See https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L971C44-L971C44
   ///
   /// TODO implement
   String getPrivKey(int pubkeyIndex) {

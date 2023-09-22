@@ -1752,15 +1752,18 @@ class Fusion {
     final inputFees = coins
         .map((e) =>
             Utilities.componentFee(e.sizeOfInput(), componentFeeRate.toInt()))
-        .reduce((a, b) => a + b);
+        .reduce((int a, int b) => a + b);
     final outputFees =
         outputs.length * Utilities.componentFee(34, componentFeeRate.toInt());
-    final sumIn = coins.map((e) => e.amount).reduce((a, b) => a + b);
-    final sumOut = outputs.map((e) => e.value).reduce((a, b) => a + b);
+    // 34 is the size of a P2PKH output.
+    int sumIn = coins.map((e) => e.amount).reduce((int a, int b) => a + b);
+    int sumOut = outputs.map((e) => e.value).reduce((int a, int b) => a + b);
 
     // Calculate total and excess fee and perform safety checks.
-    final totalFee = sumIn - sumOut;
-    final excessFee = totalFee - inputFees - outputFees;
+    final int totalFee = sumIn - sumOut;
+    final int excessFee = totalFee - inputFees - outputFees;
+
+    // Perform the safety checks!
     final safeties = [
       sumIn == safetySumIn,
       excessFee == safetyExcessFee,
@@ -2028,7 +2031,7 @@ class Fusion {
 
         // Extract public and private keys.
         // TODO fix getPubKey, getPrivKey.
-        // See https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L971C25-L971C25
+        // See https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L971C44-L971C44
         String pubKey = inp.getPubKey(0); // cast/convert to PublicKey?
         String sec = inp.getPrivKey(0); // cast/convert to SecretKey?
 

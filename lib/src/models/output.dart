@@ -5,8 +5,6 @@ import 'package:fusiondart/src/models/address.dart';
 ///
 /// Based on the protobuf definition of an OutputComponent.
 ///
-/// TODO: compared to the protobuf, where'd OutputComponent's scriptpubkey go?
-///
 /// Attributes:
 /// - [value]: The value of the output in satoshis as an int.
 /// - [addr]: The `Address` object representing the destination address.
@@ -17,13 +15,13 @@ class Output {
   /// Destination address.
   Address addr;
 
-  /// Initialized to 0, to be set later if needed.
+  /// Initialized to 0, to be set later as needed.
   int amount = 0;
 
   /// Constructor for the Output class.
   ///
   /// Parameters:
-  /// - [value] (required): The value of the output in satoshis.
+  /// - [value] (required): The value of the output in satoshis as an int.
   /// - [addr] (required): The destination address.
   Output({required this.value, required this.addr});
 
@@ -35,10 +33,12 @@ class Output {
     // Assuming addr.toScript() returns a List<int> representing the scriptpubkey.
     List<int> scriptpubkey = addr.toScript();
 
-    // Ensure the scriptpubkey length is less than 253 bytes.
+    // Ensure the scriptpubkey length is less than 253 bytes.  253 is the max
+    // length of a push opcode (see https://en.bitcoin.it/wiki/Script).
     assert(scriptpubkey.length < 253);
 
-    // Return the size of the output.
+    // Return the size of the output.  9 bytes for the value and scriptpubkey
+    // length, plus the length of the scriptpubkey.
     return 9 + scriptpubkey.length;
   }
 
