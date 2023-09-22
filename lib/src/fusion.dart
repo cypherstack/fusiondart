@@ -1786,7 +1786,7 @@ class Fusion {
     }
 
     // Generate components and related data
-    int numBlanks = numComponents - coins.length - outputs.length;
+    int numBlanks = numComponents - inputs.length - outputs.length;
     final List<ComponentResult> genComponentsResults =
         genComponents(numBlanks, coins, outputs, componentFeeRate.toInt());
 
