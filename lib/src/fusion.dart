@@ -1204,7 +1204,7 @@ class Fusion {
     int inputFees = inputs
         .map((e) =>
             Utilities.componentFee(e.sizeOfInput(), componentFeeRate.toInt()))
-        .reduce((a, b) => a + b);
+        .reduce((int a, int b) => a + b);
     int availForOutputs = sumInputsValue - inputFees - minExcessFee.toInt();
 
     // Calculate fees per output.
@@ -1754,8 +1754,11 @@ class Fusion {
         .map((e) =>
             Utilities.componentFee(e.sizeOfInput(), componentFeeRate.toInt()))
         .reduce((int a, int b) => a + b);
-    final outputFees =
-        outputs.length * Utilities.componentFee(34, componentFeeRate.toInt());
+    final outputFees = outputs.length *
+        Utilities.componentFee(
+            34, // 34 is the size of a P2PKH output.
+            componentFeeRate
+                .toInt()); // See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/fusion.py#L820
     // 34 is the size of a P2PKH output.
     int sumIn = inputs.map((e) => e.amount).reduce((int a, int b) => a + b);
     int sumOut = outputs.map((e) => e.value).reduce((int a, int b) => a + b);
