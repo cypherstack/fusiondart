@@ -1774,18 +1774,19 @@ class Fusion {
         "round starting at ${DateTime.now().millisecondsSinceEpoch / 1000}");
 
     // Calculate fees and sums for inputs and outputs.
-    final inputFees = coins
-        .map((e) =>
-            Utilities.componentFee(e.sizeOfInput(), componentFeeRate.toInt()))
-        .reduce((int a, int b) => a + b);
+    final int inputFees = inputs.fold(
+        0,
+        (sum, input) =>
+            sum +
+            Utilities.componentFee(
+                input.sizeOfInput(), componentFeeRate.toInt()));
     final outputFees = outputs.length *
         Utilities.componentFee(
             34, // 34 is the size of a P2PKH output.
             componentFeeRate
                 .toInt()); // See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/fusion.py#L820
-    // 34 is the size of a P2PKH output.
-    int sumIn = inputs.map((e) => e.amount).reduce((int a, int b) => a + b);
-    int sumOut = outputs.map((e) => e.value).reduce((int a, int b) => a + b);
+    int sumIn = inputs.fold(0, (sum, e) => sum + e.amount);
+    int sumOut = outputs.fold(0, (sum, e) => sum + e.value);
 
     // Calculate total and excess fee and perform safety checks.
     final int totalFee = sumIn - sumOut;
