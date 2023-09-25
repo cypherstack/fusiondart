@@ -11,31 +11,29 @@ final ECDomainParameters _secp256k1ECDomainParameters =
 
 /// Class responsible for setting up a Pedersen commitment.
 class PedersenSetup {
-  ECPoint? _pointH;
-  ECPoint? _pointHG;
+  final ECPoint _pointH;
+  late final ECPoint _pointHG;
 
   /// Constructor initializes the Pedersen setup with a given H point.
   ///
   /// Parameters:
   /// - [_H]: An EC point to initialize the Pedersen setup.
-  PedersenSetup(ECPoint _pointH) {
-    this._pointH = _pointH;
-
+  PedersenSetup(this._pointH) {
     // Validate H point.
     if (!Utilities.isPointOnCurve(
         _pointH, _secp256k1ECDomainParameters.curve)) {
       throw Exception('H is not a valid point on the curve');
     }
 
-    _pointHG =
-        Utilities.combinePubKeys([_pointH, _secp256k1ECDomainParameters.G]);
+    _pointHG = Utilities.combinePubKeys(
+      [
+        _pointH,
+        _secp256k1ECDomainParameters.G,
+      ],
+    );
 
-    // Validate HG point.
-    if (_pointHG == null) {
-      throw NullPointError();
-    }
     if (!Utilities.isPointOnCurve(
-        _pointHG!, _secp256k1ECDomainParameters.curve)) {
+        _pointHG, _secp256k1ECDomainParameters.curve)) {
       throw Exception('HG is not a valid point on the curve');
     }
     if (_pointHG == _secp256k1ECDomainParameters.curve.infinity) {
@@ -45,21 +43,8 @@ class PedersenSetup {
   }
 
   // Getter methods to fetch _H and _HG points as Uint8Lists.
-  Uint8List get pointH {
-    if (_pointH == null) {
-      throw NullPointError();
-    }
-
-    return _pointH!.getEncoded(false);
-  }
-
-  Uint8List get pointHG {
-    if (_pointHG == null) {
-      throw NullPointError();
-    }
-
-    return _pointHG!.getEncoded(false);
-  }
+  Uint8List get pointH => _pointH.getEncoded(false);
+  Uint8List get pointHG => _pointHG.getEncoded(false);
 
   /// Create a new commitment.
   ///
@@ -70,10 +55,17 @@ class PedersenSetup {
   ///
   /// Returns:
   ///   A new `Commitment` object.
-  Commitment commit(BigInt amount,
-      {BigInt? nonce, Uint8List? pointPUncompressed}) {
-    return Commitment(this, amount,
-        nonce: nonce, pointPUncompressed: pointPUncompressed);
+  Commitment commit(
+    BigInt amount, {
+    BigInt? nonce,
+    Uint8List? pointPUncompressed,
+  }) {
+    return Commitment(
+      this,
+      amount,
+      nonce: nonce,
+      pointPUncompressed: pointPUncompressed,
+    );
   }
 }
 
@@ -86,10 +78,14 @@ class PedersenSetup {
 /// - [pointPUncompressed]: The uncompressed representation of point P.
 class Commitment {
   // Private instance variables
-  late PedersenSetup setup; // Added setup property to Commitment class
-  late BigInt amountMod;
-  late BigInt nonce;
-  late Uint8List pointPUncompressed;
+  final PedersenSetup setup; // Added setup property to Commitment class
+
+  late final BigInt nonce;
+
+  Uint8List get pointPUncompressed => _pointPUncompressed;
+
+  late final BigInt _amountMod;
+  late final Uint8List _pointPUncompressed;
 
   /// Constructor for Commitment.
   ///
@@ -115,20 +111,15 @@ class Commitment {
     }
 
     // Take the modulus of the amount to ensure it fits within the group order.
-    amountMod =
+    _amountMod =
         amount % _secp256k1ECDomainParameters.n; // setup.params.n is order.
 
     // Retrieve curve points H and HG.
-    ECPoint? pointH = setup._pointH;
-    ECPoint? pointHG = setup._pointHG;
-
-    // Ensure points H and HG are not null.
-    if (pointH == null || pointHG == null) {
-      throw NullPointError();
-    }
+    final pointH = setup._pointH;
+    final pointHG = setup._pointHG;
 
     // Compute multipliers for points H and HG.
-    BigInt a = amountMod;
+    BigInt a = _amountMod;
     BigInt k = this.nonce;
 
     // Multiply curve points by multipliers.
@@ -146,13 +137,8 @@ class Commitment {
       throw ResultAtInfinity();
     }
 
-    // Set pointPUncompressed to the uncompressed encoding of point P.
-    this.pointPUncompressed =
-        pointPUncompressed ?? pointP?.getEncoded(false) ?? Uint8List(0);
-    // TODO is Uint8List(0) a valid default?
-
     // Do initial calculation of point P and nonce.
-    calcInitial(setup, amount);
+    _calcInitial(setup, amount);
   }
 
   /// Calculate the initial point and nonce for a given setup and amount.
@@ -163,22 +149,14 @@ class Commitment {
   ///
   /// Returns:
   ///   void
-  void calcInitial(PedersenSetup setup, BigInt amount) {
-    // Check if points are null.
-    if (setup._pointH == null) {
-      throw Exception('Point H is null');
-    }
-    if (setup._pointHG == null) {
-      throw Exception('Point HG is null');
-    }
-
+  void _calcInitial(PedersenSetup setup, BigInt amount) {
     // Retrieve the curve points H and HG from the Pedersen setup.
-    final ECPoint pointH = setup._pointH!;
-    final ECPoint pointHG = setup._pointHG!;
+    final ECPoint pointH = setup._pointH;
+    final ECPoint pointHG = setup._pointHG;
 
     // Legwork towards calculating the point P.
     BigInt k = nonce;
-    BigInt a = amountMod;
+    BigInt a = _amountMod;
     ECPoint? pointHMultiplied = pointH *
         ((a - k) % _secp256k1ECDomainParameters.n); // setup.params.n is order.
     ECPoint? pointHGMultiplied = pointHG * k;
@@ -196,7 +174,7 @@ class Commitment {
     }
 
     // Store the uncompressed form of the point P, either provided or newly calculated.
-    pointPUncompressed = pointP.getEncoded(false);
+    _pointPUncompressed = pointP.getEncoded(false);
   }
 
   /// Add multiple Commitments together.
@@ -215,7 +193,7 @@ class Commitment {
     // Loop through each commitment to sum up nonces and amounts.
     for (Commitment c in commitmentIterable) {
       ktotal += c.nonce;
-      atotal += c.amountMod; // Changed from amount to amountMod.
+      atotal += c._amountMod; // Changed from amount to amountMod.
       points.add(c.pointPUncompressed);
       setups.add(c.setup);
     }
