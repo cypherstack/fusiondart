@@ -5,44 +5,26 @@ import 'package:pointycastle/ecc/api.dart';
 
 /// Class responsible for setting up a Pedersen commitment.
 class PedersenSetup {
-  final ECPoint? _pointH;
+  ECPoint? _pointH;
   ECPoint? _pointHG;
-  ECDomainParameters? _params;
+  final ECDomainParameters _params = ECDomainParameters("secp256k1");
 
   /// Get the EC parameters for the setup.
-  ECDomainParameters get params {
-    if (_params == null) {
-      throw Exception('Params is null');
-    }
-
-    return _params!;
-  }
+  ECDomainParameters get params => _params;
 
   /// Constructor initializes the Pedersen setup with a given H point.
   ///
   /// Parameters:
   /// - [_H]: An EC point to initialize the Pedersen setup.
-  PedersenSetup(this._pointH) {
-    _params = ECDomainParameters("secp256k1");
-
-    if (_pointH == null) {
-      throw NullPointError();
-    }
-
-    if (_params?.curve == null) {
-      throw Exception('Curve is null');
-    }
-
-    if (_params?.G == null) {
-      throw Exception('G is null');
-    }
+  PedersenSetup(ECPoint _pointH) {
+    this._pointH = _pointH;
 
     // Validate H point.
-    if (!Utilities.isPointOnCurve(_pointH!, _params!.curve)) {
+    if (!Utilities.isPointOnCurve(_pointH, _params.curve)) {
       throw Exception('H is not a valid point on the curve');
     }
 
-    _pointHG = Utilities.combinePubKeys([_pointH!, _params!.G]);
+    _pointHG = Utilities.combinePubKeys([_pointH, _params.G]);
   }
 
   // Getter methods to fetch _H and _HG points as Uint8Lists.
