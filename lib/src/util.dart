@@ -587,15 +587,29 @@ class Utilities {
   /// Returns:
   ///   `true` if the point is on the curve, `false` otherwise.
   static bool isPointOnCurve(ECPoint point, ECCurve curve) {
-    // TODO validate these null assertions
-    BigInt? x = point.x!.toBigInteger()!;
-    BigInt? y = point.y!.toBigInteger()!;
-    BigInt? a = curve.a!.toBigInteger()!;
-    BigInt? b = curve.b!.toBigInteger()!;
+    if (point.isInfinity) return false;
+
+    if (point.curve != curve) {
+      throw ArgumentError('Point and curve must be on the same curve');
+    }
+
+    // Validate the point.
+    if (point.x == null || point.y == null) {
+      throw ArgumentError('Point must have x and y coordinates');
+    }
+    if (point.x!.toBigInteger() == null || point.y!.toBigInteger() == null) {
+      throw ArgumentError('Point coordinates cannot be null');
+    }
+
+    // Extract the x and y coordinates.
+    BigInt x = point.x!.toBigInteger()!;
+    BigInt y = point.y!.toBigInteger()!;
+    BigInt a = curve.a!.toBigInteger()!;
+    BigInt b = curve.b!.toBigInteger()!;
 
     // Calculate the left and right sides of the equation.
-    BigInt? left = y * y;
-    BigInt? right = (x * x * x) + (a * x) + b;
+    BigInt left = y * y;
+    BigInt right = (x * x * x) + (a * x) + b;
 
     // Check if the point is on the curve.
     return left == right;

@@ -25,6 +25,18 @@ class PedersenSetup {
     }
 
     _pointHG = Utilities.combinePubKeys([_pointH, _params.G]);
+
+    // Validate HG point.
+    if (_pointHG == null) {
+      throw NullPointError();
+    }
+    if (!Utilities.isPointOnCurve(_pointHG!, _params.curve)) {
+      throw Exception('HG is not a valid point on the curve');
+    }
+    if (_pointHG == _params.curve.infinity) {
+      // This happens if H = -G.
+      throw Exception('HG is at infinity');
+    }
   }
 
   // Getter methods to fetch _H and _HG points as Uint8Lists.
