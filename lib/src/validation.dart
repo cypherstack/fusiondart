@@ -1,12 +1,11 @@
 import 'dart:typed_data';
 
 import 'package:fusiondart/src/encrypt.dart' as Encrypt;
-import 'package:fusiondart/src/fusion.pb.dart' as pb;
-import 'package:fusiondart/src/fusion.pb.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/pedersen.dart';
+import 'package:fusiondart/src/protobuf/fusion.pb.dart' as pb;
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/export.dart';
 
@@ -208,7 +207,7 @@ pb.InputComponent? validateProofInternal(
 
   check(!badComponents.contains(msg.componentIdx), "component in bad list");
 
-  Component comp = pb.Component();
+  final comp = pb.Component();
   comp.mergeFromBuffer(componentBlob);
   assert(comp.isInitialized());
 
@@ -257,14 +256,14 @@ Future<dynamic> validateBlame(
   List<int> badComponents,
   int componentFeerate,
 ) async {
-  InitialCommitment destCommit = pb.InitialCommitment();
+  final destCommit = pb.InitialCommitment();
   destCommit.mergeFromBuffer(destCommitBlob);
   List<int> destPubkey = destCommit.communicationKey;
 
-  InitialCommitment srcCommit = pb.InitialCommitment();
+  final srcCommit = pb.InitialCommitment();
   srcCommit.mergeFromBuffer(srcCommitBlob);
 
-  Blames_BlameProof_Decrypter decrypter = blame.whichDecrypter();
+  final decrypter = blame.whichDecrypter();
   ECDomainParameters params = ECDomainParameters('secp256k1');
   if (decrypter == pb.Blames_BlameProof_Decrypter.privkey) {
     Uint8List privkey = Uint8List.fromList(blame.privkey);
@@ -278,7 +277,7 @@ Future<dynamic> validateBlame(
     List<String> pubkeys = Utilities.pubkeysFromPrivkey(privkeyHexStr);
     check(destCommit.communicationKey == pubkeys[1], 'bad blame privkey');
     try {
-      Encrypt.decrypt(encProof, privateKey);
+      await Encrypt.decrypt(encProof, privateKey);
     } catch (e) {
       return 'undecryptable';
     }

@@ -1,5 +1,5 @@
-import 'package:fusiondart/src/fusion.pb.dart';
 import 'package:fusiondart/src/models/address.dart';
+import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 
 /// Output component class
 ///

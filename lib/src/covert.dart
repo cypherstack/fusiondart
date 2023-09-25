@@ -6,7 +6,7 @@ import 'dart:math';
 
 import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
-import 'package:fusiondart/src/fusion.pb.dart';
+import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:protobuf/protobuf.dart' as pb;
 import 'package:protobuf/protobuf.dart';
 
@@ -516,7 +516,7 @@ class CovertSubmitter extends PrintError {
             '[${covConn.connNumber}] connection established after ${((tEnd - tBegin) / 1000).toStringAsFixed(3)}s');
 
         // Set the ping time for the connection.
-        covConn.delay = (randTrap(rng) ?? 0) * (randSpan ?? 0);
+        covConn.delay = randTrap(rng) * (randSpan ?? 0);
 
         // Note the time at which the ping was sent.
         int lastActionTime = DateTime.now().millisecondsSinceEpoch;

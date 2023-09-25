@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:bip340/bip340.dart' as bip340;
 import 'package:convert/convert.dart';
-import 'package:fusiondart/src/fusion.pb.dart';
 import 'package:fusiondart/src/models/transaction.dart';
+import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/util.dart';
 
 /// Input component class.

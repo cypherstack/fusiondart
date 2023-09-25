@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/fusion.dart';
-import 'package:fusiondart/src/fusion.pb.dart';
+import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:protobuf/protobuf.dart';
 

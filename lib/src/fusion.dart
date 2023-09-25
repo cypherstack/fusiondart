@@ -13,7 +13,6 @@ import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/covert.dart';
 import 'package:fusiondart/src/encrypt.dart';
-import 'package:fusiondart/src/fusion.pb.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/blind_signature_request.dart';
 import 'package:fusiondart/src/models/input.dart';
@@ -21,6 +20,7 @@ import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/models/protobuf.dart';
 import 'package:fusiondart/src/models/transaction.dart';
 import 'package:fusiondart/src/pedersen.dart';
+import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
@@ -2025,8 +2025,8 @@ class Fusion {
       // Build transaction from components and session hash.
       (Transaction, List<int>) txData =
           Transaction.txFromComponents(allComponents, sessionHash);
-      Transaction tx = txData!.$1;
-      List<int> inputIndices = txData!.$2;
+      Transaction tx = txData.$1;
+      List<int> inputIndices = txData.$2;
 
       // Initialize list to store covert transaction signature messages.
       List<CovertTransactionSignature?> covertTransactionSignatureMessages =

@@ -2,7 +2,7 @@
 
 import 'dart:typed_data';
 
-import 'package:fusiondart/src/fusion.pb.dart';
+import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 
 /// Helper class to wrap the protobuf ComponentResult.
 ///
