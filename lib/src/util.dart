@@ -486,7 +486,7 @@ class Utilities {
   ///
   /// The function calculates the fee required for a component of a given size
   /// when the feerate is known. The feerate should be specified in sat/kB.
-  /// Fee is always rounded up to the nearest integer value.
+  /// Fee is always rounded up due to the addition of 999 sats.
   ///
   /// Returns:
   ///   The calculated fee for the component in satoshis.
@@ -496,11 +496,6 @@ class Utilities {
 
     // Calculate the fee and round up to the nearest integer value
     return ((size * feerate) + 999) ~/ 1000;
-    /*
-    // This passes.
-    assert(((size * feerate) + 999) ~/ 1000 ==
-        (((size * feerate) + 999) / 1000).floor());
-     */
   }
 
   /// Converts a serialized elliptic curve point to its `ECPoint` representation.
