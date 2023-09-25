@@ -587,15 +587,12 @@ class Fusion {
     ECDomainParameters params = ECDomainParameters('secp256k1');
 
     // Decode point.
-    ECPoint? hMaybe = params.curve.decodePoint(hBytes);
+    ECPoint? H = params.curve.decodePoint(hBytes);
 
     // Check if point is null.
-    if (hMaybe == null) {
+    if (H == null) {
       throw Exception('Failed to decode point');
     }
-
-    // Set point.
-    ECPoint H = hMaybe;
 
     // Set up Pedersen setup.
     PedersenSetup setup = PedersenSetup(H);
