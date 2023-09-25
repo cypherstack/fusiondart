@@ -141,11 +141,9 @@ class Commitment {
     ECPoint? pointHG = setup._pointHG;
 
     // Ensure points H and HG are not null.
-    /*
     if (pointH == null || pointHG == null) {
       throw NullPointError();
     }
-    */
 
     // Compute multipliers for points H and HG.
     BigInt multiplier1 = (amountMod - this.nonce) % setup.params.n;
@@ -168,6 +166,9 @@ class Commitment {
     // Set pointPUncompressed to the uncompressed encoding of point P.
     this.pointPUncompressed =
         pointPUncompressed ?? pointP?.getEncoded(false) ?? Uint8List(0);
+
+    // Do initial calculation of point P and nonce.
+    calcInitial(setup, amount);
   }
 
   /// Calculate the initial point and nonce for a given setup and amount.
@@ -195,19 +196,18 @@ class Commitment {
     ECPoint? pointHG = setup._pointHG;
 
     // Ensure neither point is null.
-    /*
     if (pointH == null || pointHG == null) {
       throw NullPointError();
     }
-    */
 
     // Calculate multipliers for both H and HG.
-    BigInt multiplier1 = amountMod;
-    BigInt multiplier2 = nonce;
+    BigInt k = nonce;
+    BigInt a = amountMod;
 
     // Multiply the curve points H and HG by their respective multipliers.
-    ECPoint? pointHMultiplied = pointH * multiplier1;
-    ECPoint? pointHGMultiplied = pointHG * multiplier2;
+    ECPoint? pointHMultiplied =
+        pointH * ((a - k) % setup.params.n); // setup.params.n is order.
+    ECPoint? pointHGMultiplied = pointHG * k;
 
     // Sum the two multiplied points to get the final point P.
     ECPoint? Ppoint = pointHMultiplied != null && pointHGMultiplied != null
