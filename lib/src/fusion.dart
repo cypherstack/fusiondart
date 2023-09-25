@@ -258,8 +258,13 @@ class Fusion {
       // Connect to server.
       status = ("connecting", "");
       try {
-        connection = await openConnection(serverHost, serverPort,
-            connTimeout: 5.0, defaultTimeout: 5.0, ssl: serverSsl);
+        connection = await openConnection(
+          serverHost,
+          serverPort,
+          connTimeout: 5,
+          defaultTimeout: 5,
+          ssl: serverSsl,
+        );
       } catch (e) {
         Utilities.debugPrint("Connect failed: $e");
         String sslstr = serverSsl ? ' SSL ' : '';
