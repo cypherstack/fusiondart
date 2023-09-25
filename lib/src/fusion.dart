@@ -1218,11 +1218,22 @@ class Fusion {
     }
 
     // Calculate the available amount for outputs.
-    int sumInputsValue = inputs.map((e) => e.value).reduce((a, b) => a + b);
-    int inputFees = inputs
-        .map((e) =>
-            Utilities.componentFee(e.sizeOfInput(), componentFeeRate.toInt()))
-        .reduce((int a, int b) => a + b);
+    int sumInputsValue =
+        inputs.map((input) => input.value).reduce((a, b) => a + b);
+    int inputFees = inputs.fold(
+        0,
+        (sum, input) =>
+            sum +
+            Utilities.componentFee(
+                input.sizeOfInput(), componentFeeRate.toInt()));
+    /*
+    // Equivalent to the fold above.
+    int inputFees = 0;
+    for (Input input in inputs) {
+      inputFees +=
+      Utilities.componentFee(input.sizeOfInput(), componentFeeRate.toInt());
+    }
+     */
     int availForOutputs = sumInputsValue - inputFees - minExcessFee.toInt();
 
     // Calculate fees per output.
