@@ -532,12 +532,11 @@ class CovertSubmitter extends PrintError {
         while (!stopping) {
           DateTime? nextTime;
           final slotNum = covConn.slotNum;
-          dynamic action; // Callback to hold the action function.
-          // TODO type
+          Function? action; // Callback to hold the action function.
 
           // Second preference: submit something.
           if (slotNum != null) {
-            CovertSlot slot = this.slots[slotNum];
+            CovertSlot slot = slots[slotNum];
             nextTime = slot.tSubmit;
             action = slot.submit;
           }
@@ -600,7 +599,7 @@ class CovertSubmitter extends PrintError {
         final slotNum = covConn.slotNum;
         if (slotNum != null) {
           try {
-            final spare = this.spareConnections.removeLast();
+            final spare = spareConnections.removeLast();
             // Found a spare.
             slots[slotNum].covConn = spare;
             spare.slotNum = slotNum;
