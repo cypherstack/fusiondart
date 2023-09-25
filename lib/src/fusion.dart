@@ -582,13 +582,13 @@ class Fusion {
     Uint8List hBytes = Uint8List.fromList(
         [0x02] + 'CashFusion gives us fungibility.'.codeUnits);
 
-    // Use secp256k1 curve
+    // Use secp256k1 curve.
     ECDomainParameters params = ECDomainParameters('secp256k1');
 
-    // Decode point
+    // Decode point.
     ECPoint? hMaybe = params.curve.decodePoint(hBytes);
 
-    // Check if point is null
+    // Check if point is null.
     if (hMaybe == null) {
       throw Exception('Failed to decode point');
     }
@@ -601,7 +601,7 @@ class Fusion {
 
     // Generate components.
     for (Input input in inputs) {
-      // Calculate fee
+      // Calculate fee.
       int fee = Utilities.componentFee(input.sizeOfInput(), feerate);
 
       // Create input component.
