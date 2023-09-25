@@ -487,10 +487,16 @@ class CovertSubmitter extends PrintError {
 
         // Attempt to open a connection.
         try {
-          final connection = await openConnection(destAddr!, destPort!,
-              connTimeout: connectTimeout.toDouble(),
-              ssl: this.ssl,
-              socksOpts: proxyOpts);
+          final connection = await openConnection(
+            destAddr!,
+            destPort!,
+            connTimeout: connectTimeout,
+            ssl: ssl,
+
+            // openConnection ignores socksOpts
+            // TODO: does this need to be handled?
+            socksOpts: proxyOpts,
+          );
           covConn.connection = connection;
         } catch (e) {
           // Connection failed.

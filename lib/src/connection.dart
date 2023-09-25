@@ -27,24 +27,28 @@ import 'package:fusiondart/src/util.dart';
 Future<Connection> openConnection(
   String host,
   int port, {
-  double connTimeout = 5.0,
-  double defaultTimeout = 5.0,
+  int connTimeout = 5,
+  int defaultTimeout = 5,
   bool ssl = false,
   dynamic socksOpts, // TODO type
 }) async {
   try {
     // Connect to host and port.
     // Dart's Socket class handles connection timeout internally.
-    Socket socket = await Socket.connect(host, port);
+    final Socket socket;
     if (ssl) {
-      // Upgrade to a secure socket if SSL is enabled.
-      // We can use SecureSocket.secure to upgrade socket connection to SSL/TLS.
-      socket = await SecureSocket.secure(socket);
+      socket = await SecureSocket.connect(host, port);
+    } else {
+      socket = await Socket.connect(host, port);
     }
 
     // Create a Connection object and return it.
     return Connection(
-        socket: socket, timeout: Duration(seconds: defaultTimeout.toInt()));
+      socket: socket,
+      timeout: Duration(
+        seconds: defaultTimeout,
+      ),
+    );
   } catch (e) {
     throw 'Failed to open connection: $e';
   }
