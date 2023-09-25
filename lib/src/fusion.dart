@@ -1230,10 +1230,6 @@ class Fusion {
       throw FusionError('Selected inputs had too little value');
     }
 
-    // Initialize random seed for generating outputs.
-    Random rng = Random();
-    List<int> seed = List<int>.generate(32, (_) => rng.nextInt(256));
-
     // Allocate the outputs based on available tiers.
     //
     // The allocated outputs and excess fees are stored in instance variables.
@@ -1257,6 +1253,7 @@ class Fusion {
       assert(fuzzFeeMaxReduced >= 0);
 
       // Randomly pick a fuzz fee in the range `[0, fuzzFeeMaxReduced]`.
+      Random rng = Random();
       int fuzzFee = rng.nextInt(fuzzFeeMaxReduced + 1);
 
       // Reduce the available amount for outputs by the selected fuzz fee.

@@ -488,6 +488,11 @@ class Utilities {
 
     // Calculate the fee and round up to the nearest integer value
     return ((size * feerate) + 999) ~/ 1000;
+    /*
+    // This passes.
+    assert(((size * feerate) + 999) ~/ 1000 ==
+        (((size * feerate) + 999) / 1000).floor());
+     */
   }
 
   /// Converts a serialized elliptic curve point to its `ECPoint` representation.
