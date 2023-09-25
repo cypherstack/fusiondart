@@ -255,7 +255,7 @@ class Fusion {
       // Connect to server.
       status = ("connecting", "");
       try {
-        connection = await openConnection(
+        connection = await Connection.openConnection(
           serverHost,
           serverPort,
           connTimeout: 5,
@@ -1371,8 +1371,10 @@ class Fusion {
     // Send the message to the server.
     await send2(clientMessage);
 
-    // TODO type the status variable.
-    (String, String) status = ('waiting', 'Registered for tiers');
+    ({String status, String message}) status = (
+      status: 'waiting',
+      message: 'Registered for tiers',
+    );
 
     // TODO make Entry class or otherwise type this section.
     Map<dynamic, String> tiersStrings = {
@@ -1381,25 +1383,28 @@ class Fusion {
             (entry.key * 1e-8).toStringAsFixed(8).replaceAll(RegExp(r'0+$'), '')
     };
 
+    const String _fusionBeginKey = "fusionbegin";
+    const String _tierStatusUpdateKey = "tierstatusupdate";
+
     // Main loop to receive updates from the server.
     while (true) {
       Utilities.debugPrint("RECEIVE LOOP 870............DEBUG");
-      // TODO type msg.  GeneratedMessage doesn't have a 'fusionbegin' getter which is used below.
-      msg = await recv2(['tierstatusupdate', 'fusionbegin'],
+      msg = await recv2([_tierStatusUpdateKey, _fusionBeginKey],
           timeout: Duration(seconds: 10));
 
       /*if (msg == null) continue;*/
 
       // Check for a FusionBegin message.
-      // TODO: Properly type the fieldInfoFusionBegin variable
       FieldInfo<dynamic>? fieldInfoFusionBegin =
-          msg.info_.byName["fusionbegin"];
+          msg.info_.byName[_fusionBeginKey];
       if (fieldInfoFusionBegin == null) {
-        throw FusionError('Expected field not found in message: fusionbegin');
+        throw FusionError(
+            'Expected field not found in message: $_fusionBeginKey');
       }
 
       // Validate that the received message is indeed a FusionBegin message.
-      bool messageIsFusionBegin = msg.hasField(fieldInfoFusionBegin.tagNumber);
+      final bool messageIsFusionBegin =
+          msg.hasField(fieldInfoFusionBegin.tagNumber);
       if (messageIsFusionBegin) {
         Utilities.debugPrint("DEBUG 867 Fusion Begin message...");
         break;
@@ -1413,15 +1418,15 @@ class Fusion {
       checkCoins();
 
       // Initialize a variable to store field information for "tierstatusupdate" in the message.
-      FieldInfo<dynamic>? fieldInfo = msg.info_.byName["tierstatusupdate"];
+      FieldInfo<dynamic>? fieldInfo = msg.info_.byName[_tierStatusUpdateKey];
       // Check if the field exists in the message, if not, throw an error.
       if (fieldInfo == null) {
         throw FusionError(
-            'Expected field not found in message: tierstatusupdate');
+            'Expected field not found in message: $_tierStatusUpdateKey');
       }
 
       // Determine if the message contains a "TierStatusUpdate"
-      bool messageIsTierStatusUpdate = msg.hasField(fieldInfo.tagNumber);
+      final bool messageIsTierStatusUpdate = msg.hasField(fieldInfo.tagNumber);
       Utilities.debugPrint("DEBUG 889 getting tier update.");
 
       // If the message doesn't contain a "TierStatusUpdate", throw an error.
@@ -1453,7 +1458,7 @@ class Fusion {
         // TODO make Entry class or otherwise type this section
 
         // Calculate the fraction of players to minimum players.
-        double frac = ((entry.value.players.toInt())) /
+        final double frac = ((entry.value.players.toInt())) /
             ((entry.value.minPlayers.toInt()));
 
         // Update 'maxfraction' and 'maxtiers' if the current fraction is greater than or equal to the current 'maxfraction'.
@@ -1538,22 +1543,34 @@ class Fusion {
 
       // Final status assignment based on calculated variables
       if (besttime != null) {
-        (String, String) status =
-            ('waiting', 'Starting in ${besttime}s. $tiersString');
+        status = (
+          status: 'waiting',
+          message: 'Starting in ${besttime}s. $tiersString',
+        );
       } else if (maxfraction >= 1) {
-        (String, String) status = ('waiting', 'Starting soon. $tiersString');
+        status = (
+          status: 'waiting',
+          message: 'Starting soon. $tiersString',
+        );
       } else if (displayBest.isNotEmpty || displayMid.isNotEmpty) {
-        (String, String) status =
-            ('waiting', '${(maxfraction * 100).round()}% full. $tiersString');
+        status = (
+          status: 'waiting',
+          message: '${(maxfraction * 100).round()}% full. $tiersString',
+        );
       } else {
-        (String, String) status = ('waiting', tiersString);
+        status = (
+          status: 'waiting',
+          message: tiersString,
+        );
       }
     } // End of while loop.  Loop exits with a break if a FusionBegin message is received.
 
     // Check if the field 'fusionbegin' exists in the message.
-    FieldInfo<dynamic>? fieldInfoFusionBegin = msg.info_.byName["fusionbegin"];
+    FieldInfo<dynamic>? fieldInfoFusionBegin =
+        msg.info_.byName[_fusionBeginKey];
     if (fieldInfoFusionBegin == null) {
-      throw FusionError('Expected field not found in message: fusionbegin');
+      throw FusionError(
+          'Expected field not found in message: $_fusionBeginKey');
     }
 
     // Determine if the message contains a FusionBegin message.
