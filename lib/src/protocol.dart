@@ -1,7 +1,7 @@
 /// A class that contains all the constants used in the protocol.
 ///
 /// Refer to Electron-Cash [Electron-Cash/electroncash_plugins/fusion/server.py](https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/server.py#L59).
-class Protocol {
+abstract final class Protocol {
   // Define the version of the protocol in use.
   static const VERSION = 'alpha13';
 
