@@ -10,7 +10,6 @@ import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
-import 'package:pointycastle/ecc/curves/secp256k1.dart';
 
 /// A utility class that provides various helper functions.
 class Utilities {
@@ -49,37 +48,41 @@ class Utilities {
     return ((int64 * numPositions) >> 64).toInt();
   }
 
-  /// Generates public keys from a given private key.
-  ///
-  /// TODO make sure this return different public keys.
-  ///
-  /// Parameters:
-  /// - [privkey] A private key in String format.
-  ///
-  /// Returns:
-  ///   A list of public keys.
-  static List<String> pubkeysFromPrivkey(String privKey) {
-    // This is a placeholder implementation.
-    return [privateKeyToPublicKey(privKey), privateKeyToPublicKey(privKey)];
-  }
+  // /// Generates public keys from a given private key.
+  // ///
+  // /// TODO make sure this return different public keys.
+  // ///
+  // /// Parameters:
+  // /// - [privkey] A private key in String format.
+  // ///
+  // /// Returns:
+  // ///   A list of public keys.
+  // static List<String> pubkeysFromPrivkey(String privKey) {
+  //   // This is a placeholder implementation.
+  //   return [privateKeyToPublicKey(privKey), privateKeyToPublicKey(privKey)];
+  // }
 
-  /// Returns the public key from a given private key.
-  ///
-  /// TODO use ones of the libraries we already have for this.
-  static String privateKeyToPublicKey(String privKey) {
-    final secp256k1 = ECCurve_secp256k1();
-    final bigIntPrivateKey = BigInt.parse(privKey, radix: 16);
-
-    final private = ECPrivateKey(bigIntPrivateKey, secp256k1);
-    final Q = secp256k1.G *
-        private
-            .d; // This performs the elliptic curve multiplication to generate the public key.
-    // final ecPublicKey = ECPublicKey(Q, secp256k1);
-
-    // Convert the public key's Q value (ECPoint) to a byte array (Uint8List).
-    final publicKeyCompressed = Uint8List.fromList(Q!.getEncoded(true));
-    return utf8.decode(publicKeyCompressed);
-  }
+  // /// Returns the public key from a given private key.
+  // ///
+  // /// TODO use ones of the libraries we already have for this.
+  // static String privateKeyToPublicKey(String privKey) {
+  //
+  //   coinlib.HDPrivateKey.decode("b58").
+  //
+  //
+  //   final secp256k1 = ECCurve_secp256k1();
+  //   final bigIntPrivateKey = BigInt.parse(privKey, radix: 16);
+  //
+  //   final private = ECPrivateKey(bigIntPrivateKey, secp256k1);
+  //   final Q = secp256k1.G *
+  //       private
+  //           .d; // This performs the elliptic curve multiplication to generate the public key.
+  //   // final ecPublicKey = ECPublicKey(Q, secp256k1);
+  //
+  //   // Convert the public key's Q value (ECPoint) to a byte array (Uint8List).
+  //   final publicKeyCompressed = Uint8List.fromList(Q!.getEncoded(true));
+  //   return utf8.decode(publicKeyCompressed);
+  // }
 
   /// Determines the dust limit based on the length of the transaction.
   ///
@@ -595,5 +598,17 @@ class Utilities {
 extension HexEncoding on List<int> {
   String toHex() {
     return map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+  }
+}
+
+extension Uint8ListExtensions on Uint8List {
+  String get toUtf8String => utf8.decode(this);
+
+  BigInt get toBigInt {
+    BigInt number = BigInt.zero;
+    for (final byte in this) {
+      number = (number << 8) | BigInt.from(byte & 0xff);
+    }
+    return number;
   }
 }

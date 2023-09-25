@@ -1,13 +1,15 @@
 import 'dart:typed_data';
 
-import 'package:fusiondart/src/encrypt.dart' as Encrypt;
-import 'package:fusiondart/src/models/address.dart';
+import 'package:coinlib/coinlib.dart' as coinlib;
+import 'package:collection/collection.dart';
+import 'package:fusiondart/src/encrypt.dart' as encrypt;
 import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart' as pb;
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/export.dart';
+import 'package:protobuf/protobuf.dart';
 
 class ValidationError implements Exception {
   final String message;
@@ -38,25 +40,20 @@ void check(bool condition, String failMessage) {
   }
 }
 
-// TODO type
-dynamic protoStrictParse(dynamic msg, List<int> blob) {
-  // TODO validate "is InitialCommitment"
+T protoStrictParse<T extends GeneratedMessage>(T msg, List<int> blob) {
   try {
-    if (msg.mergeFromBuffer(blob) != blob.length) {
-      throw ArgumentError('DecodeError');
-    }
+    msg.mergeFromBuffer(blob);
   } catch (e) {
     throw ArgumentError('ValidationError: decode error');
   }
 
-  if (!(msg.isInitialized() as bool)) {
+  if (!(msg.isInitialized())) {
     throw ArgumentError('missing fields');
   }
 
-  // Protobuf in dart does not support 'unknownFields' method
-  // if (!msg.unknownFields.isEmpty) {
-  //   throw ArgumentError('has extra fields');
-  // }
+  if (msg.unknownFields.isNotEmpty) {
+    throw ArgumentError('has extra fields');
+  }
 
   if (msg.writeToBuffer().length != blob.length) {
     throw ArgumentError('encoding too long');
@@ -82,10 +79,9 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   check(msg.blindSigRequests.every((r) => r.length == 32),
       "bad blind sig request");
 
-  List<pb.InitialCommitment> commitMessages = [];
+  final List<pb.InitialCommitment> commitMessages = [];
   for (List<int> cblob in msg.initialCommitments) {
-    pb.InitialCommitment cmsg =
-        protoStrictParse(pb.InitialCommitment(), cblob) as pb.InitialCommitment;
+    final cmsg = protoStrictParse(pb.InitialCommitment(), cblob);
     check(cmsg.saltedComponentHash.length == 32, "bad salted hash");
     List<int> P = cmsg.amountCommitment;
     check(P.length == 65 && P[0] == 4, "bad commitment point");
@@ -96,18 +92,18 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
     commitMessages.add(cmsg);
   }
 
-  Uint8List HBytes =
+  final Uint8List hBytes =
       Uint8List.fromList([0x02] + 'CashFusion gives us fungibility.'.codeUnits);
-  ECDomainParameters params = ECDomainParameters('secp256k1');
-  ECPoint? HMaybe = params.curve.decodePoint(HBytes);
-  if (HMaybe == null) {
+  final ECDomainParameters params = ECDomainParameters('secp256k1');
+  final ECPoint? hMaybe = params.curve.decodePoint(hBytes);
+  if (hMaybe == null) {
     throw Exception('Failed to decode point');
   }
-  ECPoint H = HMaybe;
-  PedersenSetup setup = PedersenSetup(H);
+  final ECPoint H = hMaybe;
+  final PedersenSetup setup = PedersenSetup(H);
 
-  Commitment claimedCommit;
-  Uint8List pointsum;
+  final Commitment claimedCommit;
+  final Uint8List pointsum;
   // Verify pedersen commitment
   try {
     pointsum = Commitment.addPoints(commitMessages
@@ -135,47 +131,43 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   check(Utilities.schnorrVerify(roundPubkey, msg.signature, messageHash),
       "bad message signature");
 
-  // TODO type
-  dynamic cmsg = protoStrictParse(pb.Component(), msg.component);
+  final cmsg = protoStrictParse(pb.Component(), msg.component);
   check(cmsg.saltCommitment.length == 32, "bad salt commitment");
 
-  String sortKey;
+  final String sortKey;
 
-  if (cmsg.hasInput() as bool) {
-    // TODO type
-    dynamic inp = cmsg.input;
+  if (cmsg.hasInput()) {
+    final inp = cmsg.input;
     check(inp.prevTxid.length == 32, "bad txid");
     check(
         (inp.pubkey.length == 33 &&
                 (inp.pubkey[0] == 2 || inp.pubkey[0] == 3)) ||
             (inp.pubkey.length == 65 && inp.pubkey[0] == 4),
         "bad pubkey");
-    if (cmsg.saltCommitment is! Iterable<int>) {
-      throw Exception(
-          'cmsg.saltCommitment is not Iterable<int> in checkCovertComponent');
-    }
-    sortKey =
-        'i${String.fromCharCodes(inp.prevTxid.reversed as Iterable<int>)}${inp.prevIndex.toString()}${String.fromCharCodes(cmsg.saltCommitment as Iterable<int>)}';
-  } else if (cmsg.hasOutput() as bool) {
-    // TODO type
-    dynamic out = cmsg.output;
-    // Basically just checks if its ok address. should throw error if not.
-    Address addr =
-        Utilities.getAddressFromOutputScript(out.scriptpubkey as Uint8List);
 
-    check(
-        (out.amount >= Utilities.dustLimit(out.scriptpubkey.length as int)
-            as bool),
+    sortKey = 'i${String.fromCharCodes(inp.prevTxid.reversed)}'
+        '${inp.prevIndex.toString()}'
+        '${String.fromCharCodes(cmsg.saltCommitment)}';
+  } else if (cmsg.hasOutput()) {
+    final out = cmsg.output;
+    // Basically just checks if its ok address. should throw error if not.
+    try {
+      Utilities.getAddressFromOutputScript(out.scriptpubkey as Uint8List);
+    } catch (_) {
+      rethrow;
+    }
+
+    check(out.amount >= Utilities.dustLimit(out.scriptpubkey.length),
         "dust output");
     sortKey =
-        'o${out.amount.toString()}${String.fromCharCodes(out.scriptpubkey as Iterable<int>)}${String.fromCharCodes(cmsg.saltCommitment as Iterable<int>)}';
-  } else if (cmsg.hasBlank() as bool) {
-    sortKey = 'b${String.fromCharCodes(cmsg.saltCommitment as Iterable<int>)}';
+        'o${out.amount.toString()}${String.fromCharCodes(out.scriptpubkey)}${String.fromCharCodes(cmsg.saltCommitment)}';
+  } else if (cmsg.hasBlank()) {
+    sortKey = 'b${String.fromCharCodes(cmsg.saltCommitment)}';
   } else {
     throw ValidationError('missing component details');
   }
 
-  return (sortKey, componentContrib(cmsg as pb.Component, componentFeerate));
+  return (sortKey, componentContrib(cmsg, componentFeerate));
 }
 
 pb.InputComponent? validateProofInternal(
@@ -185,22 +177,21 @@ pb.InputComponent? validateProofInternal(
   List<int> badComponents,
   int componentFeerate,
 ) {
-  Uint8List HBytes =
+  final Uint8List hBytes =
       Uint8List.fromList([0x02] + 'CashFusion gives us fungibility.'.codeUnits);
-  ECDomainParameters params = ECDomainParameters('secp256k1');
-  ECPoint? HMaybe = params.curve.decodePoint(HBytes);
-  if (HMaybe == null) {
+  final ECDomainParameters params = ECDomainParameters('secp256k1');
+  final ECPoint? hMaybe = params.curve.decodePoint(hBytes);
+  if (hMaybe == null) {
     throw Exception('Failed to decode point');
   }
-  ECPoint H = HMaybe;
-  PedersenSetup setup = PedersenSetup(H);
+  final ECPoint h = hMaybe;
+  PedersenSetup setup = PedersenSetup(h);
 
-  // TODO type
-  dynamic msg = protoStrictParse(pb.Proof(), proofBlob);
+  final msg = protoStrictParse(pb.Proof(), proofBlob);
 
   Uint8List componentBlob;
   try {
-    componentBlob = allComponents[msg.componentIdx as int];
+    componentBlob = allComponents[msg.componentIdx];
   } catch (e) {
     throw ValidationError("component index out of range");
   }
@@ -218,7 +209,7 @@ pb.InputComponent? validateProofInternal(
   );
 
   // TODO validate
-  Iterable<int> iterableSalt = msg.salt as Iterable<int>;
+  Iterable<int> iterableSalt = msg.salt;
   check(
     Utilities.sha256(Uint8List.fromList([...iterableSalt, ...componentBlob])) ==
         commitment.saltedComponentHash,
@@ -227,15 +218,15 @@ pb.InputComponent? validateProofInternal(
 
   int contrib = componentContrib(comp, componentFeerate);
 
-  List<int> PCommitted = commitment.amountCommitment;
+  final List<int> pCommitted = commitment.amountCommitment;
 
-  Commitment claimedCommit = setup.commit(
+  final Commitment claimedCommit = setup.commit(
     BigInt.from(contrib),
     nonce: Utilities.bytesToBigInt(msg.pedersenNonce as Uint8List),
   );
 
   check(
-    Uint8List.fromList(PCommitted) == claimedCommit.pointPUncompressed,
+    Uint8List.fromList(pCommitted) == claimedCommit.pointPUncompressed,
     "pedersen commitment mismatch",
   );
 
@@ -246,8 +237,7 @@ pb.InputComponent? validateProofInternal(
   }
 }
 
-// TODO type
-Future<dynamic> validateBlame(
+Future<pb.InputComponent> validateBlame(
   pb.Blames_BlameProof blame,
   Uint8List encProof,
   Uint8List srcCommitBlob,
@@ -258,28 +248,35 @@ Future<dynamic> validateBlame(
 ) async {
   final destCommit = pb.InitialCommitment();
   destCommit.mergeFromBuffer(destCommitBlob);
+
+  // TODO: why is this unused???
+  // Looks unused in the python code as well...
   List<int> destPubkey = destCommit.communicationKey;
 
   final srcCommit = pb.InitialCommitment();
   srcCommit.mergeFromBuffer(srcCommitBlob);
 
   final decrypter = blame.whichDecrypter();
-  ECDomainParameters params = ECDomainParameters('secp256k1');
+
   if (decrypter == pb.Blames_BlameProof_Decrypter.privkey) {
-    Uint8List privkey = Uint8List.fromList(blame.privkey);
-    check(privkey.length == 32, 'bad blame privkey');
-    String privkeyHexStr =
-        Utilities.bytesToHex(privkey); // Convert bytes to hex string.
-    BigInt privkeyBigInt =
-        BigInt.parse(privkeyHexStr, radix: 16); // Convert hex string to BigInt.
-    ECPrivateKey privateKey =
-        ECPrivateKey(privkeyBigInt, params); // Create ECPrivateKey
-    List<String> pubkeys = Utilities.pubkeysFromPrivkey(privkeyHexStr);
-    check(destCommit.communicationKey == pubkeys[1], 'bad blame privkey');
+    check(blame.privkey.length == 32, 'bad blame privkey');
+
+    final privateKey = coinlib.ECPrivateKey(Uint8List.fromList(blame.privkey));
+
+    check(destCommit.communicationKey.equals(privateKey.pubkey.data),
+        'bad blame privkey');
+
+    final ECDomainParameters params = ECDomainParameters('secp256k1');
     try {
-      await Encrypt.decrypt(encProof, privateKey);
+      await encrypt.decrypt(
+        encProof,
+        ECPrivateKey(
+          privateKey.data.toBigInt,
+          params,
+        ),
+      );
     } catch (e) {
-      return 'undecryptable';
+      throw Exception("validateBlame() undecryptable");
     }
     throw ValidationError('blame gave privkey but decryption worked');
   } else if (decrypter != pb.Blames_BlameProof_Decrypter.sessionKey) {
@@ -289,7 +286,7 @@ Future<dynamic> validateBlame(
   check(key.length == 32, 'bad blame session key');
   Uint8List proofBlob;
   try {
-    proofBlob = await Encrypt.decryptWithSymmkey(encProof, key);
+    proofBlob = await encrypt.decryptWithSymmkey(encProof, key);
   } catch (e) {
     throw ValidationError('bad blame session key');
   }
@@ -303,7 +300,7 @@ Future<dynamic> validateBlame(
       componentFeerate,
     );
   } catch (e) {
-    return e.toString();
+    rethrow;
   }
 
   if (!blame.needLookupBlockchain) {
