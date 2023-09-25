@@ -2291,12 +2291,17 @@ class Fusion {
         int componentFeerateInt = componentFeeRate
             .round(); // or use .toInt() if you want to truncate instead of rounding.
 
-        InputComponent? inpComp = validateProofInternal(proofBlob, commitment,
-            allComponentsUint8, badComponentsList, componentFeerateInt);
+        inpComp = validateProofInternal(
+          proofBlob,
+          commitment,
+          allComponentsUint8,
+          badComponentsList,
+          componentFeerateInt,
+        );
       } on Exception catch (e) {
         // If the proof is invalid, add it to the blame list.
         Utilities.debugPrint("found an erroneous proof: ${e.toString()}");
-        Blames_BlameProof blameProof = Blames_BlameProof();
+        final blameProof = Blames_BlameProof();
         blameProof.whichProof = i;
         blameProof.sessionKey = sKey;
         blameProof.blameReason = e.toString();
@@ -2305,8 +2310,6 @@ class Fusion {
       }
 
       // If inpComp is not null, this means the proof was valid.
-      // TODO inpComp can't be null, so this logic will never run!  Make sure to change to a valid check!
-      // TODO null safety feedback messages for inpComp
       if (inpComp != null) {
         countInputs++;
         try {
@@ -2315,19 +2318,21 @@ class Fusion {
         } on Exception catch (e) {
           // If the input component doesn't match the blockchain, add the proof to the blame list.
           Utilities.debugPrint(
-              "found a bad input [${rp.srcCommitmentIdx}]: $e (${inpComp.prevTxid.reversed.toList().toHex()}:${inpComp.prevIndex})");
+            "found a bad input [${rp.srcCommitmentIdx}]: "
+            "$e (${inpComp.prevTxid.reversed.toList().toHex()}:${inpComp.prevIndex})",
+          );
 
-          Blames_BlameProof blameProof = Blames_BlameProof();
+          final blameProof = Blames_BlameProof();
           blameProof.whichProof = i;
           blameProof.sessionKey = sKey;
-          blameProof.blameReason =
-              'input does not match blockchain: ' + e.toString();
+          blameProof.blameReason = 'input does not match blockchain: $e';
           blameProof.needLookupBlockchain = true;
           blames.add(blameProof);
         } catch (e) {
           // If we can't check against the blockchain for some reason, log a message.
           Utilities.debugPrint(
-              "verified an input internally, but was unable to check it against blockchain: ${e}");
+            "verified an input internally, but was unable to check it against blockchain: $e",
+          );
         }
       }
     }
