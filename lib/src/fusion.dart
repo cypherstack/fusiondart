@@ -77,10 +77,6 @@ class Fusion {
   int serverPort = 8787; // Server port.
   // For use with the alternative host above, use `8789`.
 
-  String torHost = ""; // Tor SOCKS5 proxy host.
-  // Could use InternetAddress.looopbackIPv4 or InternetAddress.loopbackIPv6
-  int torPort = 0; // Tor SOCKS5 proxy port.
-
   int covertPort = 0; // Covert connection port.
   bool covertSSL = false; // Use SSL for covert connection?
 
@@ -127,8 +123,6 @@ class Fusion {
   List<int> myComponentIndexes = []; // Holds the indexes for the components.
   List<int> myCommitmentIndexes = []; // Holds the indexes for the commitments.
   Set<int> badComponents = {}; // The indexes of bad components.
-
-  ({InternetAddress host, int port})? proxyInfo; // Holds the proxy information.
 
   static const int COINBASE_MATURITY = 100; // Maturity for coinbase UTXOs.
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash/bitcoin.py#L65
@@ -234,11 +228,14 @@ class Fusion {
         throw FusionError("Incompatible: $e");
       }
 
-      // Check if can connect to Tor proxy, if not, raise FusionError. Empty String treated as no host.
-      if (torHost.isNotEmpty &&
-          torPort != 0 &&
-          !await isTorPort(torHost, torPort)) {
-        throw FusionError("Can't connect to Tor proxy at $torHost:$torPort");
+      // TODO: this refactor is probably wrong... But we cannot store tor proxy info in variables as they can get updated elsewhere and then the instance of this FusionInterface will not have the updated info
+      // Check if can connect to Tor proxy, if not, raise FusionError.
+      final ({InternetAddress host, int port}) proxyInfo;
+      try {
+        proxyInfo = await _getSocksProxyAddress();
+      } catch (e) {
+        Utilities.debugPrint("Can't connect to Tor proxy $e");
+        throw FusionError("Can't connect to Tor proxy");
       }
 
       try {
@@ -1629,12 +1626,12 @@ class Fusion {
     (String, String) status = ('running', 'Setting up Tor connections');
 
     // Get the Tor host and port from the wallet configuration.
-    ({InternetAddress host, int port}) proxyInfo =
-        await _getSocksProxyAddress();
-
-    // Set the Tor host and port.
-    torHost = proxyInfo.host.address; // TODO make sure this is correct.
-    torPort = proxyInfo.port;
+    final ({InternetAddress host, int port}) proxyInfo;
+    try {
+      proxyInfo = await _getSocksProxyAddress();
+    } catch (e) {
+      throw FusionError("startCovert() can't connect to Tor proxy");
+    }
 
     // Decode the covert domain and validate it.
     String covertDomain;
@@ -1649,8 +1646,8 @@ class Fusion {
         covertDomain,
         covertPort,
         covertSSL,
-        torHost,
-        torPort,
+        proxyInfo.host.address,
+        proxyInfo.port,
         numComponents,
         Protocol.COVERT_SUBMIT_WINDOW,
         Protocol.COVERT_SUBMIT_TIMEOUT);
