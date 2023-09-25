@@ -6,6 +6,7 @@ import 'package:bip340/bip340.dart' as bip340;
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
@@ -13,6 +14,13 @@ import 'package:pointycastle/ecc/api.dart';
 
 /// A utility class that provides various helper functions.
 class Utilities {
+  static void debugPrint(Object? object) {
+    if (kDebugPrintEnabled) {
+      // ignore: avoid_print
+      print(object);
+    }
+  }
+
   /// Checks the input for ElectrumX server.
   ///
   /// Parameters:

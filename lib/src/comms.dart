@@ -5,6 +5,7 @@ import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/fusion.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
+import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart';
 
 /// Type definition for a function that creates a new instance of a Protobuf GeneratedMessage.
@@ -66,7 +67,7 @@ Future<void> sendPb(
     {Duration? timeout}) async {
   // Construct the outer message with the submessage.
   if (pbClassCreators[pbClass] == null) {
-    print('pbClassCreators[pbClass] is null');
+    Utilities.debugPrint('pbClassCreators[pbClass] is null');
     // TODO should we throw an exception here?
     return;
   }
@@ -113,7 +114,7 @@ Future<void> sendPb2(SocketWrapper socketwrapper, Connection connection,
     {Duration? timeout}) async {
   // Construct the outer message with the submessage.
   if (pbClassCreators[pbClass] == null) {
-    print('pbClassCreators[pbClass] is null');
+    Utilities.debugPrint('pbClassCreators[pbClass] is null');
     // TODO should we throw an exception here?
     return;
   }

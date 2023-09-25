@@ -28,6 +28,8 @@ import 'package:fusiondart/src/validation.dart';
 import 'package:pointycastle/export.dart';
 import 'package:protobuf/protobuf.dart';
 
+final bool kDebugPrintEnabled = true;
+
 /// Fusion class is responsible for coordinating the CashFusion transaction process.
 ///
 /// It maintains the state and controls the flow of a fusion operation.
@@ -222,7 +224,7 @@ class Fusion {
   /// - FusionError: If any step in the fusion operation fails.
   /// - Exception: For general exceptions.
   Future<void> fuse() async {
-    print("DEBUG FUSION 223...fusion run....");
+    Utilities.debugPrint("DEBUG FUSION 223...fusion run....");
     try {
       try {
         // Check compatibility  - This was done in python version to see if fast libsec installed.
@@ -243,14 +245,14 @@ class Fusion {
         // Check stop condition
         checkStop(running: false);
       } catch (e) {
-        print(e);
+        Utilities.debugPrint(e);
       }
 
       try {
         // Check coins
         checkCoins();
       } catch (e) {
-        print(e);
+        Utilities.debugPrint(e);
       }
 
       // Connect to server.
@@ -259,7 +261,7 @@ class Fusion {
         connection = await openConnection(serverHost, serverPort,
             connTimeout: 5.0, defaultTimeout: 5.0, ssl: serverSsl);
       } catch (e) {
-        print("Connect failed: $e");
+        Utilities.debugPrint("Connect failed: $e");
         String sslstr = serverSsl ? ' SSL ' : '';
         throw FusionError(
             'Could not connect to $sslstr$serverHost:$serverPort');
@@ -290,7 +292,7 @@ class Fusion {
             throw FusionError('Started with no coins');
           }
         } catch (e) {
-          print(e);
+          Utilities.debugPrint(e);
           return;
         }
 
@@ -317,7 +319,7 @@ class Fusion {
         await (connection)?.close();
       }
 
-      print("RETURNING early in fuse....");
+      Utilities.debugPrint("RETURNING early in fuse....");
       return;
 
       // Wait for transaction to show up in wallet.
@@ -336,10 +338,10 @@ class Fusion {
       // Set status to 'complete' with txid.
       status = ('complete', 'txid: $txId');
     } on FusionError catch (err) {
-      print('Failed: ${err}');
+      Utilities.debugPrint('Failed: ${err}');
       status = ("failed", err.toString());
     } catch (exc) {
-      print('Exception: ${exc}');
+      Utilities.debugPrint('Exception: ${exc}');
       status = ("Exception", exc.toString());
     } finally {
       clearCoins();
@@ -1154,8 +1156,8 @@ class Fusion {
   /// Throws:
   /// - FusionError: if any constraints or limits are violated.
   Future<void> allocateOutputs() async {
-    print("DBUG allocateoutputs 746");
-    print("CHECK socketwrapper 746");
+    Utilities.debugPrint("DBUG allocateoutputs 746");
+    Utilities.debugPrint("CHECK socketwrapper 746");
 
     // Check if the connection is initialized.  _socketWrapper will need to be initialized.
     if (_socketWrapper == null) {
@@ -1233,7 +1235,7 @@ class Fusion {
     // Allocate the outputs based on available tiers.
     //
     // The allocated outputs and excess fees are stored in instance variables.
-    print("DBUG allocateoutputs 785");
+    Utilities.debugPrint("DBUG allocateoutputs 785");
     tierOutputs = {};
     Map<int, int> excessFees = <int, int>{};
 
@@ -1289,7 +1291,7 @@ class Fusion {
       tierOutputs[scale] = _outputs;
     }
 
-    print('Possible tiers: $tierOutputs');
+    Utilities.debugPrint('Possible tiers: $tierOutputs');
 
     // Save some parameters for safety checks.
     safetySumIn = sumInputsValue;
@@ -1330,7 +1332,7 @@ class Fusion {
           'No outputs available at any tier (selected inputs were too small / too large).');
     }
 
-    print('registering for tiers: $tiersSorted');
+    Utilities.debugPrint('registering for tiers: $tiersSorted');
 
     // Temporary initialization of some CashFusion parameters.
     int selfFuse = 1; // Temporary value for now.
@@ -1367,7 +1369,7 @@ class Fusion {
 
     // Main loop to receive updates from the server.
     while (true) {
-      print("RECEIVE LOOP 870............DEBUG");
+      Utilities.debugPrint("RECEIVE LOOP 870............DEBUG");
       // TODO type msg.  GeneratedMessage doesn't have a 'fusionbegin' getter which is used below.
       msg = await recv2(['tierstatusupdate', 'fusionbegin'],
           timeout: Duration(seconds: 10));
@@ -1385,7 +1387,7 @@ class Fusion {
       // Validate that the received message is indeed a FusionBegin message.
       bool messageIsFusionBegin = msg.hasField(fieldInfoFusionBegin.tagNumber);
       if (messageIsFusionBegin) {
-        print("DEBUG 867 Fusion Begin message...");
+        Utilities.debugPrint("DEBUG 867 Fusion Begin message...");
         break;
       } /* else {
         throw FusionError('Expected a FusionBegin message');
@@ -1406,7 +1408,7 @@ class Fusion {
 
       // Determine if the message contains a "TierStatusUpdate"
       bool messageIsTierStatusUpdate = msg.hasField(fieldInfo.tagNumber);
-      print("DEBUG 889 getting tier update.");
+      Utilities.debugPrint("DEBUG 889 getting tier update.");
 
       // If the message doesn't contain a "TierStatusUpdate", throw an error.
       if (!messageIsTierStatusUpdate) {
@@ -1423,8 +1425,8 @@ class Fusion {
         statuses = tierStatusUpdate.statuses;
       }
 
-      // print("DEBUG 8892 statuses: $statuses.");
-      // print("DEBUG 8893 statuses: ${statuses!.entries}.");
+      // Utilities.debugPrint("DEBUG 8892 statuses: $statuses.");
+      // Utilities.debugPrint("DEBUG 8893 statuses: ${statuses!.entries}.");
 
       // Initialize variables to store the maximum fraction and tier numbers.
       double maxfraction = 0.0;
@@ -1601,7 +1603,7 @@ class Fusion {
     // Retrieve the safety excess fee for the given tier.
     safetyExcessFee = safetyExcessFees[tier] ?? 0;
 
-    print(
+    Utilities.debugPrint(
         "starting fusion rounds at tier $tier: ${coins.length} inputs and ${outputs.length} outputs");
   }
 
@@ -1616,7 +1618,7 @@ class Fusion {
   /// Returns:
   ///   A `Future<CovertSubmitter>` that resolves to the initialized `CovertSubmitter`.
   Future<CovertSubmitter> startCovert() async {
-    print("DEBUG START COVERT!");
+    Utilities.debugPrint("DEBUG START COVERT!");
 
     // Initialize status record/tuple.
     (String, String) status = ('running', 'Setting up Tor connections');
@@ -1655,7 +1657,7 @@ class Fusion {
           connectTimeout: Protocol.COVERT_CONNECT_TIMEOUT.toInt());
 
       /*
-      print("DEBUG return early from covert");
+      Utilities.debugPrint("DEBUG return early from covert");
       // Return the CovertSubmitter instance early.
       // TODO finish method.
       return covert;
@@ -1709,7 +1711,7 @@ class Fusion {
   /// Returns:
   ///   A `Future<bool>` indicating the success or failure of the round.
   Future<bool> runRound(CovertSubmitter covert) async {
-    print("START OF RUN ROUND");
+    Utilities.debugPrint("START OF RUN ROUND");
 
     // Initial round status and timeout calculation.
     (String, String) status =
@@ -1755,7 +1757,8 @@ class Fusion {
     }
     tFusionBegin = DateTime.now();
 
-    print("round starting at ${DateTime.now().millisecondsSinceEpoch / 1000}");
+    Utilities.debugPrint(
+        "round starting at ${DateTime.now().millisecondsSinceEpoch / 1000}");
 
     // Calculate fees and sums for inputs and outputs.
     final inputFees = coins
@@ -1842,7 +1845,7 @@ class Fusion {
     });
 
     /*
-    print("RETURNING EARLY FROM run round .....");
+    Utilities.debugPrint("RETURNING EARLY FROM run round .....");
     return true;
     */
 
@@ -1910,7 +1913,7 @@ class Fusion {
     checkCoins();
 
     // Start covert component submissions
-    print("starting covert component submission");
+    Utilities.debugPrint("starting covert component submission");
     status = ('running', 'covert submission: components');
 
     // If we fail after this point, we want to stop connections gradually and
@@ -2008,7 +2011,7 @@ class Fusion {
 
     // Handle covert signature submission.
     if (!shareCovertComponentsMsg.skipSignatures) {
-      print("starting covert signature submission");
+      Utilities.debugPrint("starting covert signature submission");
       status = ('running', 'covert submission: signatures');
 
       // Check for duplicate server components.
@@ -2121,7 +2124,7 @@ class Fusion {
         // If not successful, identify bad components.
         badComponents = msg.badComponents.toSet();
         if (badComponents.intersection(myComponentIndexes.toSet()).isNotEmpty) {
-          print(
+          Utilities.debugPrint(
               "bad components: ${badComponents.toList()} mine: ${myComponentIndexes.toList()}");
           throw FusionError("server thinks one of my components is bad!");
         }
@@ -2138,7 +2141,7 @@ class Fusion {
 
     // Update status to indicate that proofs are being sent.
     status = ('running', 'round failed - sending proofs');
-    print("sending proofs");
+    Utilities.debugPrint("sending proofs");
 
     // Create a list of commitment indexes, but leaving out mine.
     List<int> othersCommitmentIdxes = [];
@@ -2214,7 +2217,7 @@ class Fusion {
     status = ('running', 'round failed - checking proofs');
 
     // Receive the list of proofs from the other parties
-    print("receiving proofs");
+    Utilities.debugPrint("receiving proofs");
     msg = await recv2(['theirproofslist'],
         timeout: Duration(seconds: (2 * Protocol.STANDARD_TIMEOUT).round()));
 
@@ -2259,7 +2262,7 @@ class Fusion {
         sKey = result.$2; // Second item is the symmetric key.
       } on Exception catch (e) {
         // If decryption fails, add the proof to the blame list.
-        print("found an undecryptable proof");
+        Utilities.debugPrint("found an undecryptable proof");
         blames.add(Blames_BlameProof(
             whichProof: i, privkey: privKey, blameReason: 'undecryptable'));
         continue;
@@ -2293,7 +2296,7 @@ class Fusion {
             allComponentsUint8, badComponentsList, componentFeerateInt);
       } on Exception catch (e) {
         // If the proof is invalid, add it to the blame list.
-        print("found an erroneous proof: ${e.toString()}");
+        Utilities.debugPrint("found an erroneous proof: ${e.toString()}");
         Blames_BlameProof blameProof = Blames_BlameProof();
         blameProof.whichProof = i;
         blameProof.sessionKey = sKey;
@@ -2312,7 +2315,7 @@ class Fusion {
           Utilities.checkInputElectrumX(inpComp);
         } on Exception catch (e) {
           // If the input component doesn't match the blockchain, add the proof to the blame list.
-          print(
+          Utilities.debugPrint(
               "found a bad input [${rp.srcCommitmentIdx}]: $e (${inpComp.prevTxid.reversed.toList().toHex()}:${inpComp.prevIndex})");
 
           Blames_BlameProof blameProof = Blames_BlameProof();
@@ -2324,17 +2327,18 @@ class Fusion {
           blames.add(blameProof);
         } catch (e) {
           // If we can't check against the blockchain for some reason, log a message.
-          print(
+          Utilities.debugPrint(
               "verified an input internally, but was unable to check it against blockchain: ${e}");
         }
       }
     }
-    print("checked ${msg.proofs.length} proofs, $countInputs of them inputs");
+    Utilities.debugPrint(
+        "checked ${msg.proofs.length} proofs, $countInputs of them inputs");
 
     // Send the blame list to the server
     // TODO should this be unawaited?
     await send2(Blames(blames: blames));
-    print("sending blames");
+    Utilities.debugPrint("sending blames");
 
     // Update the status to indicate that the program is waiting for the round to restart.
     status = ('running', 'awaiting restart');

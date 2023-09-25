@@ -7,6 +7,7 @@ import 'dart:math';
 import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
+import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart' as pb;
 import 'package:protobuf/protobuf.dart';
 
@@ -285,7 +286,7 @@ class CovertSubmitter extends PrintError {
 
     // Calculate the time remaining until the stop time.
     var timeRemaining = stopTStart?.difference(DateTime.now()).inSeconds ?? 0;
-    print(
+    Utilities.debugPrint(
         "Stopping; connections will close in approximately $timeRemaining seconds");
 
     // Wake up all the connections.
@@ -500,7 +501,7 @@ class CovertSubmitter extends PrintError {
           // Note the time at which the connection failed.
           final tEnd = DateTime.now().millisecondsSinceEpoch;
 
-          print(
+          Utilities.debugPrint(
               'could not establish connection (after ${((tEnd - tBegin) / 1000).toStringAsFixed(3)}s): $e');
           rethrow;
         }
@@ -512,7 +513,7 @@ class CovertSubmitter extends PrintError {
 
         // Note the time at which the connection was established.
         final tEnd = DateTime.now().millisecondsSinceEpoch;
-        print(
+        Utilities.debugPrint(
             '[${covConn.connNumber}] connection established after ${((tEnd - tBegin) / 1000).toStringAsFixed(3)}s');
 
         // Set the ping time for the connection.
@@ -562,10 +563,10 @@ class CovertSubmitter extends PrintError {
           try {
             await action?.call();
           } catch (e) {
-            print("$label error $e");
+            Utilities.debugPrint("$label error $e");
             rethrow;
           } finally {
-            print("$label done");
+            Utilities.debugPrint("$label done");
           }
 
           // Note the time at which the action was completed.
@@ -585,7 +586,7 @@ class CovertSubmitter extends PrintError {
           }
         }
 
-        print("[${covConn.connNumber}] closing from stop");
+        Utilities.debugPrint("[${covConn.connNumber}] closing from stop");
       } catch (e) {
         // In case of any problem, record the exception and if we have a slot, reassign it.
         final exception = e;

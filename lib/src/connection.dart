@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
+import 'package:fusiondart/src/util.dart';
 
 // TODO
 // This file might need some fixing up because each time we call fillBuf, we're trying to
@@ -108,8 +109,8 @@ class Connection {
     timeout ??= this.timeout;
 
     // Prepare the 4-byte length header for the message.
-    print("DEBUG sendmessage msg sending ");
-    print(msg);
+    Utilities.debugPrint("DEBUG sendmessage msg sending ");
+    Utilities.debugPrint(msg);
     final lengthBytes = Uint8List(4);
     final byteData = ByteData.view(lengthBytes.buffer);
     byteData.setUint32(0, msg.length, Endian.big);
@@ -153,7 +154,7 @@ class Connection {
     // - The "magic" bytes for validation
     // - The 4-byte length header
     // - The message itself
-    print(Connection.magic);
+    Utilities.debugPrint(Connection.magic);
     final frame = <int>[]
       ..addAll(Connection.magic)
       ..addAll(lengthBytes)
@@ -172,7 +173,7 @@ class Connection {
         // Remove the socket.flush() if it doesn't help.
         /*await socket?.flush();*/
       } catch (e) {
-        print('Error when adding to controller: $e');
+        Utilities.debugPrint('Error when adding to controller: $e');
       } finally {
         await controller.close();
       }
@@ -208,7 +209,7 @@ class Connection {
     // Listen for incoming data from the socket
     await for (List<int> data in socketwrapper.socket!.cast<List<int>>()) {
       // Checks for timeout.
-      print("DEBUG fillBuf2 1 - new data received: $data");
+      Utilities.debugPrint("DEBUG fillBuf2 1 - new data received: $data");
       if (maxTime != null && DateTime.now().isAfter(maxTime)) {
         throw SocketException('Timeout');
       }
@@ -224,12 +225,13 @@ class Connection {
 
       // Adds incoming data to the buffer.
       recvBuf.addAll(data);
-      print(
+      Utilities.debugPrint(
           "DEBUG fillBuf2 2 - data added to recvBuf, new length: ${recvBuf.length}");
 
       // Breaks out of the loop if the buffer has enough data.
       if (recvBuf.length >= n) {
-        print("DEBUG fillBuf2 3 - breaking loop, recvBuf is big enough");
+        Utilities.debugPrint(
+            "DEBUG fillBuf2 3 - breaking loop, recvBuf is big enough");
         break;
       }
     }
@@ -247,12 +249,12 @@ class Connection {
   Future<List<int>> fillBuf(int n, {Duration? timeout}) async {
     List<int> recvBuf = <int>[];
     socket?.listen((data) {
-      print('Received from server: $data');
+      Utilities.debugPrint('Received from server: $data');
     }, onDone: () {
-      print('Server closed connection.');
+      Utilities.debugPrint('Server closed connection.');
       socket?.destroy();
     }, onError: (dynamic error) {
-      print('Error: $error');
+      Utilities.debugPrint('Error: $error');
       socket?.destroy();
     });
     return recvBuf;
@@ -274,7 +276,7 @@ class Connection {
         }
       },
       onDone: () {
-        print("DEBUG ON DONE");
+        Utilities.debugPrint("DEBUG ON DONE");
         if (recvBuf.length < n) {
           throw SocketException(
               'Connection closed before enough data was received');
@@ -304,7 +306,7 @@ class Connection {
   ///   A Future<List<int>> object.
   Future<List<int>> recvMessage2(SocketWrapper socketwrapper,
       {Duration? timeout}) async {
-    print("START OF RECV2");
+    Utilities.debugPrint("START OF RECV2");
     // Use class-level timeout if no argument-level timeout is provided.
     timeout ??= this.timeout;
 
@@ -317,7 +319,7 @@ class Connection {
     // Variable to track the number of bytes read so far.
     int bytesRead = 0;
 
-    print("DEBUG recv_message2 1 - about to read the header");
+    Utilities.debugPrint("DEBUG recv_message2 1 - about to read the header");
 
     try {
       // Loop to read incoming data from the socket.
@@ -364,26 +366,27 @@ class Connection {
                 'Got a frame with msg_length=$messageLength > $MAX_MSG_LENGTH (max)');
           }
 
-          print(
+          Utilities.debugPrint(
               "DEBUG recv_message2 3 - about to read the message body, messageLength: $messageLength");
 
-          print("DEBUG recvfbuf len is ");
-          print(recvBuf.length);
-          print("bytes read is ");
-          print(bytesRead);
-          print("message length is ");
-          print(messageLength);
+          Utilities.debugPrint("DEBUG recvfbuf len is ");
+          Utilities.debugPrint(recvBuf.length);
+          Utilities.debugPrint("bytes read is ");
+          Utilities.debugPrint(bytesRead);
+          Utilities.debugPrint("message length is ");
+          Utilities.debugPrint(messageLength);
 
           // Check if the entire message has been received.
           if (recvBuf.length == bytesRead && bytesRead == 12 + messageLength) {
             // Extract and return the received message.
             final message = recvBuf.sublist(12, 12 + messageLength);
 
-            print(
+            Utilities.debugPrint(
                 "DEBUG recv_message2 4 - message received, length: ${message.length}");
-            print("DEBUG recv_message2 5 - message content: $message");
-            // print(utf8.decode(message));
-            print("END OF RECV2");
+            Utilities.debugPrint(
+                "DEBUG recv_message2 5 - message content: $message");
+            // Utilities.debugPrint(utf8.decode(message));
+            Utilities.debugPrint("END OF RECV2");
             return message;
           } else {
             // Throwing exception if the length doesn't match
@@ -396,7 +399,7 @@ class Connection {
       // Handle any SocketExceptions that may occur.
       rethrow;
       // Disable this rethrow if it causes too many issues, previously we just printed the exception
-      // print('Socket exception: $e');
+      // Utilities.debugPrint('Socket exception: $e');
     }
 
     // This is a default return in case of exceptions.

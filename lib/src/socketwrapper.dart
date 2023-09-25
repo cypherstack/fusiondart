@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:fusiondart/src/util.dart';
+
 class SocketWrapper {
   // Declare a late-initialized Socket object.
   Socket? _socket;
@@ -36,14 +38,14 @@ class SocketWrapper {
 
     // Register an event handler for socket close event.
     unawaited(_socket?.done.then((_) {
-      print('... Socket has been closed');
+      Utilities.debugPrint('... Socket has been closed');
       // Override the socket with a null value.
       _socket = null;
     }));
 
     // Register an error handler
     _socket?.handleError((error) {
-      print('Socket error: $error');
+      Utilities.debugPrint('Socket error: $error');
       throw Exception('SocketWrapper.connect(): Socket error: $error');
     });
   }
@@ -57,11 +59,11 @@ class SocketWrapper {
   void status() {
     final _socket = this._socket;
     if (_socket != null) {
-      print(
+      Utilities.debugPrint(
           "Socket connected to ${_socket.remoteAddress.address}:${_socket.remotePort}");
       // TODO return something or set a status value instead of printing
     } else {
-      // print("SocketWrapper.status(): Socket is not connected");
+      // Utilities.debugPrint("SocketWrapper.status(): Socket is not connected");
       throw Exception('SocketWrapper.status(): Socket is not connected');
     }
   }
