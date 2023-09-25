@@ -112,9 +112,10 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
           .toList(),
       params,
     );
-    claimedCommit = setup.commit(BigInt.from(msg.excessFee.toInt()),
-        nonce: Utilities.bytesToBigInt(
-            Uint8List.fromList(msg.pedersenTotalNonce)));
+    claimedCommit = setup.commit(
+      BigInt.from(msg.excessFee.toInt()),
+      Utilities.bytesToBigInt(Uint8List.fromList(msg.pedersenTotalNonce)),
+    );
 
     check(pointsum == claimedCommit.pointPUncompressed,
         "pedersen commitment mismatch");
@@ -225,7 +226,7 @@ pb.InputComponent? validateProofInternal(
 
   final Commitment claimedCommit = setup.commit(
     BigInt.from(contrib),
-    nonce: Utilities.bytesToBigInt(msg.pedersenNonce as Uint8List),
+    Utilities.bytesToBigInt(msg.pedersenNonce as Uint8List),
   );
 
   check(

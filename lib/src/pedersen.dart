@@ -56,14 +56,14 @@ class PedersenSetup {
   /// Returns:
   ///   A new `Commitment` object.
   Commitment commit(
-    BigInt amount, {
-    BigInt? nonce,
+    BigInt amount,
+    BigInt nonce, {
     Uint8List? pointPUncompressed,
   }) {
     return Commitment(
       this,
+      nonce,
       amount,
-      nonce: nonce,
       pointPUncompressed: pointPUncompressed,
     );
   }
@@ -96,17 +96,12 @@ class Commitment {
   /// - [pointPUncompressed] (optional). The uncompressed representation of point P.
   Commitment(
     this.setup,
+    this.nonce,
     BigInt amount, {
-    BigInt? nonce,
     Uint8List? pointPUncompressed,
   }) {
-    // Initialize nonce with a secure random value if not provided.
-    this.nonce = nonce ??
-        Utilities.secureRandomBigInt(_secp256k1ECDomainParameters.n.bitLength);
-
     // Validate that nonce is within the allowed range (0, n).
-    if (this.nonce <= BigInt.zero ||
-        this.nonce >= _secp256k1ECDomainParameters.n) {
+    if (nonce <= BigInt.zero || nonce >= _secp256k1ECDomainParameters.n) {
       throw NonceRangeError();
     }
 
@@ -120,7 +115,7 @@ class Commitment {
 
     // Compute multipliers for points H and HG.
     BigInt a = _amountMod;
-    BigInt k = this.nonce;
+    BigInt k = nonce;
 
     // Multiply curve points by multipliers.
     ECPoint? pointHMultiplied =
@@ -137,8 +132,12 @@ class Commitment {
       throw ResultAtInfinity();
     }
 
-    // Do initial calculation of point P and nonce.
-    _calcInitial(setup, amount);
+    if (pointPUncompressed == null) {
+      // Do initial calculation of point P and nonce.
+      _calcInitial(setup, amount);
+    } else {
+      _pointPUncompressed = pointPUncompressed;
+    }
   }
 
   /// Calculate the initial point and nonce for a given setup and amount.
@@ -235,8 +234,12 @@ class Commitment {
     }
 
     // Return new Commitment object with summed values.
-    return Commitment(setup, atotal,
-        nonce: ktotal, pointPUncompressed: pointPUncompressed);
+    return Commitment(
+      setup,
+      ktotal,
+      atotal,
+      pointPUncompressed: pointPUncompressed,
+    );
   }
 }
 

@@ -684,9 +684,15 @@ class Fusion {
       Uint8List privateKey = keyPair.$1;
       Uint8List pubKey = keyPair.$2;
 
+      // TODO: ensure this is unique?
+      // Initialize nonce with a secure random value if not provided.
+      final nonce = Utilities.secureRandomBigInt(params.n.bitLength);
+
       // Generate amount commitment.
-      Commitment commitmentInstance =
-          setup.commit(BigInt.from(componentRecord.$2));
+      Commitment commitmentInstance = setup.commit(
+        BigInt.from(componentRecord.$2),
+        nonce,
+      );
       Uint8List amountCommitment = commitmentInstance.pointPUncompressed;
 
       // Convert BigInt nonce to Uint8List.
