@@ -487,7 +487,7 @@ class CovertSubmitter extends PrintError {
 
         // Attempt to open a connection.
         try {
-          final connection = await openConnection(
+          final connection = await Connection.openConnection(
             destAddr!,
             destPort!,
             connTimeout: connectTimeout,

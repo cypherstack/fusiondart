@@ -255,7 +255,7 @@ class Fusion {
       // Connect to server.
       status = ("connecting", "");
       try {
-        connection = await openConnection(
+        connection = await Connection.openConnection(
           serverHost,
           serverPort,
           connTimeout: 5,

@@ -12,48 +12,6 @@ import 'package:fusiondart/src/util.dart';
 // remove data from a buffer but its a local copy , might not actually
 // remove the data from the socket buffer.  We may need a wrapper class for the buffer??
 
-/// Asynchronous function to open a new connection.
-///
-/// Parameters:
-/// - [host]: The host to connect to.
-/// - [port]: The port to connect to.
-/// - [connTimeout] (optional): The connection timeout duration.
-/// - [defaultTimeout] (optional): The default timeout duration.
-/// - [ssl] (optional): Whether to use SSL.
-/// - [socksOpts] (optional): Socks options.
-///
-/// Returns:
-///  A Future<Connection> object.
-Future<Connection> openConnection(
-  String host,
-  int port, {
-  int connTimeout = 5,
-  int defaultTimeout = 5,
-  bool ssl = false,
-  dynamic socksOpts, // TODO type
-}) async {
-  try {
-    // Connect to host and port.
-    // Dart's Socket class handles connection timeout internally.
-    final Socket socket;
-    if (ssl) {
-      socket = await SecureSocket.connect(host, port);
-    } else {
-      socket = await Socket.connect(host, port);
-    }
-
-    // Create a Connection object and return it.
-    return Connection(
-      socket: socket,
-      timeout: Duration(
-        seconds: defaultTimeout,
-      ),
-    );
-  } catch (e) {
-    throw 'Failed to open connection: $e';
-  }
-}
-
 /// Class to handle a connection.
 ///
 /// This class is used to send and receive messages over a socket.
@@ -96,6 +54,48 @@ class Connection {
   /// Returns:
   ///   A Connection object.
   Connection.withoutSocket({this.timeout = const Duration(seconds: 1)});
+
+  /// Asynchronous function to open a new connection.
+  ///
+  /// Parameters:
+  /// - [host]: The host to connect to.
+  /// - [port]: The port to connect to.
+  /// - [connTimeout] (optional): The connection timeout duration.
+  /// - [defaultTimeout] (optional): The default timeout duration.
+  /// - [ssl] (optional): Whether to use SSL.
+  /// - [socksOpts] (optional): Socks options.
+  ///
+  /// Returns:
+  ///  A Future<Connection> object.
+  static Future<Connection> openConnection(
+    String host,
+    int port, {
+    int connTimeout = 5,
+    int defaultTimeout = 5,
+    bool ssl = false,
+    dynamic socksOpts, // TODO type
+  }) async {
+    try {
+      // Connect to host and port.
+      // Dart's Socket class handles connection timeout internally.
+      final Socket socket;
+      if (ssl) {
+        socket = await SecureSocket.connect(host, port);
+      } else {
+        socket = await Socket.connect(host, port);
+      }
+
+      // Create a Connection object and return it.
+      return Connection(
+        socket: socket,
+        timeout: Duration(
+          seconds: defaultTimeout,
+        ),
+      );
+    } catch (e) {
+      throw 'Failed to open connection: $e';
+    }
+  }
 
   /// Asynchronous method to send a message with a socket wrapper.
   ///
