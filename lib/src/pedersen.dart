@@ -61,12 +61,18 @@ class InsecureHPoint implements Exception {
 
 /// Class responsible for setting up a Pedersen commitment.
 class PedersenSetup {
-  late final ECPoint _pointH;
-  late ECPoint _pointHG;
-  late ECDomainParameters _params;
+  final ECPoint? _pointH;
+  ECPoint? _pointHG;
+  ECDomainParameters? _params;
 
   /// Get the EC parameters for the setup.
-  ECDomainParameters get params => _params;
+  ECDomainParameters get params {
+    if (_params == null) {
+      throw Exception('Params is null');
+    }
+
+    return _params!;
+  }
 
   /// Constructor initializes the Pedersen setup with a given H point.
   ///
@@ -74,16 +80,43 @@ class PedersenSetup {
   /// - [_H]: An EC point to initialize the Pedersen setup.
   PedersenSetup(this._pointH) {
     _params = ECDomainParameters("secp256k1");
-    // validate H point
-    if (!Utilities.isPointOnCurve(_pointH, _params.curve)) {
+
+    if (_pointH == null) {
+      throw NullPointError();
+    }
+
+    if (_params?.curve == null) {
+      throw Exception('Curve is null');
+    }
+
+    if (_params?.G == null) {
+      throw Exception('G is null');
+    }
+
+    // Validate H point.
+    if (!Utilities.isPointOnCurve(_pointH!, _params!.curve)) {
       throw Exception('H is not a valid point on the curve');
     }
-    _pointHG = Utilities.combinePubKeys([_pointH, _params.G]);
+
+    _pointHG = Utilities.combinePubKeys([_pointH!, _params!.G]);
   }
 
   // Getter methods to fetch _H and _HG points as Uint8Lists.
-  Uint8List get pointH => _pointH.getEncoded(false);
-  Uint8List get pointHG => _pointHG.getEncoded(false);
+  Uint8List get pointH {
+    if (_pointH == null) {
+      throw NullPointError();
+    }
+
+    return _pointH!.getEncoded(false);
+  }
+
+  Uint8List get pointHG {
+    if (_pointHG == null) {
+      throw NullPointError();
+    }
+
+    return _pointHG!.getEncoded(false);
+  }
 
   /// Create a new commitment.
   ///
@@ -128,13 +161,13 @@ class Commitment {
     this.nonce =
         nonce ?? Utilities.secureRandomBigInt(setup.params.n.bitLength);
 
-    // Take the modulus of the amount to ensure it fits within the group order.
-    amountMod = amount % setup.params.n;
-
-    // Check if nonce is within acceptable range.
+    // Validate that nonce is within the allowed range (0, n).
     if (this.nonce <= BigInt.zero || this.nonce >= setup.params.n) {
       throw NonceRangeError();
     }
+
+    // Take the modulus of the amount to ensure it fits within the group order.
+    amountMod = amount % setup.params.n; // setup.params.n is order.
 
     // Retrieve curve points H and HG.
     ECPoint? pointH = setup._pointH;
@@ -146,12 +179,12 @@ class Commitment {
     }
 
     // Compute multipliers for points H and HG.
-    BigInt multiplier1 = (amountMod - this.nonce) % setup.params.n;
-    BigInt multiplier2 = this.nonce;
+    BigInt a = amountMod;
+    BigInt k = this.nonce;
 
     // Multiply curve points by multipliers.
-    ECPoint? pointHMultiplied = pointH * multiplier1;
-    ECPoint? pointHGMultiplied = pointHG * multiplier2;
+    ECPoint? pointHMultiplied = pointH * ((a - k) % setup.params.n);
+    ECPoint? pointHGMultiplied = pointHG * k;
 
     // Add the multiplied points to get the commitment point P.
     ECPoint? pointP = pointHMultiplied != null && pointHGMultiplied != null
@@ -166,6 +199,7 @@ class Commitment {
     // Set pointPUncompressed to the uncompressed encoding of point P.
     this.pointPUncompressed =
         pointPUncompressed ?? pointP?.getEncoded(false) ?? Uint8List(0);
+    // TODO is Uint8List(0) a valid default?
 
     // Do initial calculation of point P and nonce.
     calcInitial(setup, amount);
@@ -180,47 +214,39 @@ class Commitment {
   /// Returns:
   ///   void
   void calcInitial(PedersenSetup setup, BigInt amount) {
-    // Initialize nonce with a secure random number if not provided as an argument.
-    nonce = Utilities.secureRandomBigInt(setup.params.n.bitLength);
-
-    // Take amount modulo n to ensure it fits within the group order.
-    amountMod = amount % setup.params.n;
-
-    // Validate that nonce is within the allowed range (0, n).
-    if (nonce <= BigInt.zero || nonce >= setup.params.n) {
-      throw NonceRangeError();
+    // Check if points are null.
+    if (setup._pointH == null) {
+      throw Exception('Point H is null');
+    }
+    if (setup._pointHG == null) {
+      throw Exception('Point HG is null');
     }
 
     // Retrieve the curve points H and HG from the Pedersen setup.
-    ECPoint? pointH = setup._pointH;
-    ECPoint? pointHG = setup._pointHG;
+    ECPoint pointH = setup._pointH!;
+    ECPoint pointHG = setup._pointHG!;
 
-    // Ensure neither point is null.
-    if (pointH == null || pointHG == null) {
-      throw NullPointError();
-    }
-
-    // Calculate multipliers for both H and HG.
+    // Legwork towards calculating the point P.
     BigInt k = nonce;
     BigInt a = amountMod;
-
-    // Multiply the curve points H and HG by their respective multipliers.
     ECPoint? pointHMultiplied =
         pointH * ((a - k) % setup.params.n); // setup.params.n is order.
     ECPoint? pointHGMultiplied = pointHG * k;
 
+    if (pointHMultiplied == null || pointHGMultiplied == null) {
+      throw NullPointError();
+    }
+
     // Sum the two multiplied points to get the final point P.
-    ECPoint? Ppoint = pointHMultiplied != null && pointHGMultiplied != null
-        ? pointHMultiplied + pointHGMultiplied
-        : null;
+    ECPoint pointP = ((pointHMultiplied) + (pointHGMultiplied))!;
 
     // Check if the resulting point P is at infinity, which should not occur.
-    if (Ppoint == setup.params.curve.infinity) {
+    if (pointP == setup.params.curve.infinity) {
       throw ResultAtInfinity();
     }
 
     // Store the uncompressed form of the point P, either provided or newly calculated.
-    pointPUncompressed = Ppoint?.getEncoded(false) ?? Uint8List(0);
+    pointPUncompressed = pointP.getEncoded(false);
   }
 
   /// Method to add points together.

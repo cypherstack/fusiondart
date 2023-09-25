@@ -576,6 +576,7 @@ class Fusion {
     // Sanity check.
     assert(numBlanks >= 0);
 
+    // Initialize list of components.
     List<(Component, int)> components = [];
 
     // Set up Pedersen setup instance.
@@ -619,7 +620,7 @@ class Fusion {
 
     // Generate components for outputs.
     for (Output output in outputs) {
-      // Calculate fee
+      // Calculate fee.
       List<int> script = output.addr.toScript();
 
       // Calculate fee.
@@ -1788,7 +1789,7 @@ class Fusion {
     int sumIn = inputs.fold(0, (sum, e) => sum + e.amount);
     int sumOut = outputs.fold(0, (sum, e) => sum + e.value);
 
-    // Calculate total and excess fee and perform safety checks.
+    // Calculate total and excess fee for safety checks.
     final int totalFee = sumIn - sumOut;
     final int excessFee = totalFee - inputFees - outputFees;
 
