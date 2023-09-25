@@ -498,6 +498,43 @@ class Utilities {
     return ((size * feerate) + 999) ~/ 1000;
   }
 
+  /// Method to add points together.
+  ///
+  /// Parameters:
+  /// - [pointsIterable]: An iterable of Uint8List objects representing points.
+  ///
+  /// Returns:
+  ///   A Uint8List representing the sum of the points.
+  static Uint8List addPoints(
+      Iterable<Uint8List> pointsIterable, ECDomainParameters params) {
+    // Convert serialized points to ECPoint objects.
+    List<ECPoint> pointList = pointsIterable
+        .map((pser) => Utilities.serToPoint(pser, params))
+        .toList();
+
+    // Check for empty list of points.
+    if (pointList.isEmpty) {
+      throw ArgumentError('Empty list');
+    }
+
+    // Initialize sum of points with the first point in the list.
+    ECPoint pSum =
+        pointList.first; // Initialize pSum with the first point in the list.
+
+    // Add up all the points in the list.
+    for (int i = 1; i < pointList.length; i++) {
+      pSum = (pSum + pointList[i])!;
+    }
+
+    // Check if sum of points is at infinity.
+    if (pSum == params.curve.infinity) {
+      throw Exception('Result is at infinity');
+    }
+
+    // Convert sum to serialized form and return
+    return Utilities.pointToSer(pSum, false);
+  }
+
   /// Converts a serialized elliptic curve point to its `ECPoint` representation.
   ///
   /// Parameters:

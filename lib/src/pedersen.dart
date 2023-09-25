@@ -3,14 +3,16 @@ import 'dart:typed_data';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
 
+///
+/// File private default parameters for the secp256k1 curve.
+///
+final ECDomainParameters _secp256k1ECDomainParameters =
+    ECDomainParameters("secp256k1");
+
 /// Class responsible for setting up a Pedersen commitment.
 class PedersenSetup {
   ECPoint? _pointH;
   ECPoint? _pointHG;
-  final ECDomainParameters _params = ECDomainParameters("secp256k1");
-
-  /// Get the EC parameters for the setup.
-  ECDomainParameters get params => _params;
 
   /// Constructor initializes the Pedersen setup with a given H point.
   ///
@@ -20,20 +22,23 @@ class PedersenSetup {
     this._pointH = _pointH;
 
     // Validate H point.
-    if (!Utilities.isPointOnCurve(_pointH, _params.curve)) {
+    if (!Utilities.isPointOnCurve(
+        _pointH, _secp256k1ECDomainParameters.curve)) {
       throw Exception('H is not a valid point on the curve');
     }
 
-    _pointHG = Utilities.combinePubKeys([_pointH, _params.G]);
+    _pointHG =
+        Utilities.combinePubKeys([_pointH, _secp256k1ECDomainParameters.G]);
 
     // Validate HG point.
     if (_pointHG == null) {
       throw NullPointError();
     }
-    if (!Utilities.isPointOnCurve(_pointHG!, _params.curve)) {
+    if (!Utilities.isPointOnCurve(
+        _pointHG!, _secp256k1ECDomainParameters.curve)) {
       throw Exception('HG is not a valid point on the curve');
     }
-    if (_pointHG == _params.curve.infinity) {
+    if (_pointHG == _secp256k1ECDomainParameters.curve.infinity) {
       // This happens if H = -G.
       throw Exception('HG is at infinity');
     }
@@ -93,19 +98,25 @@ class Commitment {
   /// - [amount]: The amount to be committed.
   /// - [nonce] (optional). A BigInt representing the nonce.
   /// - [pointPUncompressed] (optional). The uncompressed representation of point P.
-  Commitment(this.setup, BigInt amount,
-      {BigInt? nonce, Uint8List? pointPUncompressed}) {
+  Commitment(
+    this.setup,
+    BigInt amount, {
+    BigInt? nonce,
+    Uint8List? pointPUncompressed,
+  }) {
     // Initialize nonce with a secure random value if not provided.
-    this.nonce =
-        nonce ?? Utilities.secureRandomBigInt(setup.params.n.bitLength);
+    this.nonce = nonce ??
+        Utilities.secureRandomBigInt(_secp256k1ECDomainParameters.n.bitLength);
 
     // Validate that nonce is within the allowed range (0, n).
-    if (this.nonce <= BigInt.zero || this.nonce >= setup.params.n) {
+    if (this.nonce <= BigInt.zero ||
+        this.nonce >= _secp256k1ECDomainParameters.n) {
       throw NonceRangeError();
     }
 
     // Take the modulus of the amount to ensure it fits within the group order.
-    amountMod = amount % setup.params.n; // setup.params.n is order.
+    amountMod =
+        amount % _secp256k1ECDomainParameters.n; // setup.params.n is order.
 
     // Retrieve curve points H and HG.
     ECPoint? pointH = setup._pointH;
@@ -121,7 +132,8 @@ class Commitment {
     BigInt k = this.nonce;
 
     // Multiply curve points by multipliers.
-    ECPoint? pointHMultiplied = pointH * ((a - k) % setup.params.n);
+    ECPoint? pointHMultiplied =
+        pointH * ((a - k) % _secp256k1ECDomainParameters.n);
     ECPoint? pointHGMultiplied = pointHG * k;
 
     // Add the multiplied points to get the commitment point P.
@@ -130,7 +142,7 @@ class Commitment {
         : null;
 
     // Check if point P ends up at infinity, which shouldn't happen.
-    if (pointP == setup.params.curve.infinity) {
+    if (pointP == _secp256k1ECDomainParameters.curve.infinity) {
       throw ResultAtInfinity();
     }
 
@@ -161,14 +173,14 @@ class Commitment {
     }
 
     // Retrieve the curve points H and HG from the Pedersen setup.
-    ECPoint pointH = setup._pointH!;
-    ECPoint pointHG = setup._pointHG!;
+    final ECPoint pointH = setup._pointH!;
+    final ECPoint pointHG = setup._pointHG!;
 
     // Legwork towards calculating the point P.
     BigInt k = nonce;
     BigInt a = amountMod;
-    ECPoint? pointHMultiplied =
-        pointH * ((a - k) % setup.params.n); // setup.params.n is order.
+    ECPoint? pointHMultiplied = pointH *
+        ((a - k) % _secp256k1ECDomainParameters.n); // setup.params.n is order.
     ECPoint? pointHGMultiplied = pointHG * k;
 
     if (pointHMultiplied == null || pointHGMultiplied == null) {
@@ -179,52 +191,12 @@ class Commitment {
     ECPoint pointP = ((pointHMultiplied) + (pointHGMultiplied))!;
 
     // Check if the resulting point P is at infinity, which should not occur.
-    if (pointP == setup.params.curve.infinity) {
+    if (pointP == _secp256k1ECDomainParameters.curve.infinity) {
       throw ResultAtInfinity();
     }
 
     // Store the uncompressed form of the point P, either provided or newly calculated.
     pointPUncompressed = pointP.getEncoded(false);
-  }
-
-  /// Method to add points together.
-  ///
-  /// Parameters:
-  /// - [pointsIterable]: An iterable of Uint8List objects representing points.
-  ///
-  /// Returns:
-  ///   A Uint8List representing the sum of the points.
-  static Uint8List addPoints(Iterable<Uint8List> pointsIterable) {
-    // Get default elliptic curve parameters.
-    ECDomainParameters params =
-        getDefaultParams(); // Using helper function here.
-
-    // Convert serialized points to ECPoint objects.
-    List<ECPoint> pointList = pointsIterable
-        .map((pser) => Utilities.serToPoint(pser, params))
-        .toList();
-
-    // Check for empty list of points.
-    if (pointList.isEmpty) {
-      throw ArgumentError('Empty list');
-    }
-
-    // Initialize sum of points with the first point in the list.
-    ECPoint pSum =
-        pointList.first; // Initialize pSum with the first point in the list.
-
-    // Add up all the points in the list.
-    for (int i = 1; i < pointList.length; i++) {
-      pSum = (pSum + pointList[i])!;
-    }
-
-    // Check if sum of points is at infinity.
-    if (pSum == params.curve.infinity) {
-      throw Exception('Result is at infinity');
-    }
-
-    // Convert sum to serialized form and return
-    return Utilities.pointToSer(pSum, false);
   }
 
   /// Add multiple Commitments together.
@@ -260,7 +232,8 @@ class Commitment {
     }
 
     // Compute sum of nonces modulo group order.
-    ktotal = ktotal % setup.params.n; // Changed order to setup.params.n
+    ktotal = ktotal %
+        _secp256k1ECDomainParameters.n; // Changed order to setup.params.n
 
     // Check if summed nonce is zero.
     if (ktotal == BigInt.zero) {
@@ -272,7 +245,10 @@ class Commitment {
     Uint8List? pointPUncompressed;
     if (points.length < 512) {
       try {
-        pointPUncompressed = addPoints(points);
+        pointPUncompressed = Utilities.addPoints(
+          points,
+          _secp256k1ECDomainParameters,
+        );
       } on Exception {
         pointPUncompressed = null;
       }
@@ -286,13 +262,7 @@ class Commitment {
   }
 }
 
-/// Fetches the default parameters for the secp256k1 curve.
-///
-/// Returns:
-///   An ECDomainParameters object representing the secp256k1 curve.
-ECDomainParameters getDefaultParams() {
-  return ECDomainParameters("secp256k1");
-}
+// ======================== Custom Exceptions ==================================
 
 // Custom exception classes to provide detailed error information.
 class NullPointError implements Exception {

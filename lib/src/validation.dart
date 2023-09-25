@@ -106,9 +106,12 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   final Uint8List pointsum;
   // Verify pedersen commitment
   try {
-    pointsum = Commitment.addPoints(commitMessages
-        .map((m) => Uint8List.fromList(m.amountCommitment))
-        .toList());
+    pointsum = Utilities.addPoints(
+      commitMessages
+          .map((m) => Uint8List.fromList(m.amountCommitment))
+          .toList(),
+      params,
+    );
     claimedCommit = setup.commit(BigInt.from(msg.excessFee.toInt()),
         nonce: Utilities.bytesToBigInt(
             Uint8List.fromList(msg.pedersenTotalNonce)));
