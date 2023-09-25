@@ -1269,30 +1269,27 @@ class Fusion {
       }
 
       // Generate a list of random outputs for this tier.
-      List<int>? outputs = randomOutputsForTier(
+      List<int>? _outputs = randomOutputsForTier(
           rng, reducedAvailForOutputs, scale, offsetPerOutput, maxOutputs);
-      if (outputs != null) {
-        print(outputs);
-      }
 
       // Check if the list of outputs is null or has fewer items than the minimum
       // required number of outputs.
-      if (outputs == null || outputs.length < minOutputs) {
+      if (_outputs == null || _outputs.length < minOutputs) {
         continue;
       }
 
       // Adjust each output value by subtracting the fee per output.
-      outputs = outputs.map((o) => o - feePerOutput).toList();
+      _outputs = _outputs.map((o) => o - feePerOutput).toList();
 
       // Ensure the total number of components (inputs + outputs) does not exceed
       // the maximum limit defined in the Protocol.
-      assert(inputs.length + (outputs.length) <= Protocol.MAX_COMPONENTS);
+      assert(inputs.length + (_outputs.length) <= Protocol.MAX_COMPONENTS);
 
       // Store the calculated excess fee for this tier.
       excessFees[scale] = sumInputsValue - inputFees - reducedAvailForOutputs;
 
       // Store the list of output values for this tier.
-      tierOutputs[scale] = outputs;
+      tierOutputs[scale] = _outputs;
     }
 
     print('Possible tiers: $tierOutputs');
