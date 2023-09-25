@@ -138,7 +138,7 @@ class Commitment {
     }
 
     // Do initial calculation of point P and nonce.
-    calcInitial(setup, amount);
+    _calcInitial(setup, amount);
   }
 
   /// Calculate the initial point and nonce for a given setup and amount.
@@ -149,7 +149,7 @@ class Commitment {
   ///
   /// Returns:
   ///   void
-  void calcInitial(PedersenSetup setup, BigInt amount) {
+  void _calcInitial(PedersenSetup setup, BigInt amount) {
     // Retrieve the curve points H and HG from the Pedersen setup.
     final ECPoint pointH = setup._pointH;
     final ECPoint pointHG = setup._pointHG;
