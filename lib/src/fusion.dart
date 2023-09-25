@@ -2004,8 +2004,7 @@ class Fusion {
         roundTime.toInt(), allCommitmentsBytes, allComponents);
 
     // Validate session hash to prevent mismatch error.
-    if (!ListEquality()
-        .equals(shareCovertComponentsMsg.sessionHash, sessionHash)) {
+    if (!shareCovertComponentsMsg.sessionHash.equals(sessionHash)) {
       throw FusionError('Session hash mismatch (bug!)');
     }
 
