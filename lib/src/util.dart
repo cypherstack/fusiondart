@@ -589,32 +589,6 @@ abstract class Utilities {
     return randomNumber;
   }
 
-  /// Combines multiple public keys into a single public key.
-  ///
-  /// Parameters:
-  /// - [pubKeys] A list of `ECPoint` representing the public keys to combine.
-  ///
-  /// Returns:
-  ///   The combined public key as an `ECPoint`.
-  static ECPoint combinePubKeys(List<ECPoint> pubKeys) {
-    if (pubKeys.isEmpty) throw ArgumentError('pubKeys cannot be empty');
-
-    // Initialize with the point at infinity.
-    ECPoint combined = pubKeys.first.curve.infinity!;
-
-    // Combine the points.
-    for (ECPoint pubKey in pubKeys) {
-      combined = (combined + pubKey)!;
-    }
-
-    // Validate the combined point.
-    if (combined.isInfinity) {
-      throw Exception('Combined point is at infinity');
-    }
-
-    return combined;
-  }
-
   /// Checks if a given point lies on a specified elliptic curve.
   ///
   /// Parameters:
