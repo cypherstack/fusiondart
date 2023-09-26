@@ -184,7 +184,7 @@ Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
 /// Throws:
 /// - DecryptionFailed: if the decryption fails for any reason.
 /// - Exception: if the private key or nonce point is null.
-Future<(Uint8List, Uint8List)> decrypt(
+Future<({Uint8List decrypted, Uint8List symmetricKey})> decrypt(
   Uint8List data,
   Uint8List privkey,
 ) async {
@@ -205,21 +205,17 @@ Future<(Uint8List, Uint8List)> decrypt(
 
   // TODO double check if this is correct according to the Python in Electron-Cash
 
-  // Initialize the EC parameters.
-  ECPoint G = params.G;
-  BigInt sec = privkey.toBigInt;
-  final List<int> key;
+  final sec = privkey.toBigInt;
 
   // Compute the point that will be used for generating the symmetric key.
   // This is done by multiplying the base point G with the private key (d) and adding the noncePoint.
-  ECPoint? point = (G * sec)! + noncePoint;
+  ECPoint? point = (params.G * sec)! + noncePoint;
 
   // Generate the symmetric key using the SHA-256 hash of the computed point.
-  key = crypto.sha256.convert(Utilities.pointToSer(point!, true)).bytes;
+  final key = crypto.sha256.convert(Utilities.pointToSer(point!, true)).bytes;
   // Use the symmetric key to decrypt the data.
-  Uint8List decryptedData =
-      await decryptWithSymmkey(data, Uint8List.fromList(key));
+  final decryptedData = await decryptWithSymmkey(data, Uint8List.fromList(key));
 
   // Return the decrypted data and the symmetric key used for decryption.
-  return (decryptedData, Uint8List.fromList(key));
+  return (decrypted: decryptedData, symmetricKey: Uint8List.fromList(key));
 }

@@ -2297,17 +2297,17 @@ class Fusion {
         throw FusionError("Server relayed bad proof indices");
       }
 
-      List<int> sKey;
-      Uint8List proofBlob;
+      final List<int> sKey;
+      final Uint8List proofBlob;
 
       try {
         // Decrypt the proof, storing the decrypted data and the symmetric key used.
-        (Uint8List, Uint8List) result = await decrypt(
+        final result = await decrypt(
           Uint8List.fromList(rp.encryptedProof),
           Uint8List.fromList(privKey),
         );
-        proofBlob = result.$1; // First item is the decrypted data.
-        sKey = result.$2; // Second item is the symmetric key.
+        proofBlob = result.decrypted;
+        sKey = result.symmetricKey;
       } on Exception catch (e) {
         // If decryption fails, add the proof to the blame list.
         Utilities.debugPrint("found an undecryptable proof");
