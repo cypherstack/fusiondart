@@ -11,20 +11,54 @@ final ECDomainParameters _secp256k1ECDomainParameters =
 
 /// Class responsible for setting up a Pedersen commitment.
 class PedersenSetup {
-  final ECPoint _pointH;
+  late final ECPoint _pointH;
   late final ECPoint _pointHG;
 
   /// Constructor initializes the Pedersen setup with a given H point.
   ///
   /// Parameters:
   /// - [_H]: An EC point to initialize the Pedersen setup.
-  PedersenSetup(this._pointH) {
-    // Validate H point.
+  PedersenSetup(Uint8List _hBytes) {
+    // Deserialize hBytes to get point H.
+    _pointH = Utilities.serToPoint(_hBytes, _secp256k1ECDomainParameters);
+
+    // Check if H is null.
+    if (_pointH == null) {
+      throw Exception('Failed to decode point');
+    }
+
+    // Check if point is on the curve.
     if (!Utilities.isPointOnCurve(
         _pointH, _secp256k1ECDomainParameters.curve)) {
       throw Exception('H is not a valid point on the curve');
     }
 
+    // Calculate H + G to get HG.
+    _pointHG = (_pointH + _secp256k1ECDomainParameters.G)!;
+    // Could use Utilities.combinePubKeys instead?
+    assert(_pointHG ==
+        Utilities.combinePubKeys(
+            [_pointH, _secp256k1ECDomainParameters.G])); // We'll see.
+
+    if (_pointHG == null) {
+      throw Exception('Failed to compute HG');
+    }
+
+    // Check if HG is on the curve.
+    if (!Utilities.isPointOnCurve(
+        _pointHG, _secp256k1ECDomainParameters.curve)) {
+      throw Exception('HG is not a valid point on the curve');
+    }
+
+    // Validate H point.
+    /*
+    if (!Utilities.isPointOnCurve(
+        _pointH, _secp256k1ECDomainParameters.curve)) {
+      throw Exception('H is not a valid point on the curve');
+    }
+     */
+
+    // Calculate HG point.
     _pointHG = Utilities.combinePubKeys(
       [
         _pointH,
@@ -32,19 +66,22 @@ class PedersenSetup {
       ],
     );
 
+    // Validate HG point.
+    /*
     if (!Utilities.isPointOnCurve(
         _pointHG, _secp256k1ECDomainParameters.curve)) {
       throw Exception('HG is not a valid point on the curve');
     }
     if (_pointHG == _secp256k1ECDomainParameters.curve.infinity) {
       // This happens if H = -G.
-      throw Exception('HG is at infinity');
+      throw InsecureHPoint('HG is at infinity');
     }
+     */
   }
 
-  // Getter methods to fetch _H and _HG points as Uint8Lists.
-  Uint8List get pointH => _pointH.getEncoded(false);
-  Uint8List get pointHG => _pointHG.getEncoded(false);
+  // Getter methods to fetch _H and _HG points.
+  Uint8List get pointH => Utilities.pointToSer(_pointH, false);
+  Uint8List get pointHG => Utilities.pointToSer(_pointHG, false);
 
   /// Create a new commitment.
   ///

@@ -95,12 +95,12 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   final Uint8List hBytes =
       Uint8List.fromList([0x02] + 'CashFusion gives us fungibility.'.codeUnits);
   final ECDomainParameters params = ECDomainParameters('secp256k1');
-  final ECPoint? hMaybe = params.curve.decodePoint(hBytes);
-  if (hMaybe == null) {
-    throw Exception('Failed to decode point');
-  }
-  final ECPoint H = hMaybe;
-  final PedersenSetup setup = PedersenSetup(H);
+  // final ECPoint? hMaybe = params.curve.decodePoint(hBytes);
+  // if (hMaybe == null) {
+  //   throw Exception('Failed to decode point');
+  // }
+  // final ECPoint H = hMaybe;
+  final PedersenSetup setup = PedersenSetup(hBytes);
 
   final Commitment claimedCommit;
   final Uint8List pointsum;
@@ -184,12 +184,12 @@ pb.InputComponent? validateProofInternal(
   final Uint8List hBytes =
       Uint8List.fromList([0x02] + 'CashFusion gives us fungibility.'.codeUnits);
   final ECDomainParameters params = ECDomainParameters('secp256k1');
-  final ECPoint? hMaybe = params.curve.decodePoint(hBytes);
-  if (hMaybe == null) {
-    throw Exception('Failed to decode point');
-  }
-  final ECPoint h = hMaybe;
-  PedersenSetup setup = PedersenSetup(h);
+  // final ECPoint? hMaybe = params.curve.decodePoint(hBytes);
+  // if (hMaybe == null) {
+  //   throw Exception('Failed to decode point');
+  // }
+  // final ECPoint h = hMaybe;
+  PedersenSetup setup = PedersenSetup(hBytes);
 
   final msg = protoStrictParse(pb.Proof(), proofBlob);
 

@@ -594,35 +594,8 @@ class Fusion {
     // Use secp256k1 curve.
     ECDomainParameters params = ECDomainParameters('secp256k1');
 
-    // Deserialize hBytes to get point H.
-    ECPoint? H = params.curve.decodePoint(hBytes);
-
-    // Check if H is null.
-    if (H == null) {
-      throw Exception('Failed to decode point');
-    }
-
-    // Check if point is on the curve.
-    if (!Utilities.isPointOnCurve(H, params.curve)) {
-      throw Exception('H is not a valid point on the curve');
-    }
-
-    // Calculate H + G to get HG.
-    ECPoint? HG = H + params.G;
-    // Could use Utilities.combinePubKeys instead?
-    assert(HG == Utilities.combinePubKeys([H, params.G])); // We'll see.
-
-    if (HG == null) {
-      throw Exception('Failed to compute HG');
-    }
-
-    // Check if HG is on the curve.
-    if (!Utilities.isPointOnCurve(HG, params.curve)) {
-      throw Exception('HG is not a valid point on the curve');
-    }
-
     // Set up Pedersen setup.
-    PedersenSetup setup = PedersenSetup(H);
+    PedersenSetup setup = PedersenSetup(hBytes);
 
     // Generate components.
     for (Input input in inputs) {
