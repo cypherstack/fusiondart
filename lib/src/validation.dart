@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:collection/collection.dart';
 import 'package:fusiondart/src/encrypt.dart' as encrypt;
-import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/pedersen.dart';
@@ -271,14 +270,10 @@ Future<pb.InputComponent> validateBlame(
     check(destCommit.communicationKey.equals(privateKey.pubkey.data),
         'bad blame privkey');
 
-    final ECDomainParameters params = ECDomainParameters('secp256k1');
     try {
       await encrypt.decrypt(
         encProof,
-        ECPrivateKey(
-          privateKey.data.toBigInt,
-          params,
-        ),
+        Uint8List.fromList(blame.privkey),
       );
     } catch (e) {
       throw Exception("validateBlame() undecryptable");
