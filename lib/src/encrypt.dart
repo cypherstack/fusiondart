@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:cryptography/cryptography.dart';
+import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/pointycastle.dart' hide Mac;
 
@@ -184,7 +185,9 @@ Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
 /// - DecryptionFailed: if the decryption fails for any reason.
 /// - Exception: if the private key or nonce point is null.
 Future<(Uint8List, Uint8List)> decrypt(
-    Uint8List data, ECPrivateKey privkey) async {
+  Uint8List data,
+  Uint8List privkey,
+) async {
   // Ensure the encrypted data is of the minimum required length.
   if (data.length < 33 + 16 + 16) {
     throw DecryptionFailed();
@@ -204,24 +207,19 @@ Future<(Uint8List, Uint8List)> decrypt(
 
   // Initialize the EC parameters.
   ECPoint G = params.G;
+  BigInt sec = privkey.toBigInt;
   final List<int> key;
 
-  // Ensure the private key exists and is valid.
-  if (privkey.d != null) {
-    // Compute the point that will be used for generating the symmetric key.
-    // This is done by multiplying the base point G with the private key (d) and adding the noncePoint.
-    ECPoint? point = (G * privkey.d)! + noncePoint;
+  // Compute the point that will be used for generating the symmetric key.
+  // This is done by multiplying the base point G with the private key (d) and adding the noncePoint.
+  ECPoint? point = (G * sec)! + noncePoint;
 
-    // Generate the symmetric key using the SHA-256 hash of the computed point.
-    key = crypto.sha256.convert(Utilities.pointToSer(point!, true)).bytes;
-    // Use the symmetric key to decrypt the data.
-    Uint8List decryptedData =
-        await decryptWithSymmkey(data, Uint8List.fromList(key));
+  // Generate the symmetric key using the SHA-256 hash of the computed point.
+  key = crypto.sha256.convert(Utilities.pointToSer(point!, true)).bytes;
+  // Use the symmetric key to decrypt the data.
+  Uint8List decryptedData =
+      await decryptWithSymmkey(data, Uint8List.fromList(key));
 
-    // Return the decrypted data and the symmetric key used for decryption.
-    return (decryptedData, Uint8List.fromList(key));
-  } else {
-    // Handle the situation where privkey.d or noncePoint is null.
-    throw Exception("FIXME"); // TODO
-  }
+  // Return the decrypted data and the symmetric key used for decryption.
+  return (decryptedData, Uint8List.fromList(key));
 }

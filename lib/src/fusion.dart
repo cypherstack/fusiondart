@@ -2301,21 +2301,23 @@ class Fusion {
       Uint8List proofBlob;
 
       try {
-        // Decrypt the received proof using the private key.
-        BigInt eccPrivateKey =
-            Utilities.parseBigIntFromBytes(Uint8List.fromList(privKey));
-        ECPrivateKey privateKey = ECPrivateKey(eccPrivateKey, params);
-
         // Decrypt the proof, storing the decrypted data and the symmetric key used.
-        (Uint8List, Uint8List) result =
-            await decrypt(Uint8List.fromList(rp.encryptedProof), privateKey);
+        (Uint8List, Uint8List) result = await decrypt(
+          Uint8List.fromList(rp.encryptedProof),
+          Uint8List.fromList(privKey),
+        );
         proofBlob = result.$1; // First item is the decrypted data.
         sKey = result.$2; // Second item is the symmetric key.
       } on Exception catch (e) {
         // If decryption fails, add the proof to the blame list.
         Utilities.debugPrint("found an undecryptable proof");
-        blames.add(Blames_BlameProof(
-            whichProof: i, privkey: privKey, blameReason: 'undecryptable'));
+        blames.add(
+          Blames_BlameProof(
+            whichProof: i,
+            privkey: privKey,
+            blameReason: 'undecryptable',
+          ),
+        );
         continue;
       }
 
