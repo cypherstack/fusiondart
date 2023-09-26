@@ -21,6 +21,9 @@ class Utilities {
     }
   }
 
+  static ECDomainParameters get secp256k1Params =>
+      ECDomainParameters('secp256k1');
+
   /// Checks the input for ElectrumX server.
   ///
   /// Parameters:

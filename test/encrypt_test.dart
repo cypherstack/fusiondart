@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:fusiondart/src/encrypt.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:test/test.dart';
@@ -35,10 +36,10 @@ void main() {
     final k = result.symmetricKey;
     Uint8List d12 = result.decrypted;
 
-    expect(d12.toString(), msg12.toString());
+    expect(d12.equals(msg12), true);
 
     d12 = await decryptWithSymmkey(e12, k);
-    expect(d12.toString(), msg12.toString());
+    expect(d12.equals(msg12), true);
 
     // ============== tweak the nonce point's oddness bit ======================
 
@@ -54,7 +55,7 @@ void main() {
     expect(e, isA<DecryptionFailed>());
 
     d12 = await decryptWithSymmkey(e12Bad, k);
-    expect(d12.toString(), msg12.toString());
+    expect(d12.equals(msg12), true);
 
     // ============== tweak the hmac ===========================================
 
@@ -77,12 +78,100 @@ void main() {
     }
     expect(e, isA<DecryptionFailed>());
 
-    // ============== tweak the nonce point's oddness bit ======================
+    // ============== tweak the message ========================================
 
-    // TODO
+    e12Bad = Uint8List.fromList(e12); // create copy to modify
+    e12Bad[35] = e12Bad[35] ^ 1;
 
-    // ============== tweak the nonce point's oddness bit ======================
+    e = null;
+    try {
+      await decrypt(e12Bad, aPriv);
+    } catch (err) {
+      e = err;
+    }
+    expect(e, isA<DecryptionFailed>());
 
-    // TODO
+    e = null;
+    try {
+      await decryptWithSymmkey(e12Bad, k);
+    } catch (err) {
+      e = err;
+    }
+    expect(e, isA<DecryptionFailed>());
+
+    // ============== drop a byte ==============================================
+
+    e12Bad = Uint8List.fromList(e12); // create copy to modify
+    e12Bad = e12Bad.sublist(0, e12Bad.length - 1);
+    e = null;
+    try {
+      await decrypt(e12Bad, aPriv);
+    } catch (err) {
+      e = err;
+    }
+    expect(e, isA<DecryptionFailed>());
+
+    e = null;
+    try {
+      await decryptWithSymmkey(e12Bad, k);
+    } catch (err) {
+      e = err;
+    }
+    expect(e, isA<DecryptionFailed>());
+
+    // =========================================================================
+
+    final msg13 = Uint8List.fromList([
+      ...msg12,
+      ..."!".toUint8ListFromUtf8,
+    ]);
+
+    Uint8List e13 = await encrypt(msg13, aPub);
+    expect(e13.length, 81); // need another block
+
+    e = null;
+    try {
+      await encrypt(msg13, aPub, padToLength: 16);
+    } catch (err) {
+      e = err;
+    }
+    expect(e, isA<ArgumentError>());
+
+    e13 = await encrypt(msg13, aPub, padToLength: 32);
+    expect(e13.length, 81);
+
+    e = null;
+    try {
+      await decrypt(e13, aPriv);
+    } catch (err) {
+      e = err;
+    }
+    expect(e, null);
+
+    // =========================================================================
+
+    final msgBig = ("a" * 1234).toUint8ListFromUtf8;
+
+    final eBig = await encrypt(msgBig, aPub);
+    expect(eBig.length, 33 + (1234 + 4 + 10) + 16);
+
+    final result2 = await decrypt(eBig, aPriv);
+    expect(result2.decrypted.equals(msgBig), true);
+
+    // =========================================================================
+
+    final enc = await encrypt("".toUint8ListFromUtf8, aPub);
+    expect(enc.length, 65);
+
+    final enc2 = await encrypt("".toUint8ListFromUtf8, aPub, padToLength: 1248);
+    expect(enc2.length, 1297);
+
+    e = null;
+    try {
+      await encrypt("".toUint8ListFromUtf8, aPub, padToLength: 0);
+    } catch (err) {
+      e = err;
+    }
+    expect(e, isA<ArgumentError>());
   });
 }

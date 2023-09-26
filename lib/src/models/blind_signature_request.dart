@@ -2,7 +2,6 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
-import 'package:fusiondart/src/encrypt.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
 import 'package:pointycastle/ecc/curves/secp256r1.dart';
@@ -115,14 +114,14 @@ class BlindSignatureRequest {
   /// Performs initial calculations needed for blind signature generation.
   void _calcInitial() {
     // Convert byte representations to ECPoints
-    ECPoint? pointR = Utilities.serToPoint(R, params);
-    ECPoint? pubPoint = Utilities.serToPoint(pubkey, params);
+    ECPoint? pointR = Utilities.serToPoint(R, Utilities.secp256k1Params);
+    ECPoint? pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
 
     // Compress public key
     pubKeyCompressed = Utilities.pointToSer(pubPoint, true);
 
     // Calculate intermediateR
-    ECPoint? intermediateR = pointR + (params.G * a);
+    ECPoint? intermediateR = pointR + (Utilities.secp256k1Params.G * a);
 
     // Check that intermediateR is not null
     if (intermediateR == null) {
@@ -277,7 +276,7 @@ class BlindSignatureRequest {
     List<int> sig = pointRxNew + Utilities.bigIntToBytes(snew);
 
     // Verify the signature if requested.
-    ECPoint? pubPoint = Utilities.serToPoint(pubkey, params);
+    ECPoint? pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
 
     // Check that pubPoint is not null.
     if (check && !Utilities.schnorrVerify(pubPoint, sig, messageHash)) {

@@ -1,14 +1,11 @@
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:cryptography/cryptography.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/pointycastle.dart' hide Mac;
-
-// Global constants for elliptic curve parameters
-final ECDomainParameters params = ECDomainParameters('secp256k1');
-final BigInt order = params.n;
 
 /// Custom exception class for encryption failures.
 class EncryptionFailed implements Exception {}
@@ -36,22 +33,23 @@ Future<Uint8List> encrypt(
   // Initialize public point from the public key
   final ECPoint pubPoint;
   try {
-    pubPoint = Utilities.serToPoint(pubKey, params);
+    pubPoint = Utilities.serToPoint(pubKey, Utilities.secp256k1Params);
   } catch (_) {
     throw EncryptionFailed(); // If serialization to point fails, throw encryption failed exception.
   }
 
   // Generate secure random nonce.
-  final BigInt nonceSec = Utilities.secureRandomBigInt(params.n.bitLength);
+  // final BigInt nonceSec = Utilities.secureRandomBigInt(params.n.bitLength);
+  final BigInt nonceSec = BigInt.one;
 
   // Calculate G * nonceSec
-  final ECPoint? GTimesNonceSec = params.G * nonceSec;
-  if (GTimesNonceSec == null) {
+  final ECPoint? gTimesNonceSec = Utilities.secp256k1Params.G * nonceSec;
+  if (gTimesNonceSec == null) {
     throw Exception('Multiplication of G with nonceSec resulted in null');
   }
 
   // Serialize G_times_nonceSec to bytes
-  final Uint8List noncePub = Utilities.pointToSer(GTimesNonceSec, true);
+  final Uint8List noncePub = Utilities.pointToSer(gTimesNonceSec, true);
 
   // Calculate public point * nonceSec
   ECPoint? pubPointTimesNonceSec = pubPoint * nonceSec;
@@ -87,10 +85,12 @@ Future<Uint8List> encrypt(
 
   // Initialize secret key, MAC algorithm, and cipher.
   final secretKey = SecretKey(key);
-  final macAlgorithm = Hmac(Sha256());
-  final cipher = AesCbc.with128bits(macAlgorithm: macAlgorithm);
+  final cipher = AesCbc.with256bits(
+    macAlgorithm: Hmac.sha256(),
+    paddingAlgorithm: PaddingAlgorithm.zero,
+  );
 
-  //TODO: Generate a random nonce.
+  // IV is set to zeros: https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/encrypt.py#L97
   final nonce = Uint8List(16);
 
   // Perform AES encryption.
@@ -103,15 +103,15 @@ Future<Uint8List> encrypt(
   // Prepare final ciphertext.
   final ciphertext = secretBox.cipherText;
 
+  // truncate mac (as done in the python code)
+  final mac = secretBox.mac.bytes.sublist(0, 16);
+
   // Combine nonce, ciphertext, and MAC to create the final encrypted message.
-  return Uint8List(
-      noncePub.length + ciphertext.length + secretBox.mac.bytes.length)
-    ..setRange(0, noncePub.length, noncePub)
-    ..setRange(noncePub.length, noncePub.length + ciphertext.length, ciphertext)
-    ..setRange(
-        noncePub.length + ciphertext.length,
-        noncePub.length + ciphertext.length + secretBox.mac.bytes.length,
-        secretBox.mac.bytes);
+  return Uint8List.fromList([
+    ...noncePub,
+    ...ciphertext,
+    ...mac,
+  ]);
 }
 
 /// Decrypts data using a symmetric key.
@@ -141,14 +141,32 @@ Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
 
   // Initialize the secret key and cipher.
   final secretKey = SecretKey(key);
-  final cipher = AesCbc.with128bits(macAlgorithm: Hmac.sha256());
+  final cipher = AesCbc.with256bits(
+    macAlgorithm: Hmac.sha256(),
+    paddingAlgorithm: PaddingAlgorithm.zero,
+  );
 
-  // Create a random nonce.
+  // IV https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/encrypt.py#L119
   final nonce = Uint8List(16);
 
+  final extractedMacBytes = data.sublist(data.length - 16);
+
+  final calculatedHMAC = await Hmac(Sha256()).calculateMac(
+    ciphertext,
+    secretKey: secretKey,
+    nonce: nonce,
+  );
+
+  if (!calculatedHMAC.bytes.sublist(0, 16).equals(extractedMacBytes)) {
+    throw DecryptionFailed();
+  }
+
   // Initialize the SecretBox with the ciphertext, MAC and nonce.
-  final secretBox = SecretBox(ciphertext,
-      mac: Mac(data.sublist(data.length - 16)), nonce: nonce);
+  final secretBox = SecretBox(
+    ciphertext,
+    mac: calculatedHMAC,
+    nonce: nonce,
+  );
 
   // Perform the decryption.
   final plaintext = await cipher.decrypt(secretBox, secretKey: secretKey);
@@ -186,7 +204,7 @@ Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
 /// - Exception: if the private key or nonce point is null.
 Future<({Uint8List decrypted, Uint8List symmetricKey})> decrypt(
   Uint8List data,
-  Uint8List privkey,
+  Uint8List privateKey,
 ) async {
   // Ensure the encrypted data is of the minimum required length.
   if (data.length < 33 + 16 + 16) {
@@ -198,18 +216,12 @@ Future<({Uint8List decrypted, Uint8List symmetricKey})> decrypt(
 
   // Attempt to deserialize the nonce point.
   try {
-    noncePoint = Utilities.serToPoint(noncePub, params);
+    noncePoint = Utilities.serToPoint(noncePub, Utilities.secp256k1Params);
   } catch (_) {
     throw DecryptionFailed();
   }
 
-  // TODO double check if this is correct according to the Python in Electron-Cash
-
-  final sec = privkey.toBigInt;
-
-  // Compute the point that will be used for generating the symmetric key.
-  // This is done by multiplying the base point G with the private key (d) and adding the noncePoint.
-  ECPoint? point = (params.G * sec)! + noncePoint;
+  final ECPoint? point = noncePoint * privateKey.toBigInt;
 
   // Generate the symmetric key using the SHA-256 hash of the computed point.
   final key = crypto.sha256.convert(Utilities.pointToSer(point!, true)).bytes;
