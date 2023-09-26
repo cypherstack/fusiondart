@@ -29,9 +29,3 @@ extension Uint8ListExtensions on Uint8List {
     return number;
   }
 }
-
-void f() {
-  final c = InputComponent();
-
-  final u = Uint8List.fromList(c.prevTxid.reversed.toList()).toHex;
-}
