@@ -22,11 +22,6 @@ class PedersenSetup {
     // Deserialize hBytes to get point H.
     _pointH = Utilities.serToPoint(_hBytes, _secp256k1ECDomainParameters);
 
-    // Check if H is null.
-    if (_pointH == null) {
-      throw Exception('Failed to decode point');
-    }
-
     // Check if point is on the curve.
     if (!Utilities.isPointOnCurve(
         _pointH, _secp256k1ECDomainParameters.curve)) {
@@ -34,15 +29,16 @@ class PedersenSetup {
     }
 
     // Calculate H + G to get HG.
-    _pointHG = (_pointH + _secp256k1ECDomainParameters.G)!;
+    try {
+      _pointHG = (_pointH + _secp256k1ECDomainParameters.G)!;
+    } catch (_) {
+      throw Exception('Failed to compute HG');
+    }
+
     // Could use Utilities.combinePubKeys instead?
     assert(_pointHG ==
         Utilities.combinePubKeys(
             [_pointH, _secp256k1ECDomainParameters.G])); // We'll see.
-
-    if (_pointHG == null) {
-      throw Exception('Failed to compute HG');
-    }
 
     // Check if HG is on the curve.
     if (!Utilities.isPointOnCurve(
