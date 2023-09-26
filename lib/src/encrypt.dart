@@ -27,10 +27,13 @@ class DecryptionFailed implements Exception {}
 ///
 /// Throws:
 /// - EncryptionFailed: if the encryption fails for any reason.
-Future<Uint8List> encrypt(Uint8List message, Uint8List pubKey,
-    {int? padToLength}) async {
+Future<Uint8List> encrypt(
+  Uint8List message,
+  Uint8List pubKey, {
+  int? padToLength,
+}) async {
   // Initialize public point from the public key
-  ECPoint pubPoint;
+  final ECPoint pubPoint;
   try {
     pubPoint = Utilities.serToPoint(pubKey, params);
   } catch (_) {
@@ -38,16 +41,16 @@ Future<Uint8List> encrypt(Uint8List message, Uint8List pubKey,
   }
 
   // Generate secure random nonce.
-  BigInt nonceSec = Utilities.secureRandomBigInt(params.n.bitLength);
+  final BigInt nonceSec = Utilities.secureRandomBigInt(params.n.bitLength);
 
   // Calculate G * nonceSec
-  ECPoint? GTimesNonceSec = params.G * nonceSec;
+  final ECPoint? GTimesNonceSec = params.G * nonceSec;
   if (GTimesNonceSec == null) {
     throw Exception('Multiplication of G with nonceSec resulted in null');
   }
 
   // Serialize G_times_nonceSec to bytes
-  Uint8List noncePub = Utilities.pointToSer(GTimesNonceSec, true);
+  final Uint8List noncePub = Utilities.pointToSer(GTimesNonceSec, true);
 
   // Calculate public point * nonceSec
   ECPoint? pubPointTimesNonceSec = pubPoint * nonceSec;
@@ -57,7 +60,7 @@ Future<Uint8List> encrypt(Uint8List message, Uint8List pubKey,
   }
 
   // Create a SHA-256 hash as the symmetric key.
-  List<int> key = crypto.sha256
+  final List<int> key = crypto.sha256
       .convert(Utilities.pointToSer(pubPointTimesNonceSec, true))
       .bytes;
 
@@ -86,12 +89,15 @@ Future<Uint8List> encrypt(Uint8List message, Uint8List pubKey,
   final macAlgorithm = Hmac(Sha256());
   final cipher = AesCbc.with128bits(macAlgorithm: macAlgorithm);
 
-  // Generate a random nonce.
+  //TODO: Generate a random nonce.
   final nonce = Uint8List(16);
 
   // Perform AES encryption.
-  final secretBox =
-      await cipher.encrypt(plaintext, secretKey: secretKey, nonce: nonce);
+  final secretBox = await cipher.encrypt(
+    plaintext,
+    secretKey: secretKey,
+    nonce: nonce,
+  );
 
   // Prepare final ciphertext.
   final ciphertext = secretBox.cipherText;
