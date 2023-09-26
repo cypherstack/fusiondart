@@ -27,12 +27,12 @@ class DecryptionFailed implements Exception {}
 ///
 /// Throws:
 /// - EncryptionFailed: if the encryption fails for any reason.
-Future<Uint8List> encrypt(Uint8List message, ECPoint pubKey,
+Future<Uint8List> encrypt(Uint8List message, Uint8List pubKey,
     {int? padToLength}) async {
   // Initialize public point from the public key
   ECPoint pubPoint;
   try {
-    pubPoint = Utilities.serToPoint(pubKey.getEncoded(true), params);
+    pubPoint = Utilities.serToPoint(pubKey, params);
   } catch (_) {
     throw EncryptionFailed(); // If serialization to point fails, throw encryption failed exception.
   }

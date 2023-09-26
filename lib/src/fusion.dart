@@ -13,6 +13,7 @@ import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/covert.dart';
 import 'package:fusiondart/src/encrypt.dart';
+import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/blind_signature_request.dart';
 import 'package:fusiondart/src/models/input.dart';
@@ -21,7 +22,6 @@ import 'package:fusiondart/src/models/protobuf.dart';
 import 'package:fusiondart/src/models/transaction.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
-import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
@@ -2239,20 +2239,10 @@ class Fusion {
       Proof proof = myProofs[i];
       proof.componentIdx = myComponentIndexes[i];
 
-      // Decode the communication key from its byte form.
-      ECPoint? communicationKeyPointMaybe =
-          params.curve.decodePoint(Uint8List.fromList(msg.communicationKey));
-
-      // Error handling in case the decoding fails.
-      if (communicationKeyPointMaybe == null) {
-        continue;
-      }
-      ECPoint communicationKeyPoint = communicationKeyPointMaybe;
-
       try {
         // Encrypt the proof using the communication key.
         Uint8List encryptedData = await encrypt(
-            proof.writeToBuffer(), communicationKeyPoint,
+            proof.writeToBuffer(), Uint8List.fromList(msg.communicationKey),
             padToLength: 80);
         encproofs[i] = String.fromCharCodes(encryptedData);
       } on EncryptionFailed {
