@@ -620,10 +620,6 @@ class Fusion {
       throw Exception('HG is not a valid point on the curve');
     }
 
-    if (!Utilities.isPointOnCurve(H, params.curve)) {
-      throw Exception('H1 is not a valid point on the curve');
-    }
-
     // Set up Pedersen setup.
     PedersenSetup setup = PedersenSetup(H);
 
