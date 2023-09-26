@@ -94,7 +94,6 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
 
   final Uint8List hBytes =
       Uint8List.fromList([0x02] + 'CashFusion gives us fungibility.'.codeUnits);
-  final ECDomainParameters params = ECDomainParameters('secp256k1');
   // final ECPoint? hMaybe = params.curve.decodePoint(hBytes);
   // if (hMaybe == null) {
   //   throw Exception('Failed to decode point');
@@ -110,7 +109,7 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
       commitMessages
           .map((m) => Uint8List.fromList(m.amountCommitment))
           .toList(),
-      params,
+      Utilities.secp256k1Params,
     );
     claimedCommit = setup.commit(
       BigInt.from(msg.excessFee.toInt()),
@@ -183,7 +182,6 @@ pb.InputComponent? validateProofInternal(
 ) {
   final Uint8List hBytes =
       Uint8List.fromList([0x02] + 'CashFusion gives us fungibility.'.codeUnits);
-  final ECDomainParameters params = ECDomainParameters('secp256k1');
   // final ECPoint? hMaybe = params.curve.decodePoint(hBytes);
   // if (hMaybe == null) {
   //   throw Exception('Failed to decode point');

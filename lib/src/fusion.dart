@@ -26,7 +26,6 @@ import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:fusiondart/src/validation.dart';
-import 'package:pointycastle/export.dart';
 import 'package:protobuf/protobuf.dart';
 
 final bool kDebugPrintEnabled = true;
@@ -591,9 +590,6 @@ class Fusion {
     List<int> stringBytes = utf8.encode('CashFusion gives us fungibility.');
     Uint8List hBytes = Uint8List.fromList([...prefix, ...stringBytes]);
 
-    // Use secp256k1 curve.
-    ECDomainParameters params = ECDomainParameters('secp256k1');
-
     // Set up Pedersen setup.
     PedersenSetup setup = PedersenSetup(hBytes);
 
@@ -656,7 +652,9 @@ class Fusion {
 
       // TODO: ensure this is unique?
       // Initialize nonce with a secure random value if not provided.
-      final nonce = Utilities.secureRandomBigInt(params.n.bitLength);
+      final nonce = Utilities.secureRandomBigInt(
+        Utilities.secp256k1Params.n.bitLength,
+      );
 
       // Generate amount commitment.
       Commitment commitmentInstance = setup.commit(
@@ -2202,9 +2200,6 @@ class Fusion {
 
     // Generate the encrypted proofs.
     List<String> encproofs = List<String>.filled(myCommitments.length, '');
-
-    // Parameters for elliptic curve cryptography.
-    ECDomainParameters params = ECDomainParameters('secp256k1');
 
     // Loop through all the destination commitments to generate encrypted proofs.
     for (int i = 0; i < dstCommits.length; i++) {

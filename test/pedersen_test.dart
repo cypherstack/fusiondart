@@ -61,11 +61,8 @@ void main() {
           'CashFusion gives us fungibility.'.toUint8ListFromUtf8;
       hBytes = Uint8List.fromList([...prefix, ...stringBytes]);
 
-      // Use secp256k1 curve.
-      params = ECDomainParameters('secp256k1');
-
       // Deserialize hBytes to get point H.
-      H = params.curve.decodePoint(hBytes);
+      H = Utilities.secp256k1Params.curve.decodePoint(hBytes);
     });
 
     test('Decode point H', () {
@@ -78,14 +75,14 @@ void main() {
 
     test('Validate H is on the curve', () {
       expect(
-        Utilities.isPointOnCurve(H!, params.curve),
+        Utilities.isPointOnCurve(H!, Utilities.secp256k1Params.curve),
         isTrue,
         reason: 'H is not a valid point on the curve',
       );
     });
 
     test('Calculate H + G', () {
-      HG = H! + params.G;
+      HG = H! + Utilities.secp256k1Params.G;
       expect(
         HG,
         isNotNull,
@@ -93,14 +90,14 @@ void main() {
       );
       expect(
         HG,
-        equals(Utilities.combinePubKeys([H!, params.G])),
+        equals(Utilities.combinePubKeys([H!, Utilities.secp256k1Params.G])),
         reason: 'HG computation inconsistency',
       );
     });
 
     test('Validate HG is on the curve', () {
       expect(
-        Utilities.isPointOnCurve(HG!, params.curve),
+        Utilities.isPointOnCurve(HG!, Utilities.secp256k1Params.curve),
         isTrue,
         reason: 'HG is not a valid point on the curve',
       );

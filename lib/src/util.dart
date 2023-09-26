@@ -13,7 +13,7 @@ import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
 
 /// A utility class that provides various helper functions.
-class Utilities {
+abstract class Utilities {
   static void debugPrint(Object? object) {
     if (kDebugPrintEnabled) {
       // ignore: avoid_print
@@ -317,14 +317,11 @@ class Utilities {
   /// Returns:
   ///   A tuple containing the private key and the public key as Uint8List.
   static (Uint8List, Uint8List) genKeypair() {
-    // Initialize the EC domain parameters for secp256k1
-    ECDomainParameters params = ECDomainParameters('secp256k1');
-
     // Generate a private key using secure random values and curve's bit length
-    BigInt privKeyBigInt = _generatePrivateKey(params.n.bitLength);
+    BigInt privKeyBigInt = _generatePrivateKey(secp256k1Params.n.bitLength);
 
     // Calculate the public key point using elliptic curve multiplication
-    ECPoint? pubKeyPoint = params.G * privKeyBigInt;
+    ECPoint? pubKeyPoint = secp256k1Params.G * privKeyBigInt;
 
     // Check for any errors in public key generation
     if (pubKeyPoint == null) {
