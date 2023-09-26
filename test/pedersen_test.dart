@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:fusiondart/src/extensions/on_string.dart';
-import 'package:fusiondart/src/pedersen.dart' as pedersen;
+import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
 import 'package:pointycastle/ecc/curves/secp256k1.dart';
@@ -17,16 +16,14 @@ void main() {
           "0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798b7c52588d95c3b9aa25b0403f1eef75702e84bb7597aabe663b82f6f04ef2777";
 
       expect(
-        () => pedersen.PedersenSetup(
-            Uint8List.fromList(utf8.encode(invalidHPointHex1))),
-        throwsA(isA<pedersen.InsecureHPoint>()),
+        () => PedersenSetup(invalidHPointHex1.toUint8ListFromHex),
+        throwsA(isA<InsecureHPoint>()),
         reason: 'Should raise InsecureHPoint exception for invalid H point 1',
       );
 
       expect(
-        () => pedersen.PedersenSetup(
-            Uint8List.fromList(utf8.encode(invalidHPointHex2))),
-        throwsA(isA<pedersen.InsecureHPoint>()),
+        () => PedersenSetup(invalidHPointHex2.toUint8ListFromHex),
+        throwsA(isA<InsecureHPoint>()),
         reason: 'Should raise InsecureHPoint exception for invalid H point 2',
       );
 
@@ -34,8 +31,7 @@ void main() {
           "030000000000000000000000000000000000000000000000000000000000000007";
 
       expect(
-        () => pedersen.PedersenSetup(
-            Uint8List.fromList(utf8.encode(nonPointHex))),
+        () => PedersenSetup(nonPointHex.toUint8ListFromHex),
         throwsA(isA<ArgumentError>()),
         reason: 'Should raise ArgumentError for non-point input',
       );
@@ -90,7 +86,7 @@ void main() {
       );
       expect(
         HG,
-        equals(Utilities.combinePubKeys([H!, Utilities.secp256k1Params.G])),
+        equals(H! + Utilities.secp256k1Params.G),
         reason: 'HG computation inconsistency',
       );
     });
