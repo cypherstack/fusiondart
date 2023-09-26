@@ -18,5 +18,14 @@ void main() {
 
     Uint8List e12 = await encrypt(msg12, aPub);
     expect(e12.length, 65);
+
+    e12 = await encrypt(msg12, aPub, padToLength: 16);
+    expect(e12.length, 65);
+
+    final d1 = await decrypt(e12, aPriv);
+    expect(d1.decrypted.toString(), msg12.toString());
+
+    final d2 = await decryptWithSymmkey(e12, d1.symmetricKey);
+    expect(d2.toString(), msg12.toString());
   });
 }
