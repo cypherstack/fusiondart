@@ -652,22 +652,3 @@ class Utilities {
     return left == right;
   }
 }
-
-/// An extension on the `List<int>` class that adds a `toHex` method.
-extension HexEncoding on List<int> {
-  String toHex() {
-    return map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
-  }
-}
-
-extension Uint8ListExtensions on Uint8List {
-  String get toUtf8String => utf8.decode(this);
-
-  BigInt get toBigInt {
-    BigInt number = BigInt.zero;
-    for (final byte in this) {
-      number = (number << 8) | BigInt.from(byte & 0xff);
-    }
-    return number;
-  }
-}

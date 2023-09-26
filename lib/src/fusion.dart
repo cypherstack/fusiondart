@@ -21,6 +21,7 @@ import 'package:fusiondart/src/models/protobuf.dart';
 import 'package:fusiondart/src/models/transaction.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
+import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
@@ -2380,7 +2381,7 @@ class Fusion {
           // If the input component doesn't match the blockchain, add the proof to the blame list.
           Utilities.debugPrint(
             "found a bad input [${rp.srcCommitmentIdx}]: "
-            "$e (${inpComp.prevTxid.reversed.toList().toHex()}:${inpComp.prevIndex})",
+            "$e (${(Uint8List.fromList(inpComp.prevTxid.reversed.toList())).toHex}:${inpComp.prevIndex})",
           );
 
           final blameProof = Blames_BlameProof();
