@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -6,6 +5,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
+import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
@@ -450,26 +450,21 @@ abstract final class OutputHandling {
   /// Returns:
   ///   A list of `ComponentResult` objects containing all the components needed for the transaction.
   static List<ComponentResult> genComponents(
-      int numBlanks, List<Input> inputs, List<Output> outputs, int feerate) {
+    int numBlanks,
+    List<Input> inputs,
+    List<Output> outputs,
+    int feerate,
+  ) {
     // Sanity check.
     assert(numBlanks >= 0);
 
     // Initialize list of components.
-    List<(Component, int)> components = [];
-
-    // Set up Pedersen setup instance.
-    // Uint8List hBytes = Uint8List.fromList(
-    //     [0x02] + 'CashFusion gives us fungibility.'.codeUnits);
-    // Uint8List hBytes = Uint8List.fromList(
-    //     [0x02, ...utf8.encode('CashFusion gives us fungibility.')]);
-    // Uint8List hBytes = Uint8List.fromList(
-    //     [...utf8.encode('\x02CashFusion gives us fungibility.')]);
-    Uint8List prefix = Uint8List.fromList([0x02]);
-    List<int> stringBytes = utf8.encode('CashFusion gives us fungibility.');
-    Uint8List hBytes = Uint8List.fromList([...prefix, ...stringBytes]);
+    List<({Component component, BigInt value})> components = [];
 
     // Set up Pedersen setup.
-    PedersenSetup setup = PedersenSetup(hBytes);
+    PedersenSetup setup = PedersenSetup(
+      '\x02CashFusion gives us fungibility.'.toUint8ListFromUtf8,
+    );
 
     // Generate components.
     for (Input input in inputs) {
@@ -477,16 +472,23 @@ abstract final class OutputHandling {
       int fee = Utilities.componentFee(input.sizeOfInput(), feerate);
 
       // Create input component.
-      Component comp = Component();
-      comp.input = InputComponent(
+      final comp = Component()
+        ..input = InputComponent(
           prevTxid: Uint8List.fromList(
-              input.prevTxid.reversed.toList()), // Why is this reversed?
+            input.prevTxid.reversed.toList(),
+          ), // Why is this reversed?
           prevIndex: input.prevIndex,
           pubkey: input.pubKey,
-          amount: Int64(input.amount));
+          amount: Int64(input.amount),
+        );
 
       // Add component and fee to list.
-      components.add((comp, input.amount - fee));
+      components.add(
+        (
+          component: comp,
+          value: BigInt.from(input.amount) - BigInt.from(fee),
+        ),
+      );
     }
 
     // Generate components for outputs.
@@ -498,30 +500,39 @@ abstract final class OutputHandling {
       int fee = Utilities.componentFee(output.sizeOfOutput(), feerate);
 
       // Create output component.
-      Component comp = Component();
-      comp.output =
-          OutputComponent(scriptpubkey: script, amount: Int64(output.value));
+      final comp = Component()
+        ..output =
+            OutputComponent(scriptpubkey: script, amount: Int64(output.value));
 
       // Add component and fee to list.
-      components.add((comp, -output.value - fee));
+      components.add(
+        (
+          component: comp,
+          value:
+              (BigInt.from(-1) * BigInt.from(output.value)) - BigInt.from(fee),
+        ),
+      );
     }
 
     // Generate components for blanks.
     for (int i = 0; i < numBlanks; i++) {
-      Component comp = Component();
-      comp.blank = BlankComponent();
-      components.add((comp, 0));
+      components.add(
+        (
+          component: Component()..blank = BlankComponent(),
+          value: BigInt.zero,
+        ),
+      );
     }
 
     // Initialize result list.
     List<ComponentResult> resultList = [];
 
-    // Generate components.
+    // Generate commitments.
     components.asMap().forEach((cnum, componentRecord) {
       // Generate salt.
       Uint8List salt = Utilities.tokenBytes(32);
-      componentRecord.$1.saltCommitment = Utilities.sha256(salt);
-      Uint8List compser = componentRecord.$1.writeToBuffer();
+      componentRecord.component.saltCommitment = Utilities.sha256(salt);
+      Uint8List compser = componentRecord.component.writeToBuffer();
 
       // Generate keypair.
       (Uint8List, Uint8List) keyPair = Utilities.genKeypair();
@@ -530,31 +541,42 @@ abstract final class OutputHandling {
 
       // Generate amount commitment.
       Commitment commitmentInstance = setup.commit(
-        BigInt.from(componentRecord.$2),
+        componentRecord.value,
       );
-      Uint8List amountCommitment = commitmentInstance.pointPUncompressed;
+      final amountCommitment = commitmentInstance.pointPUncompressed;
 
       // Convert BigInt nonce to Uint8List.
-      final Uint8List pedersenNonce = commitmentInstance.nonce.toBytes;
+      final pedersenNonce = commitmentInstance.nonce.toBytes;
 
       // Generating initial commitment.
       InitialCommitment commitment = InitialCommitment(
-          saltedComponentHash:
-              Utilities.sha256(Uint8List.fromList([...compser, ...salt])),
-          amountCommitment: amountCommitment,
-          communicationKey: pubKey);
+        saltedComponentHash:
+            Utilities.sha256(Uint8List.fromList([...compser, ...salt])),
+        amountCommitment: amountCommitment,
+        communicationKey: pubKey,
+      );
 
       // Write commitment to buffer.
       Uint8List commitser = commitment.writeToBuffer();
 
       // Generate proof.
-      Proof proof =
-          Proof(componentIdx: cnum, salt: salt, pedersenNonce: pedersenNonce);
+      Proof proof = Proof(
+        componentIdx: cnum,
+        salt: salt,
+        pedersenNonce: pedersenNonce,
+      );
 
       // Add result to list.
-      resultList.add(ComponentResult(
-          commitser, cnum, compser, proof, privateKey,
-          pedersenAmount: BigInt.from(componentRecord.$2)));
+      resultList.add(
+        ComponentResult(
+          commitser,
+          cnum,
+          compser,
+          proof,
+          privateKey,
+          pedersenAmount: componentRecord.value,
+        ),
+      );
       // TODO What about pedersenNonce?
     });
 
