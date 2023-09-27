@@ -99,7 +99,7 @@ class Fusion {
   List<Input> coins = []; // "coins"≈"inputs" in the python source.
   List<Input> inputs = [];
   List<Output> outputs = [];
-  List<Address> changeAddresses = [];
+  // List<Address> changeAddresses = [];
 
   bool serverConnectedAndGreeted = false; // Have we connected to the server?
   bool stopping = false; // Should fusion stop?
@@ -186,17 +186,17 @@ class Fusion {
     // TODO add validation and throw error if invalid UTXO detected
   }
 
-  /// Adds a change address [address] to the `changeAddresses` list.
-  ///
-  /// Takes an `Address` object and adds it to the internal `changeAddresses` list,
-  /// which is used to send back any remaining balance from a fusion operation.
-  ///
-  /// Returns:
-  ///   A future that completes when the address has been added.
-  Future<void> addChangeAddress(Address address) async {
-    // Add address to List<Address> addresses[].
-    changeAddresses.add(address);
-  }
+  // /// Adds a change address [address] to the `changeAddresses` list.
+  // ///
+  // /// Takes an `Address` object and adds it to the internal `changeAddresses` list,
+  // /// which is used to send back any remaining balance from a fusion operation.
+  // ///
+  // /// Returns:
+  // ///   A future that completes when the address has been added.
+  // Future<void> addChangeAddress(Address address) async {
+  //   // Add address to List<Address> addresses[].
+  //   changeAddresses.add(address);
+  // }
 
   /// Executes the fusion operation.
   ///
