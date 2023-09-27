@@ -537,9 +537,38 @@ abstract class Utilities {
     }
 
     // Convert byte array to BigInt.
-    BigInt randomNumber = BigInt.parse(
-        randomBytes.map((e) => e.toRadixString(16).padLeft(2, '0')).join(),
-        radix: 16);
+    BigInt randomNumber = parseHexToBigInt(
+        randomBytes.map((e) => e.toRadixString(16).padLeft(2, '0')).join());
+
     return randomNumber;
   }
+
+  static BigInt parseHexToBigInt(String hex) {
+    // Remove the '0x' prefix if it exists.
+    if (hex.startsWith("0x")) {
+      hex = hex.substring(2);
+    }
+
+    // Parse the hexadecimal string into a BigInt.
+    return BigInt.parse(hex, radix: 16);
+  }
+}
+
+/// Converts a BigInt to a Uint8List.
+///
+/// Needed because there's no BigInt.toBytes built-in function.
+///
+/// Parameters:
+/// - [number] The BigInt to be converted.
+///
+/// Returns:
+///  A Uint8List representing the given BigInt.
+Uint8List bigIntToUint8List(BigInt number) {
+  final byteCount =
+      (number.bitLength + 7) ~/ 8; // Calculate the number of bytes needed.
+  final byteList = List<int>.generate(byteCount, (i) {
+    final shift = 8 * (byteCount - i - 1);
+    return (number >> shift).toUnsigned(8).toInt();
+  });
+  return Uint8List.fromList(byteList);
 }

@@ -661,8 +661,8 @@ class Fusion {
       Uint8List amountCommitment = commitmentInstance.pointPUncompressed;
 
       // Convert BigInt nonce to Uint8List.
-      Uint8List pedersenNonce = Uint8List.fromList(
-          [int.parse(commitmentInstance.nonce.toRadixString(16), radix: 16)]);
+      Uint8List pedersenNonce = bigIntToUint8List(
+          BigInt.parse(commitmentInstance.nonce.toRadixString(16), radix: 16));
 
       // Generating initial commitment.
       InitialCommitment commitment = InitialCommitment(
