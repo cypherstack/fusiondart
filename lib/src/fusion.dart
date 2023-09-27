@@ -673,8 +673,10 @@ class Fusion {
           Proof(componentIdx: cnum, salt: salt, pedersenNonce: pedersenNonce);
 
       // Add result to list.
-      resultList
-          .add(ComponentResult(commitser, cnum, compser, proof, privateKey));
+      resultList.add(ComponentResult(
+          commitser, cnum, compser, proof, privateKey,
+          pedersenAmount: BigInt.from(componentRecord.$2)));
+      // TODO What about pedersenNonce?
     });
 
     return resultList;
@@ -1835,7 +1837,7 @@ class Fusion {
     final List<Proof> myProofs = [];
     final List<Uint8List> privKeys = [];
     // TODO type
-    final List<dynamic> pedersenAmount = [];
+    final List<BigInt> pedersenAmount = [];
     final List<dynamic> pedersenNonce = [];
 
     // Populate the lists with data from the generated components.
@@ -1845,13 +1847,17 @@ class Fusion {
       myComponents.add(genComponentResult.component);
       myProofs.add(genComponentResult.proof);
       privKeys.add(genComponentResult.privateKey);
-      pedersenAmount.add(genComponentResult.pedersenAmount);
+      if (genComponentResult.pedersenAmount != null) {
+        pedersenAmount.add(genComponentResult.pedersenAmount!);
+      }
       pedersenNonce.add(genComponentResult.pedersenNonce);
     }
     // Sanity checks on the generated components.
     assert(excessFee ==
-        pedersenAmount.reduce(
-            (a, b) => a + b)); // sanity check that we didn't mess up the above
+        pedersenAmount
+            .map((value) =>
+                value.toInt() ?? 0) // Convert to int and handle null values
+            .fold(0, (a, b) => a + b)); // Sum the elements
     assert(myComponents.toSet().length == myComponents.length); // no duplicates
 
     // Generate blind signature requests (see schnorr from Electron-Cash's schnorr.py)

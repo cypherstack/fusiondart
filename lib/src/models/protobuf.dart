@@ -21,7 +21,7 @@ class ComponentResult {
   final Proof proof; // Proof for this component.
   final Uint8List privateKey; // Private key for this component.
   // TODO type
-  final dynamic pedersenAmount; // Pedersen amount, type to be determined.
+  final BigInt? pedersenAmount; // Pedersen amount.
   final dynamic pedersenNonce; // Pedersen nonce, type to be determined.
 
   /// Constructor for the ComponentResult class.
