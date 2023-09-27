@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:bip340/bip340.dart' as bip340;
@@ -10,19 +9,18 @@ import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fixnum/fixnum.dart';
-import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/covert.dart';
 import 'package:fusiondart/src/encrypt.dart';
-import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
+import 'package:fusiondart/src/io.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/blind_signature_request.dart';
 import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/models/protobuf.dart';
 import 'package:fusiondart/src/models/transaction.dart';
-import 'package:fusiondart/src/pedersen.dart';
+import 'package:fusiondart/src/output_handling.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
@@ -109,24 +107,37 @@ class Fusion {
   (String, String) status = ("", ""); // Holds the current status as a Record.
   Connection? connection; // Holds the active Connection object.
 
-  int numComponents = 0; // Tracks the number of components.
-  double componentFeeRate = 0; // Defines the fee rate for each component.
-  double minExcessFee = 0; // Specifies the minimum excess fee.
-  double maxExcessFee = 0; // Specifies the maximum excess fee.
-  List<int> availableTiers = []; // Lists the available CashFusion tiers.
+  // int numComponents = 0; // Tracks the number of components.
+  // double componentFeeRate = 0; // Defines the fee rate for each component.
+  // double minExcessFee = 0; // Specifies the minimum excess fee.
+  // double maxExcessFee = 0; // Specifies the maximum excess fee.
+  // List<int> availableTiers = []; // Lists the available CashFusion tiers.
+  ({
+    int numComponents,
+    int componentFeeRate,
+    int minExcessFee,
+    int maxExcessFee,
+    List<int> availableTiers,
+  })? serverParams;
 
   int maxOutputs = 0; // Maximum number of outputs allowed.
-  int safetySumIn = 0; // The sum of all inputs, used for safety checks.
-  Map<int, int> safetyExcessFees = {}; // Holds safety excess fees.
-  Map<int, List<int>> tierOutputs = {}; // Associates tiers with outputs.
+  // int safetySumIn = 0; // The sum of all inputs, used for safety checks.
+  // Map<int, int> safetyExcessFees = {}; // Holds safety excess fees.
+  // Map<int, List<int>> tierOutputs = {}; // Associates tiers with outputs.
   // Not sure if this should be using the Output model.
+  ({
+    List<Input> inputs,
+    Map<int, List<int>> tierOutputs,
+    int safetySumIn,
+    Map<int, int> safetyExcessFees,
+  })? allocatedOutputs;
 
   int inactiveTimeLimit = 600000; // [ms] 10 minutes in milliseconds.
   int tier = 0; // Currently selected CashFusion tier.
   double beginTime = 0.0; // [s] Represent time in seconds.
   List<int> lastHash = <int>[]; // Holds the last hash used in a fusion.
   List<Address> reservedAddresses = <Address>[]; // List of reserved addresses.
-  int safetyExcessFee = 0; // Safety excess fee for the operation.
+  // int safetyExcessFee = 0; // Safety excess fee for the operation.
   DateTime tFusionBegin = DateTime.now(); // The timestamp when Fusion began.
   Uint8List covertDomainB = Uint8List(0); // Holds the covert domain in bytes.
 
@@ -280,7 +291,10 @@ class Fusion {
         await _socketWrapper!.connect();
 
         // Version check and download server params.
-        await greet();
+        serverParams = await IO.greet(
+          connection: connection!,
+          socketWrapper: _socketWrapper!,
+        );
 
         _socketWrapper!.status();
         serverConnectedAndGreeted = true;
@@ -297,7 +311,17 @@ class Fusion {
           return;
         }
 
-        await allocateOutputs();
+        allocatedOutputs = await OutputHandling.allocateOutputs(
+          connection: connection!,
+          socketWrapper: _socketWrapper!,
+          status: status.$1,
+          coins: coins,
+          currentChainHeight: localHeight,
+          serverParams: serverParams!,
+          getTransactionsByAddress: _getTransactionsByAddress,
+          getInputsByAddress: _getInputsByAddress,
+          getAddresses: _getAddresses,
+        );
         // In principle we can hook a pause in here -- user can tweak tier_outputs, perhaps cancelling some unwanted tiers.
 
         // Register for tiers, wait for a pool.
@@ -462,851 +486,6 @@ class Fusion {
     return true;
   }
 
-  /// Generates a non-zero random double.
-  ///
-  /// Produces a random double value that is guaranteed not to be zero using a
-  /// `Random` object parameter [rng] used for generating random numbers.
-  ///
-  /// Returns:
-  ///   A non-zero random double value.
-  static double nextNonZeroDouble(Random rng) {
-    // Start with 0.0.
-    double value = 0.0;
-
-    // Generate a random double value between 0.0 and 1.0 until the value is not 0.0.
-    while (value == 0.0) {
-      value = rng.nextDouble();
-    }
-
-    // Return the non-zero random double value.
-    return value;
-  }
-
-  /// Generates random outputs given specific parameters.
-  ///
-  /// Generates a list of random integer values for output tiers, adhering to the given parameters
-  /// [rng], [inputAmount], [scale], [offset], and [maxCount].
-  ///
-  /// Returns:
-  ///   A list of integer values representing the random outputs for the tier.
-  static List<int>? randomOutputsForTier(
-      Random rng, int inputAmount, int scale, int offset, int maxCount) {
-    // Check if the input amount is insufficient.
-    if (inputAmount < offset) {
-      return [];
-    }
-
-    // Initialize required variables.
-    double lambd = 1.0 / scale;
-    int remaining = inputAmount;
-    List<double> values =
-        []; // List of fractional random values without offset.
-    bool didBreak =
-        false; // Add this flag to detect when a break is encountered.
-
-    // Generate random values.
-    for (int i = 0; i < maxCount + 1; i++) {
-      double val = -lambd * log(nextNonZeroDouble(rng));
-      remaining -= (val.ceil() + offset);
-      if (remaining < 0) {
-        didBreak = true; // If you break, set this flag to true.
-        break;
-      }
-      values.add(val);
-    }
-
-    // Truncate values list if needed.
-    if (!didBreak && values.length > maxCount) {
-      values = values.sublist(0, maxCount);
-    }
-
-    if (values.isEmpty) {
-      // Our first try put us over the limit, so we have nothing to work with.
-      // (most likely, scale was too large).
-      return [];
-    }
-
-    int desiredRandomSum = inputAmount - values.length * offset;
-    assert(desiredRandomSum >= 0, 'desiredRandomSum is less than 0');
-    // Now we need to rescale and round the values so they fill up the desired.
-    // input amount exactly. We perform rounding in cumulative space so that the
-    // sum is exact, and the rounding is distributed fairly.
-
-    // Dart equivalent of itertools.accumulate.
-    List<double> cumsum = [];
-    double sum = 0;
-    for (double value in values) {
-      sum += value;
-      cumsum.add(sum);
-    }
-
-    // Rescale the cumsum to the desired sum.
-    double rescale = desiredRandomSum / cumsum[cumsum.length - 1];
-    List<int> normedCumsum = cumsum.map((v) => (rescale * v).round()).toList();
-    assert(normedCumsum[normedCumsum.length - 1] == desiredRandomSum,
-        'Last element of normedCumsum is not equal to desiredRandomSum');
-    List<int> differences = [];
-    differences.add(normedCumsum[0]); // First element
-    for (int i = 1; i < normedCumsum.length; i++) {
-      differences.add(normedCumsum[i] - normedCumsum[i - 1]);
-    }
-
-    // Add offset to differences.
-    List<int> result = differences.map((d) => offset + d).toList();
-
-    // Sanity check.
-    assert(result.reduce((a, b) => a + b) == inputAmount,
-        'Sum of result is not equal to inputAmount');
-
-    return result;
-  }
-
-  /// Generates the components required for a fusion transaction.
-  ///
-  /// Given the number of blank components [numBlanks], input components [inputs],
-  /// output components [outputs], and fee rate [feerate], this method generates and
-  /// returns a list of `ComponentResult` objects that include all necessary
-  /// details for a fusion transaction.
-  ///
-  /// Returns:
-  ///   A list of `ComponentResult` objects containing all the components needed for the transaction.
-  static List<ComponentResult> genComponents(
-      int numBlanks, List<Input> inputs, List<Output> outputs, int feerate) {
-    // Sanity check.
-    assert(numBlanks >= 0);
-
-    // Initialize list of components.
-    List<(Component, int)> components = [];
-
-    // Set up Pedersen setup instance.
-    // Uint8List hBytes = Uint8List.fromList(
-    //     [0x02] + 'CashFusion gives us fungibility.'.codeUnits);
-    // Uint8List hBytes = Uint8List.fromList(
-    //     [0x02, ...utf8.encode('CashFusion gives us fungibility.')]);
-    // Uint8List hBytes = Uint8List.fromList(
-    //     [...utf8.encode('\x02CashFusion gives us fungibility.')]);
-    Uint8List prefix = Uint8List.fromList([0x02]);
-    List<int> stringBytes = utf8.encode('CashFusion gives us fungibility.');
-    Uint8List hBytes = Uint8List.fromList([...prefix, ...stringBytes]);
-
-    // Set up Pedersen setup.
-    PedersenSetup setup = PedersenSetup(hBytes);
-
-    // Generate components.
-    for (Input input in inputs) {
-      // Calculate fee.
-      int fee = Utilities.componentFee(input.sizeOfInput(), feerate);
-
-      // Create input component.
-      Component comp = Component();
-      comp.input = InputComponent(
-          prevTxid: Uint8List.fromList(
-              input.prevTxid.reversed.toList()), // Why is this reversed?
-          prevIndex: input.prevIndex,
-          pubkey: input.pubKey,
-          amount: Int64(input.amount));
-
-      // Add component and fee to list.
-      components.add((comp, input.amount - fee));
-    }
-
-    // Generate components for outputs.
-    for (Output output in outputs) {
-      // Calculate fee.
-      List<int> script = output.addr.toScript();
-
-      // Calculate fee.
-      int fee = Utilities.componentFee(output.sizeOfOutput(), feerate);
-
-      // Create output component.
-      Component comp = Component();
-      comp.output =
-          OutputComponent(scriptpubkey: script, amount: Int64(output.value));
-
-      // Add component and fee to list.
-      components.add((comp, -output.value - fee));
-    }
-
-    // Generate components for blanks.
-    for (int i = 0; i < numBlanks; i++) {
-      Component comp = Component();
-      comp.blank = BlankComponent();
-      components.add((comp, 0));
-    }
-
-    // Initialize result list.
-    List<ComponentResult> resultList = [];
-
-    // Generate components.
-    components.asMap().forEach((cnum, componentRecord) {
-      // Generate salt.
-      Uint8List salt = Utilities.tokenBytes(32);
-      componentRecord.$1.saltCommitment = Utilities.sha256(salt);
-      Uint8List compser = componentRecord.$1.writeToBuffer();
-
-      // Generate keypair.
-      (Uint8List, Uint8List) keyPair = Utilities.genKeypair();
-      Uint8List privateKey = keyPair.$1;
-      Uint8List pubKey = keyPair.$2;
-
-      // Generate amount commitment.
-      Commitment commitmentInstance = setup.commit(
-        BigInt.from(componentRecord.$2),
-      );
-      Uint8List amountCommitment = commitmentInstance.pointPUncompressed;
-
-      // Convert BigInt nonce to Uint8List.
-      final Uint8List pedersenNonce = commitmentInstance.nonce.toBytes;
-
-      // Generating initial commitment.
-      InitialCommitment commitment = InitialCommitment(
-          saltedComponentHash:
-              Utilities.sha256(Uint8List.fromList([...compser, ...salt])),
-          amountCommitment: amountCommitment,
-          communicationKey: pubKey);
-
-      // Write commitment to buffer.
-      Uint8List commitser = commitment.writeToBuffer();
-
-      // Generate proof.
-      Proof proof =
-          Proof(componentIdx: cnum, salt: salt, pedersenNonce: pedersenNonce);
-
-      // Add result to list.
-      resultList.add(ComponentResult(
-          commitser, cnum, compser, proof, privateKey,
-          pedersenAmount: BigInt.from(componentRecord.$2)));
-      // TODO What about pedersenNonce?
-    });
-
-    return resultList;
-  }
-
-  /// Receives a message from the server with the modern API (vs `recv()`).
-  ///
-  /// Receives an expected message from the server based on the given list of message names
-  /// [expectedMsgNames]. Optionally, a [timeout] can be provided.
-  ///
-  /// TODO rename and return a GeneratedMessage or superclass that can include a FusionBegin
-  ///
-  /// Parameters:
-  /// - [expectedMsgNames]: The list of expected message names.
-  /// - [timeout] (optional): The timeout to use for the receive.
-  ///
-  /// Returns:
-  ///   A future that completes with the received `GeneratedMessage`.
-  ///
-  /// Throws:
-  /// - FusionError: if the connection is not initialized or a server error occurs.
-  Future<GeneratedMessage> recv2(List<String> expectedMsgNames,
-      {Duration? timeout}) async {
-    // Check if connection has been initialized.
-    if (connection == null) {
-      throw FusionError('Connection not initialized');
-    }
-
-    // Check if _socketWrapper has been initialized.
-    if (_socketWrapper == null) {
-      throw FusionError('Socket wrapper not initialized');
-    }
-    // This throw could be removed if it's an issue.
-
-    // Receive the message from the server.
-    (GeneratedMessage, String) result = await recvPb2(
-        _socketWrapper!, connection!, ServerMessage, expectedMsgNames,
-        timeout: timeout);
-
-    // Extract the message and message type.
-    GeneratedMessage submsg = result.$1;
-    String mtype = result.$2;
-
-    // Check if the message type is an error.
-    if (mtype == 'error') {
-      throw FusionError('server error: ${result.$1.toString()}');
-    }
-
-    // Return the message.
-    return submsg;
-  }
-
-  /// Receives a message from the server.
-  ///
-  /// [DEPRECATED]
-  ///
-  /// TODO rename or remove.
-  ///
-  /// Returns:
-  ///   A future that completes with the received `GeneratedMessage`.
-  ///
-  /// Throws:
-  /// - FusionError: if the connection is not initialized or a server error occurs.
-  Future<GeneratedMessage> recv(List<String> expectedMsgNames,
-      {Duration? timeout}) async {
-    // DEPRECATED
-    // TODO remove usages of this function.
-    if (connection == null) {
-      throw FusionError('Connection not initialized');
-    }
-
-    // Get the message from the server.
-    (GeneratedMessage, String) result = await recvPb(
-        connection!, ServerMessage, expectedMsgNames,
-        timeout: timeout);
-
-    // Extract the message and message type.
-    GeneratedMessage submsg = result.$1;
-    String mtype = result.$2;
-
-    // Check if the message type is an error.
-    if (mtype == 'error') {
-      throw FusionError('server error: ${submsg.toString()}');
-    }
-
-    // Return the message.
-    return submsg;
-  }
-
-  /// Sends a message to the server with the deprecated API.
-  ///
-  /// [DEPRECATED]
-  ///
-  /// TODO rename or remove
-  ///
-  /// Takes a `GeneratedMessage` object [submsg] and sends it to the server. Optionally,
-  /// a [timeout] can be specified.
-  Future<void> send(GeneratedMessage submsg, {Duration? timeout}) async {
-    // Check if connection has been initialized.
-    if (connection == null) {
-      throw FusionError('Connection not initialized');
-    }
-    // Previously this code just printed an error; if it's an issue, comment out the throw.
-
-    // Send the message to the server.
-    return await sendPb(connection!, ClientMessage, submsg, timeout: timeout);
-  }
-
-  /// Sends a message to the server with the modern API (vs. `send()`).
-  ///
-  /// Sends a `GeneratedMessage` object [submsg] to the server using the provided
-  /// [socketwrapper]. Optionally, a [timeout] can be specified.
-  ///
-  /// TODO rename
-  ///
-  /// Parameters:
-  /// - [socketwrapper]: The SocketWrapper object to use for communication.
-  /// - [submsg]: The GeneratedMessage to send.
-  /// - [timeout] (optional): The timeout to use for the send.
-  ///
-  /// Returns:
-  ///   A future that completes when the message has been sent.
-  ///
-  /// Throws:
-  /// - FusionError: if the connection is not initialized.
-  Future<void> send2(GeneratedMessage submsg, {Duration? timeout}) async {
-    // Check if _socketWrapper has been initialized.
-    if (_socketWrapper == null) {
-      throw FusionError('Socket wrapper not initialized');
-    }
-
-    // Check if connection has been initialized.
-    if (connection == null) {
-      throw FusionError('Connection not initialized');
-    }
-
-    // Send the message to the server.
-    return await sendPb2(_socketWrapper!, connection!, ClientMessage, submsg,
-        timeout: timeout);
-  }
-
-  /// Initializes communication by sending a greeting message to the server.
-  ///
-  /// Initiates the handshake by sending a `ClientHello` message to the server
-  /// using the given [socketwrapper] for communication.
-  ///
-  /// Returns:
-  ///   A `Future<void>` that completes once the handshake is successful.
-  ///
-  /// Throws:
-  ///   FusionError if there are problems with the server's configuration or if
-  ///   an unexpected message type is received.
-  Future<void> greet() async {
-    // Create the ClientHello message with version and genesis hash.
-    ClientHello clientHello = ClientHello(
-        version: Uint8List.fromList(utf8.encode(Protocol.VERSION)),
-        genesisHash: Utilities.getCurrentGenesisHash());
-
-    // Wrap the ClientHello in a ClientMessage.
-    ClientMessage clientMessage = ClientMessage()..clienthello = clientHello;
-
-    /*
-    Connection greet_connection_1 = Connection.withoutSocket();
-    // Let's move this up a level to the fusion_run and pass it in...
-    SocketWrapper socketwrapper = SocketWrapper(server_host, server_port);
-    await socketwrapper.connect();
-    */
-
-    // Send the message to the server.
-    // TODO should this be unawaited?
-    await send2(clientMessage);
-
-    // Wait for a ServerHello message in reply.
-    GeneratedMessage replyMsg = await recv2(['serverhello']);
-
-    // Process the ServerHello message.
-    if (replyMsg is ServerMessage) {
-      ServerHello reply = replyMsg.serverhello;
-
-      // Extract and set various server parameters.
-      numComponents = reply.numComponents;
-      componentFeeRate = reply.componentFeerate.toDouble();
-      minExcessFee = reply.minExcessFee.toDouble();
-      maxExcessFee = reply.maxExcessFee.toDouble();
-      availableTiers = reply.tiers.map((tier) => tier.toInt()).toList();
-
-      // Enforce some sensible limits, in case server is crazy
-      if (componentFeeRate > Protocol.MAX_COMPONENT_FEERATE) {
-        throw FusionError('excessive component feerate from server');
-      }
-      if (minExcessFee > 400) {
-        // note this threshold should be far below MAX_EXCESS_FEE.
-        throw FusionError('excessive min excess fee from server');
-      }
-      if (minExcessFee > maxExcessFee) {
-        throw FusionError('bad config on server: fees');
-      }
-      if (numComponents < Protocol.MIN_TX_COMPONENTS * 1.5) {
-        throw FusionError('bad config on server: num_components');
-      }
-    } else {
-      throw Exception(
-          'Received unexpected message type: ${replyMsg.runtimeType}');
-    }
-
-    return;
-  }
-
-  /// Selects coins for fusion.
-  ///
-  /// Takes a set of `Input` objects [_coins] and returns a Record containing
-  /// a list of eligible inputs, a list of ineligible inputs, the sum of the
-  /// values of the eligible buckets, a boolean flag indicating if there are
-  /// unconfirmed coins, and a boolean flag indicating if there are coinbase
-  /// coins.
-  ///
-  /// TODO utilize a response class.
-  ///
-  /// Parameters:
-  /// - [_coins]: The set of coins from which to select.
-  ///
-  /// Returns:
-  ///   A `Future<(
-  ///   List<(String, List<Input>)>, // Eligible
-  ///   List<(String, List<Input>)>, // Ineligible
-  ///   int, // sumValue
-  ///   bool, // hasUnconfirmed
-  ///   bool // hasCoinbase
-  ///   )>` that completes with a Record containing the eligible inputs, ineligible inputs,
-  ///   sum of the values of the eligible buckets, a boolean flag indicating if there are
-  ///   unconfirmed coins, and a boolean flag indicating if there are coinbase coins.
-  Future<
-      (
-        List<(String, List<Input>)>, // Eligible.
-        List<(String, List<Input>)>, // Ineligible.
-        int, // sumValue.
-        bool, // hasUnconfirmed.
-        bool // hasCoinbase.
-      )> selectCoins(List<Input> _coins) async {
-    List<(String, List<Input>)> eligible = []; // List of eligible inputs.
-    List<(String, List<Input>)> ineligible = []; // List of ineligible inputs.
-    bool hasUnconfirmed = false; // Are there unconfirmed coins?
-    bool hasCoinbase = false; // Are there coinbase coins?
-    int sumValue = 0; // Sum of the values of the eligible `Input`s.
-    int mincbheight = localHeight + COINBASE_MATURITY;
-
-    // Loop through the addresses in the wallet.
-    for (Address address in await _getAddresses()) {
-      // Get the coins for the address.
-      List<Input> acoins = await _getInputsByAddress(address.addr);
-
-      // Check if the address has any coins.
-      if (acoins.isEmpty) continue;
-
-      // Bool flag to indicate if the address is good (eligible).
-      bool good = true;
-
-      // TODO check if address is frozen
-      /*
-      if (wallet.frozenAddresses.contains(address)) {
-        good = false;
-      }
-      */
-
-      // Loop through the coins and check for eligibility.
-      for (var i = 0; i < acoins.length; i++) {
-        // Get the coin.
-        var c = acoins[i];
-
-        // Add the amount to the sum.
-        sumValue += c.amount;
-
-        // TODO check for tokens, maturity, etc.
-        // TODO DO NOT TEST THIS WITH A WALLET WITH TOKENS OR YOU MAY LOSE THEM !!!
-        /*
-        good = good &&
-            (i < 3 &&
-                c['token_data'] == null &&
-                c['slp_token'] == null &&
-                !c['is_frozen_coin'] &&
-                (!c['coinbase'] || c['height'] <= mincbheight)); // where `int mincbheight = localHeight + COINBASE_MATURITY;`
-
-        if (c['height'] <= 0) {
-          good = false;
-          hasUnconfirmed = true;
-        }
-
-        hasCoinbase = hasCoinbase || c['coinbase'];
-        */
-      }
-      if (good) {
-        // Add the address and coins to the eligible list.
-        eligible.add((address.addr, acoins));
-      } else {
-        // Add the address and coins to the ineligible list.
-        ineligible.add((address.addr, acoins));
-      }
-    }
-
-    // Return the Record.
-    return (
-      eligible.toList(),
-      ineligible.toList(),
-      sumValue,
-      hasUnconfirmed,
-      hasCoinbase
-    );
-  }
-
-  /// Selects random coins for fusion.
-  ///
-  /// Takes a double [fraction] and a list of eligible buckets [eligible] and returns a list of
-  /// random coins.
-  ///
-  /// Parameters:
-  /// - [fraction]: The fraction of eligible `Input`s to select.
-  /// - [eligible]: The list of eligible `Input`s.
-  ///
-  /// Returns:
-  ///   A `Future<List<Input>>` that completes with a list of random coins.
-  Future<List<Input>> selectRandomCoins(
-      double fraction, List<(String, List<Input>)> eligible) async {
-    // Shuffle the eligible buckets.
-    var addrCoins = List<(String, List<Input>)>.from(eligible);
-    addrCoins.shuffle();
-
-    // Initialize the result set.
-    Set<String> resultTxids = {};
-
-    // Initialize the result list.
-    List<Input> result = [];
-
-    // Counts the number of coins in the result so far.
-    int numCoins = 0;
-
-    // Counts the number of attempts to select coins.
-    int maxAttempts = 100;
-
-    // Counts the number of attempts to select coins.
-    int numAttempts = 0;
-
-    // Selection loop.
-    //
-    // This was added because the original code was failing to select a bucket
-    // with coins when the number of coins was low.  This loop will try to select
-    // a bucket with coins if the number of coins is low and we've tried to select
-    // coins randomly over 100 (maxAttempts) times.
-    while (true) {
-      // Loop through each coin and check it.
-      for (var record in addrCoins) {
-        // Get the address and coins.
-        var addr = record.$1;
-        var acoins = record.$2;
-
-        // Check if we have enough coins.
-        if (numCoins >= DEFAULT_MAX_COINS) {
-          // We have enough coins, so break.
-          break;
-        } else if (numCoins + acoins.length > DEFAULT_MAX_COINS) {
-          // We have too many coins, so truncate the coins.
-          continue;
-        }
-
-        // Check if we should skip this bucket.
-        if (Random().nextDouble() > fraction) {
-          continue;
-        }
-
-        // Semi-linkage check
-        //
-        // We consider all txids involving the address, historical and current.
-
-        // Get the transactions for the address.
-        List<Transaction> ctxs = await _getTransactionsByAddress(addr);
-
-        // Extract the txids from the transactions.
-        Set<String> ctxids = ctxs.map((tx) {
-          return tx.txid();
-        }).toSet();
-
-        // Check if there are any collisions.
-        var collisions = ctxids.intersection(resultTxids);
-
-        // Check if we should skip this bucket.
-        //
-        // Note each collision gives a separate chance of discarding this bucket.
-        if (Random().nextDouble() >
-            pow(KEEP_LINKED_PROBABILITY, collisions.length)) {
-          continue;
-        }
-
-        // Add the coins and txids to the result.
-        numCoins += acoins.length;
-        result.addAll(acoins);
-        resultTxids.addAll(ctxids);
-      }
-
-      // Check if we have enough coins.
-      //
-      // If we don't and if we've tried to select coins randomly over 100 times,
-      // then we'll try the first bucket which has coins.
-      if (result.isEmpty && numAttempts > maxAttempts) {
-        try {
-          // Try to find a bucket with coins.
-          var res = addrCoins.firstWhere((record) => record.$2.isNotEmpty).$2;
-          result = res.toList();
-        } catch (e) {
-          // Handle exception where all eligible buckets were cleared.
-          throw FusionError('No coins available');
-        }
-      } else if (result.isNotEmpty) {
-        // We have enough coins, so break the selection loop.
-        break;
-      }
-
-      numAttempts++;
-    }
-
-    // Return the result.
-    return result;
-  }
-
-  /// Gets the fraction parameter used to help select coins.
-  ///
-  /// Takes an integer [sumValue] and returns a double representing the fraction
-  /// of coins to select.
-  ///
-  /// TODO implement custom modes.
-  ///
-  /// Parameters:
-  /// - [sumValue]: The sum of the values of the eligible buckets.
-  ///
-  /// Returns:
-  ///  A double representing the fraction of coins to select.
-  double getFraction(int sumValue) {
-    String mode = 'normal'; // TODO get from wallet configuration
-    // 'normal', 'consolidate', 'fan-out', etc.
-    double fraction = 0.1;
-
-    // TODO implement custom modes.
-    /*
-    if (mode == 'custom') {
-      String selectType = walletConf.selector[0];
-      double selectAmount = walletConf.selector[1];
-
-      if (selectType == 'size' && sumValue.toInt() != 0) {
-        fraction = COIN_FRACTION_FUDGE_FACTOR * selectAmount / sumValue;
-      } else if (selectType == 'count' && selectAmount.toInt() != 0) {
-        fraction = COIN_FRACTION_FUDGE_FACTOR / selectAmount;
-      } else if (selectType == 'fraction') {
-        fraction = selectAmount;
-      }
-      // Note: fraction at this point could be <0 or >1 but doesn't matter.
-    } else */
-    if (mode == 'consolidate') {
-      fraction = 1.0;
-    } else if (mode == 'normal') {
-      fraction = 0.5;
-    } else if (mode == 'fan-out') {
-      fraction = 0.1;
-    }
-
-    return fraction;
-  }
-
-  /// Allocates outputs for transaction components.
-  ///
-  /// Uses server parameters and local constraints to determine the number and
-  /// sizes of the outputs in a transaction through a [_socketWrapper].
-  ///
-  /// Returns:
-  ///   A `Future<void>` that completes once the outputs are successfully allocated.
-  ///
-  /// Throws:
-  /// - FusionError: if any constraints or limits are violated.
-  Future<void> allocateOutputs() async {
-    Utilities.debugPrint("DBUG allocateoutputs 746");
-    Utilities.debugPrint("CHECK socketwrapper 746");
-
-    // Check if the connection is initialized.  _socketWrapper will need to be initialized.
-    if (_socketWrapper == null) {
-      throw FusionError('Connection not initialized');
-    }
-
-    // Initial sanity checks.
-    _socketWrapper!.status();
-    assert(['setup', 'connecting'].contains(status.$1));
-
-    // Get the coins.
-    (
-      List<(String, List<Input>)>, // Eligible.
-      List<(String, List<Input>)>, // Ineligible.
-      int, // sumValue.
-      bool, // hasUnconfirmed.
-      bool // hasCoinbase _selections = await selectCoins(_inputs);
-    ) _selections = await selectCoins(coins);
-
-    // Initialize the eligible set.
-    List<Input> eligible = [];
-
-    // Loop through each key-value pair in the Map to extract Inputs and put them in the Set.
-    for ((String, List<Input>) inputList in _selections.$1) {
-      for (Input input in inputList.$2) {
-        if (!eligible.contains(input)) {
-          // Shouldn't this be accomplished by the Set?
-          eligible.add(input);
-        }
-      }
-    }
-
-    // Select random coins from the eligible set.
-    inputs =
-        await selectRandomCoins(getFraction(_selections.$3), _selections.$1);
-    /*await selectRandomCoins(
-            numComponents / eligible.length, _selections.$1);*/
-    int numInputs = inputs.length; // Number of inputs selected.
-
-    // Calculate limits on the number of components and outputs.
-    int maxComponents = min(numComponents, Protocol.MAX_COMPONENTS);
-    int maxOutputs = maxComponents - numInputs;
-
-    // More sanity checks.
-    if (maxOutputs < 1) {
-      throw FusionError('Too many inputs ($numInputs >= $maxComponents)');
-    }
-    assert(maxOutputs >= 1);
-
-    // Calculate the number of distinct inputs.
-    int numDistinct = inputs.map((e) => e.value).toSet().length;
-    int minOutputs = max(Protocol.MIN_TX_COMPONENTS - numDistinct, 1);
-    if (maxOutputs < minOutputs) {
-      throw FusionError(
-          'Too few distinct inputs selected ($numDistinct); cannot satisfy output count constraint (>= $minOutputs, <= $maxOutputs)');
-    }
-
-    // Calculate the available amount for outputs.
-    int sumInputsValue =
-        inputs.map((input) => input.value).reduce((a, b) => a + b);
-    int inputFees = inputs.fold(
-        0,
-        (sum, input) =>
-            sum +
-            Utilities.componentFee(
-                input.sizeOfInput(), componentFeeRate.toInt()));
-    /*
-    // Equivalent to the fold above.
-    int inputFees = 0;
-    for (Input input in inputs) {
-      inputFees +=
-      Utilities.componentFee(input.sizeOfInput(), componentFeeRate.toInt());
-    }
-     */
-    int availForOutputs = sumInputsValue - inputFees - minExcessFee.toInt();
-
-    // Calculate fees per output.
-    int feePerOutput = Utilities.componentFee(34, componentFeeRate.toInt());
-    int offsetPerOutput = Protocol.MIN_OUTPUT + feePerOutput;
-
-    // Check if the selected inputs have sufficient value.
-    if (availForOutputs < offsetPerOutput) {
-      throw FusionError('Selected inputs had too little value');
-    }
-
-    // Allocate the outputs based on available tiers.
-    //
-    // The allocated outputs and excess fees are stored in instance variables.
-    Utilities.debugPrint("DBUG allocateoutputs 785");
-    tierOutputs = {};
-    Map<int, int> excessFees = <int, int>{};
-
-    // Loop through each available tier to determine the optimal fee and outputs.
-    for (int scale in availableTiers) {
-      // Calculate the maximum fuzz fee for this tier, which is the scale divided by 1,000,000.
-      int fuzzFeeMax = scale ~/ 1000000;
-
-      // Reduce the maximum allowable fuzz fee considering the minimum and maximum
-      // excess fees and the maximum limit defined in the Protocol.
-      int fuzzFeeMaxReduced = min(
-          fuzzFeeMax,
-          min(Protocol.MAX_EXCESS_FEE - minExcessFee.toInt(),
-              maxExcessFee.toInt()));
-
-      // Ensure that the reduced maximum fuzz fee is non-negative.
-      assert(fuzzFeeMaxReduced >= 0);
-
-      // Randomly pick a fuzz fee in the range `[0, fuzzFeeMaxReduced]`.
-      Random rng = Random();
-      int fuzzFee = rng.nextInt(fuzzFeeMaxReduced + 1);
-
-      // Reduce the available amount for outputs by the selected fuzz fee.
-      int reducedAvailForOutputs = availForOutputs - fuzzFee;
-
-      // If the reduced available amount for outputs is less than the offset per
-      // output, skip to the next iteration.
-      if (reducedAvailForOutputs < offsetPerOutput) {
-        continue;
-      }
-
-      // Generate a list of random outputs for this tier.
-      List<int>? _outputs = randomOutputsForTier(
-          rng, reducedAvailForOutputs, scale, offsetPerOutput, maxOutputs);
-
-      // Check if the list of outputs is null or has fewer items than the minimum
-      // required number of outputs.
-      if (_outputs == null || _outputs.length < minOutputs) {
-        continue;
-      }
-
-      // Adjust each output value by subtracting the fee per output.
-      _outputs = _outputs.map((o) => o - feePerOutput).toList();
-
-      // Ensure the total number of components (inputs + outputs) does not exceed
-      // the maximum limit defined in the Protocol.
-      assert(inputs.length + (_outputs.length) <= Protocol.MAX_COMPONENTS);
-
-      // Store the calculated excess fee for this tier.
-      excessFees[scale] = sumInputsValue - inputFees - reducedAvailForOutputs;
-
-      // Store the list of output values for this tier.
-      tierOutputs[scale] = _outputs;
-    }
-
-    Utilities.debugPrint('Possible tiers: $tierOutputs');
-
-    // Save some parameters for safety checks.
-    safetySumIn = sumInputsValue;
-    safetyExcessFees = excessFees;
-    return;
-  } // End of `allocateOutputs()`.
-
   /// Registers a client to a fusion server and waits for the fusion process to start.
   ///
   /// This method is responsible for the client-side setup and management of the
@@ -1324,12 +503,12 @@ class Fusion {
 
     // Placeholder for messages from the server.
     //
-    // This used to be `dynamic`, but then recv and recv2 were changed to return
+    // This used to be `dynamic`, but then recv and IO.recv were changed to return
     // a GeneratedMessage.
     GeneratedMessage msg;
 
     // Initialize a map to store the outputs for each tier.
-    Map<int, List<int>> tierOutputs = this.tierOutputs;
+    Map<int, List<int>> tierOutputs = allocatedOutputs!.tierOutputs;
 
     // Sort the tiers in ascending order.
     List<int> tiersSorted = tierOutputs.keys.toList()..sort();
@@ -1363,7 +542,11 @@ class Fusion {
     ClientMessage clientMessage = ClientMessage()..joinpools = joinPools;
 
     // Send the message to the server.
-    await send2(clientMessage);
+    await IO.send(
+      clientMessage,
+      socketWrapper: _socketWrapper!,
+      connection: connection!,
+    );
 
     ({String status, String message}) status = (
       status: 'waiting',
@@ -1383,7 +566,9 @@ class Fusion {
     // Main loop to receive updates from the server.
     while (true) {
       Utilities.debugPrint("RECEIVE LOOP 870............DEBUG");
-      msg = await recv2([_tierStatusUpdateKey, _fusionBeginKey],
+      msg = await IO.recv([_tierStatusUpdateKey, _fusionBeginKey],
+          socketWrapper: _socketWrapper!,
+          connection: connection!,
           timeout: Duration(seconds: 10));
 
       /*if (msg == null) continue;*/
@@ -1625,9 +810,6 @@ class Fusion {
         .map((pair) => Output(value: pair[0] as int, addr: pair[1] as Address))
         .toList();
 
-    // Retrieve the safety excess fee for the given tier.
-    safetyExcessFee = safetyExcessFees[tier] ?? 0;
-
     Utilities.debugPrint(
         "starting fusion rounds at tier $tier: ${coins.length} inputs and ${outputs.length} outputs");
   }
@@ -1671,7 +853,7 @@ class Fusion {
         covertSSL,
         proxyInfo.host.address,
         proxyInfo.port,
-        numComponents,
+        serverParams!.numComponents,
         Protocol.COVERT_SUBMIT_WINDOW,
         Protocol.COVERT_SUBMIT_TIMEOUT);
     try {
@@ -1704,7 +886,7 @@ class Fusion {
         // Update the status based on connection counts.
         (String, String) status = (
           'running',
-          'Setting up Tor connections ($numConnected+$numSpareConnected out of $numComponents)'
+          'Setting up Tor connections ($numConnected+$numSpareConnected out of ${serverParams?.numComponents})'
         );
 
         // Wait for 1 second before re-checking.
@@ -1745,7 +927,9 @@ class Fusion {
         (2 * Protocol.WARMUP_SLOP + Protocol.STANDARD_TIMEOUT).toInt();
 
     // Await the start of round message from the server.
-    GeneratedMessage msg = await recv2(['startround'],
+    GeneratedMessage msg = await IO.recv(['startround'],
+        socketWrapper: _socketWrapper!,
+        connection: connection!,
         timeout: Duration(seconds: timeoutInSeconds));
 
     // Initialize the covert timer base
@@ -1791,12 +975,12 @@ class Fusion {
         (sum, input) =>
             sum +
             Utilities.componentFee(
-                input.sizeOfInput(), componentFeeRate.toInt()));
+                input.sizeOfInput(), serverParams!.componentFeeRate));
     final outputFees = outputs.length *
         Utilities.componentFee(
             34, // 34 is the size of a P2PKH output.
-            componentFeeRate
-                .toInt()); // See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/fusion.py#L820
+            serverParams!
+                .componentFeeRate); // See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/fusion.py#L820
     int sumIn = inputs.fold(0, (sum, e) => sum + e.amount);
     int sumOut = outputs.fold(0, (sum, e) => sum + e.value);
 
@@ -1806,8 +990,8 @@ class Fusion {
 
     // Perform the safety checks!
     final safeties = [
-      sumIn == safetySumIn,
-      excessFee == safetyExcessFee,
+      sumIn == allocatedOutputs!.safetySumIn,
+      excessFee == (allocatedOutputs!.safetyExcessFees[tier] ?? 0),
       excessFee <= Protocol.MAX_EXCESS_FEE,
       totalFee <= Protocol.MAX_FEE,
     ];
@@ -1821,14 +1005,16 @@ class Fusion {
     // Extract round public key and blind nonce points from the server message.
     final roundPubKey = startRoundMsg.roundPubkey;
     final blindNoncePoints = startRoundMsg.blindNoncePoints;
-    if (blindNoncePoints.length != numComponents) {
+    if (blindNoncePoints.length != serverParams!.numComponents) {
       throw FusionError('blind nonce miscount');
     }
 
     // Generate components and related data
-    int numBlanks = numComponents - inputs.length - outputs.length;
+    int numBlanks =
+        serverParams!.numComponents - inputs.length - outputs.length;
     final List<ComponentResult> genComponentsResults =
-        genComponents(numBlanks, coins, outputs, componentFeeRate.toInt());
+        OutputHandling.genComponents(
+            numBlanks, coins, outputs, serverParams!.componentFeeRate);
 
     // Initialize lists to store various parts of the component data.
     final List<Uint8List> myCommitments = [];
@@ -1891,16 +1077,22 @@ class Fusion {
     }
 
     // Send initial commitments, fees, and other data to the server.
-    await send2(PlayerCommit(
-      initialCommitments: myCommitments,
-      excessFee: Int64(excessFee),
-      pedersenTotalNonce: pedersenNonce.cast<int>(),
-      randomNumberCommitment: crypto.sha256.convert(randomNumber).bytes,
-      blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
-    ));
+    await IO.send(
+      PlayerCommit(
+        initialCommitments: myCommitments,
+        excessFee: Int64(excessFee),
+        pedersenTotalNonce: pedersenNonce.cast<int>(),
+        randomNumberCommitment: crypto.sha256.convert(randomNumber).bytes,
+        blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
+      ),
+      socketWrapper: _socketWrapper!,
+      connection: connection!,
+    );
 
     // Await blind signature responses from the server
-    msg = await recv2(['blindsigresponses'],
+    msg = await IO.recv(['blindsigresponses'],
+        socketWrapper: _socketWrapper!,
+        connection: connection!,
         timeout: Duration(seconds: Protocol.T_START_COMPS.toInt()));
 
     // Validate type and length of the received message and perform a sanity-check on it.
@@ -1969,7 +1161,9 @@ class Fusion {
     covert.scheduleSubmissions(targetDateTime, messages);
 
     // While submitting, we download the (large) full commitment list.
-    msg = await recv2(['allcommitments'],
+    msg = await IO.recv(['allcommitments'],
+        socketWrapper: _socketWrapper!,
+        connection: connection!,
         timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()));
     AllCommitments allCommitmentsMsg = msg as AllCommitments;
     List<InitialCommitment> allCommitments =
@@ -1997,7 +1191,9 @@ class Fusion {
     }
 
     // Once all components are received, the server shares them with us:
-    msg = await recv2(['sharecovertcomponents'],
+    msg = await IO.recv(['sharecovertcomponents'],
+        socketWrapper: _socketWrapper!,
+        connection: connection!,
         timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()));
 
     ShareCovertComponents shareCovertComponentsMsg =
@@ -2109,7 +1305,10 @@ class Fusion {
               Protocol.TS_EXPECTING_COVERT_COMPONENTS)
           .toInt();
       Duration timeout = Duration(milliseconds: timeoutMillis);
-      msg = await recv2(['fusionresult'], timeout: timeout);
+      msg = await IO.recv(['fusionresult'],
+          socketWrapper: _socketWrapper!,
+          connection: connection!,
+          timeout: timeout);
 
       // Critical check on server's response timing.
       if (covertClock() > Protocol.T_EXPECTING_CONCLUSION) {
@@ -2226,15 +1425,21 @@ class Fusion {
     // The comment is asking if this call should be awaited or not,
     // depending on whether the program needs to pause execution until the data is sent.
     // TODO should this be unawaited?
-    await send2(MyProofsList(
-        encryptedProofs: encodedEncproofs, randomNumber: randomNumber));
+    await IO.send(
+      MyProofsList(
+          encryptedProofs: encodedEncproofs, randomNumber: randomNumber),
+      socketWrapper: _socketWrapper!,
+      connection: connection!,
+    );
 
     // Update the status to indicate that the program is in the process of checking proofs.
     status = ('running', 'round failed - checking proofs');
 
     // Receive the list of proofs from the other parties
     Utilities.debugPrint("receiving proofs");
-    msg = await recv2(['theirproofslist'],
+    msg = await IO.recv(['theirproofslist'],
+        socketWrapper: _socketWrapper!,
+        connection: connection!,
         timeout: Duration(seconds: (2 * Protocol.STANDARD_TIMEOUT).round()));
 
     // Initialize a list to store proofs that should be blamed for failure.
@@ -2307,8 +1512,7 @@ class Fusion {
         // Convert badComponents to List<int>
         List<int> badComponentsList = badComponents.toList();
         // Convert componentFeeRate to int if it's double.
-        int componentFeerateInt = componentFeeRate
-            .round(); // or use .toInt() if you want to truncate instead of rounding.
+        int componentFeerateInt = serverParams!.componentFeeRate;
 
         inpComp = validateProofInternal(
           proofBlob,
@@ -2360,7 +1564,11 @@ class Fusion {
 
     // Send the blame list to the server
     // TODO should this be unawaited?
-    await send2(Blames(blames: blames));
+    await IO.send(
+      Blames(blames: blames),
+      socketWrapper: _socketWrapper!,
+      connection: connection!,
+    );
     Utilities.debugPrint("sending blames");
 
     // Update the status to indicate that the program is waiting for the round to restart.
@@ -2369,7 +1577,9 @@ class Fusion {
     // Await the final 'restartround' message. It might take some time
     // to arrive since other players might be slow, and then the server
     // itself needs to check blockchain.
-    await recv2(['restartround'],
+    await IO.recv(['restartround'],
+        socketWrapper: _socketWrapper!,
+        connection: connection!,
         timeout: Duration(
             seconds: 2 *
                 (Protocol.STANDARD_TIMEOUT.round() +
