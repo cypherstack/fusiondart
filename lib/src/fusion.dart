@@ -32,52 +32,62 @@ import 'package:protobuf/protobuf.dart';
 
 final bool kDebugPrintEnabled = true;
 
+final class FusionParams {
+  // CashFusion server host.
+  // Alternative host: `"fusion.servo.cash"`.
+
+  final String serverHost = "cashfusion.stackwallet.com";
+
+  // Server port.
+  // For use with the alternative host above, use `8789`.
+  final int serverPort = 8787;
+
+  final bool serverSsl = false;
+}
+
 /// Fusion class is responsible for coordinating the CashFusion transaction process.
 ///
 /// It maintains the state and controls the flow of a fusion operation.
 class Fusion {
+  final FusionParams _fusionParams;
+
   // Private late finals used for dependency injection.
-  // Disabled because _getUnusedReservedChangeAddresses fulfills all requirements.
   late final Future<List<Address>> Function() _getAddresses;
   late final Future<List<Input>> Function(String address) _getInputsByAddress;
   late final Future<List<Transaction>> Function(String address)
       _getTransactionsByAddress;
-  /*late final Future<Address> Function() _createNewReservedChangeAddress;*/
   late final Future<List<Address>> Function(int numberOfAddresses)
       _getUnusedReservedChangeAddresses;
   late final Future<({InternetAddress host, int port})> Function()
       _getSocksProxyAddress;
 
   /// Constructor that sets up a Fusion object.
-  Fusion({
+  Fusion(this._fusionParams);
+
+  /// Method to initialize Fusion instance with necessary wallet methods.
+  /// The methods injected here are used for various operations throughout the fusion process.
+  Future<void> initFusion({
     required Future<List<Address>> Function() getAddresses,
     required Future<List<Input>> Function(String address) getInputsByAddress,
     required Future<List<Transaction>> Function(String address)
         getTransactionsByAddress,
-    /*required Future<Address> Function() createNewReservedChangeAddress,*/
     required Future<List<Address>> Function(int numberOfAddresses)
         getUnusedReservedChangeAddresses,
     required Future<({InternetAddress host, int port})> Function()
         getSocksProxyAddress,
-  }); /*{
-    initializeConnection(host, port);
-  }
+  }) async {
+    _getAddresses = getAddresses;
+    _getInputsByAddress = getInputsByAddress;
+    _getTransactionsByAddress = getTransactionsByAddress;
+    _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
+    _getSocksProxyAddress = getSocksProxyAddress;
 
-  Future<void> initializeConnection(String host, int port) async {
-    Socket socket = await Socket.connect(host, port);
-    connection = Connection()..socket = socket;
+// Load coinlib.
+    await coinlib.loadCoinlib();
   }
-   */
 
   // Host and port variables.
   // TODO parameterize; should these be fed in as parameters upon construction/instantiation?
-  bool serverSsl = false;
-
-  String serverHost = "cashfusion.stackwallet.com"; // CashFusion server host.
-  // Alternative host: `"fusion.servo.cash"`.
-
-  int serverPort = 8787; // Server port.
-  // For use with the alternative host above, use `8789`.
 
   int covertPort = 0; // Covert connection port.
   bool covertSSL = false; // Use SSL for covert connection?
@@ -141,30 +151,6 @@ class Fusion {
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/conf.py#L68
 
   SocketWrapper? _socketWrapper;
-
-  /// Method to initialize Fusion instance with necessary wallet methods.
-  /// The methods injected here are used for various operations throughout the fusion process.
-  Future<void> initFusion({
-    required Future<List<Address>> Function() getAddresses,
-    required Future<List<Input>> Function(String address) getInputsByAddress,
-    required Future<List<Transaction>> Function(String address)
-        getTransactionsByAddress,
-    // required Future<Address> Function() createNewReservedChangeAddress,
-    required Future<List<Address>> Function(int numberOfAddresses)
-        getUnusedReservedChangeAddresses,
-    required Future<({InternetAddress host, int port})> Function()
-        getSocksProxyAddress,
-  }) async {
-    _getAddresses = getAddresses;
-    _getInputsByAddress = getInputsByAddress;
-    _getTransactionsByAddress = getTransactionsByAddress;
-    // _createNewReservedChangeAddress = createNewReservedChangeAddress;
-    _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
-    _getSocksProxyAddress = getSocksProxyAddress;
-
-    // Load coinlib.
-    await coinlib.loadCoinlib();
-  }
 
   /// Adds Unspent Transaction Outputs (UTXOs) from [utxoList] to the `coins` list as `Input`s.
   ///
@@ -261,27 +247,35 @@ class Fusion {
       status = ("connecting", "");
       try {
         connection = await Connection.openConnection(
-          serverHost,
-          serverPort,
+          _fusionParams.serverHost,
+          _fusionParams.serverPort,
           connTimeout: 5,
           defaultTimeout: 5,
-          ssl: serverSsl,
+          ssl: _fusionParams.serverSsl,
         );
       } catch (e) {
         Utilities.debugPrint("Connect failed: $e");
-        String sslstr = serverSsl ? ' SSL ' : '';
+        String sslstr = _fusionParams.serverSsl ? ' SSL ' : '';
         throw FusionError(
-            'Could not connect to $sslstr$serverHost:$serverPort');
+          "Could not connect to "
+          "$sslstr${_fusionParams.serverHost}:${_fusionParams.serverPort}",
+        );
       }
 
       // Once connection is successful, wrap operations inside this block.
       //
       // Within this block, version checks, downloads server params, handles coins and runs rounds.
       try {
-        _socketWrapper = SocketWrapper(serverHost, serverPort);
+        _socketWrapper = SocketWrapper(
+          _fusionParams.serverHost,
+          _fusionParams.serverPort,
+        );
 
         if (_socketWrapper == null) {
-          throw FusionError('Could not connect to $serverHost:$serverPort');
+          throw FusionError(
+            "Could not connect to "
+            "${_fusionParams.serverHost}:${_fusionParams.serverPort}",
+          );
         }
         await _socketWrapper!.connect();
 
