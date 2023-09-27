@@ -7,6 +7,7 @@ import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/fusiondart.dart';
+import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
@@ -60,42 +61,6 @@ abstract class Utilities {
     return ((int64 * numPositions) >> 64).toInt();
   }
 
-  // /// Generates public keys from a given private key.
-  // ///
-  // /// TODO make sure this return different public keys.
-  // ///
-  // /// Parameters:
-  // /// - [privkey] A private key in String format.
-  // ///
-  // /// Returns:
-  // ///   A list of public keys.
-  // static List<String> pubkeysFromPrivkey(String privKey) {
-  //   // This is a placeholder implementation.
-  //   return [privateKeyToPublicKey(privKey), privateKeyToPublicKey(privKey)];
-  // }
-
-  // /// Returns the public key from a given private key.
-  // ///
-  // /// TODO use ones of the libraries we already have for this.
-  // static String privateKeyToPublicKey(String privKey) {
-  //
-  //   coinlib.HDPrivateKey.decode("b58").
-  //
-  //
-  //   final secp256k1 = ECCurve_secp256k1();
-  //   final bigIntPrivateKey = BigInt.parse(privKey, radix: 16);
-  //
-  //   final private = ECPrivateKey(bigIntPrivateKey, secp256k1);
-  //   final Q = secp256k1.G *
-  //       private
-  //           .d; // This performs the elliptic curve multiplication to generate the public key.
-  //   // final ecPublicKey = ECPublicKey(Q, secp256k1);
-  //
-  //   // Convert the public key's Q value (ECPoint) to a byte array (Uint8List).
-  //   final publicKeyCompressed = Uint8List.fromList(Q!.getEncoded(true));
-  //   return utf8.decode(publicKeyCompressed);
-  // }
-
   /// Determines the dust limit based on the length of the transaction.
   ///
   /// See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/util.py#L70
@@ -121,8 +86,6 @@ abstract class Utilities {
   ///   The extracted Address.
   static Address getAddressFromOutputScript(Uint8List scriptPubKey) {
     // Throw exception if this is not a standard P2PKH address.
-    //
-    // TODO use one of the libraries we already have for this.
     if (scriptPubKey.length == 25 &&
             scriptPubKey[0] == 0x76 && // OP_DUP
             scriptPubKey[1] == 0xa9 && // OP_HASH160
@@ -148,8 +111,6 @@ abstract class Utilities {
 
   /// Verifies a Schnorr signature.
   ///
-  /// TODO implement.
-  ///
   /// Parameters:
   /// - [pubkey] The public key as an ECPoint.
   /// - [signature] The signature as a List<int>.
@@ -160,9 +121,10 @@ abstract class Utilities {
   static bool schnorrVerify(
       ECPoint pubKey, List<int> signature, Uint8List messageHash) {
     return bip340.verify(
-        hex.encode(pubKey.getEncoded(false)), // false indicates uncompressed.
-        hex.encode(messageHash),
-        hex.encode(signature));
+      hex.encode(pubKey.getEncoded(false)), // false indicates uncompressed.
+      hex.encode(messageHash),
+      hex.encode(signature),
+    );
   }
 
   /// Formats a given number of satoshis.
@@ -177,7 +139,7 @@ abstract class Utilities {
   ///   The formatted satoshis as a string.
   static String formatSatoshis(sats, {int numZeros = 8}) {
     // To implement
-    return "";
+    throw UnimplementedError(" // TODO implement formatSatoshis.");
   }
 
   /// Updates the wallet label for a given transaction ID.
@@ -189,6 +151,7 @@ abstract class Utilities {
   /// - [label] The new label for the transaction.
   static void updateWalletLabel(String txid, String label) {
     // TODO implement; call the wallet layer.
+    throw UnimplementedError(" // TODO implement updateWalletLabel");
   }
 
   /// Generates a random sequence of bytes of a given [length].
@@ -276,17 +239,17 @@ abstract class Utilities {
       int roundTime,
       List<List<int>> allCommitments,
       List<List<int>> allComponents) {
-    return listHash([
+    return _listHash([
       utf8.encode('Cash Fusion Round'),
       lastHash,
       roundPubkey,
-      bigIntToBytes(BigInt.from(roundTime)),
-      listHash(allCommitments),
-      listHash(allComponents),
+      BigInt.from(roundTime).toBytes,
+      _listHash(allCommitments),
+      _listHash(allComponents),
     ]);
   }
 
-  static List<int> listHash(Iterable<List<int>> iterable) {
+  static List<int> _listHash(Iterable<List<int>> iterable) {
     List<int> bytes = <int>[];
 
     for (List<int> x in iterable) {
@@ -319,10 +282,11 @@ abstract class Utilities {
   ///   A tuple containing the private key and the public key as Uint8List.
   static (Uint8List, Uint8List) genKeypair() {
     // Generate a private key using secure random values and curve's bit length
-    BigInt privKeyBigInt = _generatePrivateKey(secp256k1Params.n.bitLength);
+    final BigInt privKeyBigInt =
+        _generatePrivateKey(secp256k1Params.n.bitLength);
 
     // Calculate the public key point using elliptic curve multiplication
-    ECPoint? pubKeyPoint = secp256k1Params.G * privKeyBigInt;
+    final ECPoint? pubKeyPoint = secp256k1Params.G * privKeyBigInt;
 
     // Check for any errors in public key generation
     if (pubKeyPoint == null) {
@@ -330,8 +294,8 @@ abstract class Utilities {
     }
 
     // Convert the private and public keys to Uint8List format
-    Uint8List privKey = bigIntToBytes(privKeyBigInt);
-    Uint8List pubKey = pubKeyPoint.getEncoded(true);
+    final privKey = privKeyBigInt.toBytes;
+    final pubKey = pubKeyPoint.getEncoded(true);
 
     return (privKey, pubKey);
   }
@@ -373,32 +337,6 @@ abstract class Utilities {
         radix: 16);
 
     return privateKey;
-  }
-
-  /// Converts a BigInt to a Uint8List.
-  ///
-  /// The returned Uint8List is padded to 32 bytes if necessary.
-  ///
-  /// Returns:
-  ///   A Uint8List representing the given BigInt.
-  static Uint8List bigIntToBytes(BigInt bigInt) {
-    // Convert the BigInt to a hexadecimal string and pad it to 32 bytes
-    return Uint8List.fromList(
-        bigInt.toRadixString(16).padLeft(32, '0').codeUnits);
-  }
-
-  /// Parses a BigInt from a Uint8List [bytes].
-  ///
-  /// The function assumes that the bytes in the Uint8List are in big-endian order.
-  ///
-  /// Returns:
-  ///   A BigInt parsed from the given Uint8List.
-  static BigInt parseBigIntFromBytes(Uint8List bytes) {
-    // Convert the bytes to a hexadecimal string
-    return BigInt.parse(
-      bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(),
-      radix: 16,
-    );
   }
 
   /// Returns the sha256 hash of a Uint8List.
@@ -543,23 +481,4 @@ abstract class Utilities {
 
     return randomNumber;
   }
-}
-
-/// Converts a BigInt to a Uint8List.
-///
-/// Needed because there's no BigInt.toBytes built-in function.
-///
-/// Parameters:
-/// - [number] The BigInt to be converted.
-///
-/// Returns:
-///  A Uint8List representing the given BigInt.
-Uint8List bigIntToUint8List(BigInt number) {
-  final byteCount =
-      (number.bitLength + 7) ~/ 8; // Calculate the number of bytes needed.
-  final byteList = List<int>.generate(byteCount, (i) {
-    final shift = 8 * (byteCount - i - 1);
-    return (number >> shift).toUnsigned(8).toInt();
-  });
-  return Uint8List.fromList(byteList);
 }

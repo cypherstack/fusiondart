@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
 import 'package:pointycastle/ecc/curves/secp256r1.dart';
@@ -133,14 +134,13 @@ class BlindSignatureRequest {
     ECPoint? pointRnew = intermediateR + (pubPoint * b);
 
     // Check that pointRnew is not null
-    if (pointRnew == null) {
+    if (pointRnew == null || pointRnew.x?.toBigInteger() == null) {
       throw ArgumentError(
           'Failed to perform elliptic curve operation intermediateR + (pubPoint * b).');
     }
 
     // Convert pointRnew.x to bytes
-    pointRxNew = Utilities.bigIntToBytes(
-        pointRnew.x!.toBigInteger()!); // TODO check for null
+    pointRxNew = pointRnew.x!.toBigInteger()!.toBytes;
 
     // Calculate y for the Jacobi symbol c
     BigInt? y = pointRnew.y?.toBigInteger();
@@ -233,7 +233,7 @@ class BlindSignatureRequest {
   ///   The request as a Uint8List
   Uint8List get request {
     // Return the request as a Uint8List
-    return Utilities.bigIntToBytes(e);
+    return e.toBytes;
   }
 
   /// Finalizes the blind signature request.
@@ -273,7 +273,7 @@ class BlindSignatureRequest {
     BigInt snew = (c * (s + a)) % order;
 
     // Calculate the final signature.
-    List<int> sig = pointRxNew + Utilities.bigIntToBytes(snew);
+    List<int> sig = pointRxNew + snew.toBytes;
 
     // Verify the signature if requested.
     ECPoint? pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);

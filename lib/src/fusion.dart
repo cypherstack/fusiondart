@@ -14,6 +14,7 @@ import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/covert.dart';
 import 'package:fusiondart/src/encrypt.dart';
+import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/blind_signature_request.dart';
@@ -661,8 +662,7 @@ class Fusion {
       Uint8List amountCommitment = commitmentInstance.pointPUncompressed;
 
       // Convert BigInt nonce to Uint8List.
-      Uint8List pedersenNonce = bigIntToUint8List(
-          BigInt.parse(commitmentInstance.nonce.toRadixString(16), radix: 16));
+      final Uint8List pedersenNonce = commitmentInstance.nonce.toBytes;
 
       // Generating initial commitment.
       InitialCommitment commitment = InitialCommitment(
