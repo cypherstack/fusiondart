@@ -48,14 +48,14 @@ class PedersenSetup {
   /// Returns:
   ///   A new `Commitment` object.
   Commitment commit(
-    BigInt amount,
-    BigInt nonce, {
+    BigInt amount, {
+    BigInt? nonce,
     Uint8List? pointPUncompressed,
   }) {
     return Commitment(
       this,
-      nonce,
       amount,
+      nonce: nonce,
       pointPUncompressed: pointPUncompressed,
     );
   }
@@ -74,10 +74,13 @@ class Commitment {
 
   late final BigInt nonce;
 
-  Uint8List get pointPUncompressed => _pointPUncompressed;
+  late final BigInt amountMod;
 
-  late final BigInt _amountMod;
+  Uint8List get pointPUncompressed => _pointPUncompressed;
+  Uint8List get pointPCompressed => _pointPCompressed;
+
   late final Uint8List _pointPUncompressed;
+  late final Uint8List _pointPCompressed;
 
   /// Constructor for Commitment.
   ///
@@ -88,17 +91,25 @@ class Commitment {
   /// - [pointPUncompressed] (optional). The uncompressed representation of point P.
   Commitment(
     this.setup,
-    this.nonce,
     BigInt amount, {
+    BigInt? nonce,
     Uint8List? pointPUncompressed,
   }) {
+    // TODO: ensure this is unique?
+    // Initialize nonce with a secure random value if not provided.
+    this.nonce = nonce ??
+        Utilities.secureRandomBigInt(
+          Utilities.secp256k1Params.n.bitLength,
+        );
+
     // Validate that nonce is within the allowed range (0, n).
-    if (nonce <= BigInt.zero || nonce >= Utilities.secp256k1Params.n) {
+    if (this.nonce <= BigInt.zero ||
+        this.nonce >= Utilities.secp256k1Params.n) {
       throw NonceRangeError();
     }
 
     // Take the modulus of the amount to ensure it fits within the group order.
-    _amountMod =
+    amountMod =
         amount % Utilities.secp256k1Params.n; // setup.params.n is order.
 
     // Retrieve curve points H and HG.
@@ -106,8 +117,8 @@ class Commitment {
     final pointHG = setup._pointHG;
 
     // Compute multipliers for points H and HG.
-    BigInt a = _amountMod;
-    BigInt k = nonce;
+    BigInt a = amountMod;
+    BigInt k = this.nonce;
 
     // Multiply curve points by multipliers.
     ECPoint? pointHMultiplied =
@@ -129,6 +140,13 @@ class Commitment {
       _calcInitial(setup, amount);
     } else {
       _pointPUncompressed = pointPUncompressed;
+      _pointPCompressed = Utilities.pointToSer(
+        Utilities.serToPoint(
+          _pointPUncompressed,
+          Utilities.secp256k1Params,
+        ),
+        true,
+      );
     }
   }
 
@@ -147,7 +165,7 @@ class Commitment {
 
     // Legwork towards calculating the point P.
     BigInt k = nonce;
-    BigInt a = _amountMod;
+    BigInt a = amountMod;
     ECPoint? pointHMultiplied = pointH *
         ((a - k) % Utilities.secp256k1Params.n); // setup.params.n is order.
     ECPoint? pointHGMultiplied = pointHG * k;
@@ -164,8 +182,9 @@ class Commitment {
       throw ResultAtInfinity();
     }
 
-    // Store the uncompressed form of the point P, either provided or newly calculated.
+    // Store both forms of the point P
     _pointPUncompressed = pointP.getEncoded(false);
+    _pointPCompressed = pointP.getEncoded(true);
   }
 
   /// Add multiple Commitments together.
@@ -175,7 +194,7 @@ class Commitment {
   ///
   /// Returns:
   ///   A new Commitment object.
-  Commitment addCommitments(Iterable<Commitment> commitmentIterable) {
+  static Commitment addCommitments(Iterable<Commitment> commitmentIterable) {
     BigInt ktotal = BigInt.zero; // Changed to `BigInt` from `int`.
     BigInt atotal = BigInt.zero; // Changed to `BigInt` from `int`.
     List<Uint8List> points = [];
@@ -184,7 +203,7 @@ class Commitment {
     // Loop through each commitment to sum up nonces and amounts.
     for (Commitment c in commitmentIterable) {
       ktotal += c.nonce;
-      atotal += c._amountMod; // Changed from amount to amountMod.
+      atotal += c.amountMod; // Changed from amount to amountMod.
       points.add(c.pointPUncompressed);
       setups.add(c.setup);
     }
@@ -228,8 +247,8 @@ class Commitment {
     // Return new Commitment object with summed values.
     return Commitment(
       setup,
-      ktotal,
       atotal,
+      nonce: ktotal,
       pointPUncompressed: pointPUncompressed,
     );
   }

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:collection/collection.dart';
 import 'package:fusiondart/src/encrypt.dart' as encrypt;
+import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/pedersen.dart';
@@ -113,7 +114,7 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
     );
     claimedCommit = setup.commit(
       BigInt.from(msg.excessFee.toInt()),
-      Utilities.bytesToBigInt(Uint8List.fromList(msg.pedersenTotalNonce)),
+      nonce: (Uint8List.fromList(msg.pedersenTotalNonce)).toBigInt,
     );
 
     check(pointsum == claimedCommit.pointPUncompressed,
@@ -224,7 +225,7 @@ pb.InputComponent? validateProofInternal(
 
   final Commitment claimedCommit = setup.commit(
     BigInt.from(contrib),
-    Utilities.bytesToBigInt(msg.pedersenNonce as Uint8List),
+    nonce: Uint8List.fromList(msg.pedersenNonce).toBigInt,
   );
 
   check(

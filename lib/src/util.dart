@@ -7,6 +7,7 @@ import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/fusiondart.dart';
+import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
@@ -300,7 +301,7 @@ abstract class Utilities {
     // TODO feed in from wallet.
     String genesis =
         "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"; // Bitcoin genesis hash
-    List<int> _lastGenesisHash = hexToBytes(genesis).reversed.toList();
+    List<int> _lastGenesisHash = genesis.toUint8ListFromHex.reversed.toList();
     return Uint8List.fromList(_lastGenesisHash);
   }
 
@@ -398,53 +399,6 @@ abstract class Utilities {
       bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(),
       radix: 16,
     );
-  }
-
-  /// Converts a Uint8List [bytes] to a hexadecimal string representation.
-  ///
-  /// Takes a Uint8List [bytes] and converts each byte to its hexadecimal
-  /// representation. The resulting hexadecimal values are concatenated
-  /// into a single string.
-  ///
-  /// Returns:
-  ///   A String containing the hexadecimal representation of the input [bytes].
-  static String bytesToHex(Uint8List bytes) {
-    return bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
-  }
-
-  /// Converts a hexadecimal string [hex] to a Uint8List.
-  ///
-  /// The function assumes that the input string is a valid hexadecimal string
-  /// with an even number of characters.
-  ///
-  /// Returns:
-  ///   A Uint8List containing the bytes represented by the input hex string.
-  static Uint8List hexToBytes(String hex) {
-    // Initialize the result Uint8List with a length of half the hex string
-    Uint8List result = Uint8List(hex.length ~/ 2);
-
-    // Loop through the hex string, two characters at a time
-    for (int i = 0; i < hex.length; i += 2) {
-      // Parse the next byte from the hex string
-      int byte = int.parse(hex.substring(i, i + 2), radix: 16);
-
-      // Place the parsed byte into the result Uint8List
-      result[i ~/ 2] = byte;
-    }
-    return result;
-  }
-
-  /// Converts a BigInt [bytes] to a Uint8List.
-  ///
-  /// Takes a Uint8List [bytes] and converts it into a BigInt.
-  /// The input [bytes] are first converted to a hexadecimal string,
-  /// which is then parsed into a BigInt object.
-  ///
-  /// Returns:
-  ///   A BigInt object representing the numerical value of the input [bytes].
-  static BigInt bytesToBigInt(Uint8List bytes) {
-    String hexString = bytesToHex(bytes);
-    return BigInt.parse(hexString, radix: 16);
   }
 
   /// Returns the sha256 hash of a Uint8List.
@@ -587,42 +541,5 @@ abstract class Utilities {
         randomBytes.map((e) => e.toRadixString(16).padLeft(2, '0')).join(),
         radix: 16);
     return randomNumber;
-  }
-
-  /// Checks if a given point lies on a specified elliptic curve.
-  ///
-  /// Parameters:
-  /// - [point] The `ECPoint` to be checked.
-  /// - [curve] The `ECCurve` representing the elliptic curve.
-  ///
-  /// Returns:
-  ///   `true` if the point is on the curve, `false` otherwise.
-  static bool isPointOnCurve(ECPoint point, ECCurve curve) {
-    if (point.isInfinity) return false;
-
-    if (point.curve != curve) {
-      throw ArgumentError('Point and curve must be on the same curve');
-    }
-
-    // Validate the point.
-    if (point.x == null || point.y == null) {
-      throw ArgumentError('Point must have x and y coordinates');
-    }
-    if (point.x!.toBigInteger() == null || point.y!.toBigInteger() == null) {
-      throw ArgumentError('Point coordinates cannot be null');
-    }
-
-    // Extract the x and y coordinates.
-    BigInt x = point.x!.toBigInteger()!;
-    BigInt y = point.y!.toBigInteger()!;
-    BigInt a = curve.a!.toBigInteger()!;
-    BigInt b = curve.b!.toBigInteger()!;
-
-    // Calculate the left and right sides of the equation.
-    BigInt left = y * y;
-    BigInt right = (x * x * x) + (a * x) + b;
-
-    // Check if the point is on the curve.
-    return left == right;
   }
 }
