@@ -537,20 +537,11 @@ abstract class Utilities {
     }
 
     // Convert byte array to BigInt.
-    BigInt randomNumber = parseHexToBigInt(
-        randomBytes.map((e) => e.toRadixString(16).padLeft(2, '0')).join());
+    BigInt randomNumber =
+        (randomBytes.map((e) => e.toRadixString(16).padLeft(2, '0')).join())
+            .toBigIntFromHex;
 
     return randomNumber;
-  }
-
-  static BigInt parseHexToBigInt(String hex) {
-    // Remove the '0x' prefix if it exists.
-    if (hex.startsWith("0x")) {
-      hex = hex.substring(2);
-    }
-
-    // Parse the hexadecimal string into a BigInt.
-    return BigInt.parse(hex, radix: 16);
   }
 }
 
