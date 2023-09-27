@@ -11,7 +11,7 @@ and the Flutter guide for
 [developing packages and plugins](https://flutter.dev/developing-packages). 
 -->
 
-# fusiondart
+# FusionDart
 
 A Dart package for interacting with CashFusion servers.
 
@@ -37,6 +37,12 @@ These actions may result in loss of funds, tokens, or both.
  - [ ] Send and receive CashFusion session stats updates errors
 
 ## Getting started
+
+### Building
+
+FusionDart uses [coinlib](https://github.com/peercoin/coinlib) for cryptocurrency calculations, which [needs to be built](https://github.com/peercoin/coinlib/tree/master/coinlib#building-for-linux).  Build it according to their documentation ([macOS instructions here](https://github.com/peercoin/coinlib/tree/master/coinlib#building-for-macos).)
+
+### Example
 
 Check `/example` folder for a sample app.
 

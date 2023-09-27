@@ -5,6 +5,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:bip340/bip340.dart' as bip340;
+import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
@@ -65,7 +66,7 @@ class Fusion {
     Socket socket = await Socket.connect(host, port);
     connection = Connection()..socket = socket;
   }
-  */
+   */
 
   // Host and port variables.
   // TODO parameterize; should these be fed in as parameters upon construction/instantiation?
@@ -142,7 +143,7 @@ class Fusion {
 
   /// Method to initialize Fusion instance with necessary wallet methods.
   /// The methods injected here are used for various operations throughout the fusion process.
-  void initFusion({
+  Future<void> initFusion({
     required Future<List<Address>> Function() getAddresses,
     required Future<List<Input>> Function(String address) getInputsByAddress,
     required Future<List<Transaction>> Function(String address)
@@ -152,13 +153,16 @@ class Fusion {
         getUnusedReservedChangeAddresses,
     required Future<({InternetAddress host, int port})> Function()
         getSocksProxyAddress,
-  }) {
+  }) async {
     _getAddresses = getAddresses;
     _getInputsByAddress = getInputsByAddress;
     _getTransactionsByAddress = getTransactionsByAddress;
     // _createNewReservedChangeAddress = createNewReservedChangeAddress;
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
     _getSocksProxyAddress = getSocksProxyAddress;
+
+    // Load coinlib.
+    await coinlib.loadCoinlib();
   }
 
   /// Adds Unspent Transaction Outputs (UTXOs) from [utxoList] to the `coins` list as `Input`s.
