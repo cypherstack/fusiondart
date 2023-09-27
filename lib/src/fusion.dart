@@ -80,7 +80,7 @@ class Fusion {
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
     _getSocksProxyAddress = getSocksProxyAddress;
 
-// Load coinlib.
+    // Load coinlib.
     await coinlib.loadCoinlib();
   }
 
@@ -95,7 +95,7 @@ class Fusion {
 
   // Various state variables.
   List<Input> coins = []; // "coins"≈"inputs" in the python source.
-  List<Input> inputs = [];
+  // List<Input> inputs = [];
   List<Output> outputs = [];
   // List<Address> changeAddresses = [];
 
@@ -827,8 +827,8 @@ class Fusion {
   Future<CovertSubmitter> startCovert() async {
     Utilities.debugPrint("DEBUG START COVERT!");
 
-    // Initialize status record/tuple.
-    (String, String) status = ('running', 'Setting up Tor connections');
+    // set status record/tuple.
+    status = ('running', 'Setting up Tor connections');
 
     // Get the Tor host and port from the wallet configuration.
     final ({InternetAddress host, int port}) proxyInfo;
@@ -970,7 +970,7 @@ class Fusion {
         "round starting at ${DateTime.now().millisecondsSinceEpoch / 1000}");
 
     // Calculate fees and sums for inputs and outputs.
-    final int inputFees = inputs.fold(
+    final int inputFees = allocatedOutputs!.inputs.fold(
         0,
         (sum, input) =>
             sum +
@@ -981,7 +981,7 @@ class Fusion {
             34, // 34 is the size of a P2PKH output.
             serverParams!
                 .componentFeeRate); // See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/fusion.py#L820
-    int sumIn = inputs.fold(0, (sum, e) => sum + e.amount);
+    int sumIn = allocatedOutputs!.inputs.fold(0, (sum, e) => sum + e.amount);
     int sumOut = outputs.fold(0, (sum, e) => sum + e.value);
 
     // Calculate total and excess fee for safety checks.
@@ -1010,8 +1010,9 @@ class Fusion {
     }
 
     // Generate components and related data
-    int numBlanks =
-        serverParams!.numComponents - inputs.length - outputs.length;
+    int numBlanks = serverParams!.numComponents -
+        allocatedOutputs!.inputs.length -
+        outputs.length;
     final List<ComponentResult> genComponentsResults =
         OutputHandling.genComponents(
             numBlanks, coins, outputs, serverParams!.componentFeeRate);
