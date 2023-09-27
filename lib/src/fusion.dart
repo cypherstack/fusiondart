@@ -24,6 +24,7 @@ import 'package:fusiondart/src/models/transaction.dart';
 import 'package:fusiondart/src/output_handling.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
+import 'package:fusiondart/src/receive_messages.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:fusiondart/src/validation.dart';
@@ -561,13 +562,11 @@ class Fusion {
             (entry.key * 1e-8).toStringAsFixed(8).replaceAll(RegExp(r'0+$'), '')
     };
 
-    const String _fusionBeginKey = "fusionbegin";
-    const String _tierStatusUpdateKey = "tierstatusupdate";
-
     // Main loop to receive updates from the server.
     while (true) {
       Utilities.debugPrint("RECEIVE LOOP 870............DEBUG");
-      msg = await IO.recv([_tierStatusUpdateKey, _fusionBeginKey],
+      msg = await IO.recv(
+          [ReceiveMessages.tierStatusUpdate, ReceiveMessages.fusionBegin],
           socketWrapper: _socketWrapper!,
           connection: connection!,
           timeout: Duration(seconds: 10));
@@ -576,10 +575,10 @@ class Fusion {
 
       // Check for a FusionBegin message.
       FieldInfo<dynamic>? fieldInfoFusionBegin =
-          msg.info_.byName[_fusionBeginKey];
+          msg.info_.byName[ReceiveMessages.fusionBegin];
       if (fieldInfoFusionBegin == null) {
         throw FusionError(
-            'Expected field not found in message: $_fusionBeginKey');
+            'Expected field not found in message: $ReceiveMessages.fusionbegin');
       }
 
       // Validate that the received message is indeed a FusionBegin message.
@@ -598,11 +597,12 @@ class Fusion {
       checkCoins();
 
       // Initialize a variable to store field information for "tierstatusupdate" in the message.
-      FieldInfo<dynamic>? fieldInfo = msg.info_.byName[_tierStatusUpdateKey];
+      FieldInfo<dynamic>? fieldInfo =
+          msg.info_.byName[ReceiveMessages.tierStatusUpdate];
       // Check if the field exists in the message, if not, throw an error.
       if (fieldInfo == null) {
         throw FusionError(
-            'Expected field not found in message: $_tierStatusUpdateKey');
+            'Expected field not found in message: $ReceiveMessages.tierstatusupdate');
       }
 
       // Determine if the message contains a "TierStatusUpdate"
@@ -747,10 +747,10 @@ class Fusion {
 
     // Check if the field 'fusionbegin' exists in the message.
     FieldInfo<dynamic>? fieldInfoFusionBegin =
-        msg.info_.byName[_fusionBeginKey];
+        msg.info_.byName[ReceiveMessages.fusionBegin];
     if (fieldInfoFusionBegin == null) {
       throw FusionError(
-          'Expected field not found in message: $_fusionBeginKey');
+          'Expected field not found in message: $ReceiveMessages.fusionbegin');
     }
 
     // Determine if the message contains a FusionBegin message.
@@ -929,7 +929,7 @@ class Fusion {
         (2 * Protocol.WARMUP_SLOP + Protocol.STANDARD_TIMEOUT).toInt();
 
     // Await the start of round message from the server.
-    GeneratedMessage msg = await IO.recv(['startround'],
+    GeneratedMessage msg = await IO.recv([ReceiveMessages.startRound],
         socketWrapper: _socketWrapper!,
         connection: connection!,
         timeout: Duration(seconds: timeoutInSeconds));
@@ -1105,7 +1105,7 @@ class Fusion {
     );
 
     // Await blind signature responses from the server
-    msg = await IO.recv(['blindsigresponses'],
+    msg = await IO.recv([ReceiveMessages.blindSigResponses],
         socketWrapper: _socketWrapper!,
         connection: connection!,
         timeout: Duration(seconds: Protocol.T_START_COMPS));
@@ -1176,7 +1176,7 @@ class Fusion {
     covert.scheduleSubmissions(targetDateTime, messages);
 
     // While submitting, we download the (large) full commitment list.
-    msg = await IO.recv(['allcommitments'],
+    msg = await IO.recv([ReceiveMessages.allCommitments],
         socketWrapper: _socketWrapper!,
         connection: connection!,
         timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()));
@@ -1206,7 +1206,7 @@ class Fusion {
     }
 
     // Once all components are received, the server shares them with us:
-    msg = await IO.recv(['sharecovertcomponents'],
+    msg = await IO.recv([ReceiveMessages.shareCovertComponents],
         socketWrapper: _socketWrapper!,
         connection: connection!,
         timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()));
@@ -1320,7 +1320,7 @@ class Fusion {
               Protocol.TS_EXPECTING_COVERT_COMPONENTS)
           .toInt();
       Duration timeout = Duration(milliseconds: timeoutMillis);
-      msg = await IO.recv(['fusionresult'],
+      msg = await IO.recv([ReceiveMessages.fusionResult],
           socketWrapper: _socketWrapper!,
           connection: connection!,
           timeout: timeout);
@@ -1452,7 +1452,7 @@ class Fusion {
 
     // Receive the list of proofs from the other parties
     Utilities.debugPrint("receiving proofs");
-    msg = await IO.recv(['theirproofslist'],
+    msg = await IO.recv([ReceiveMessages.theirProofsList],
         socketWrapper: _socketWrapper!,
         connection: connection!,
         timeout: Duration(seconds: (2 * Protocol.STANDARD_TIMEOUT).round()));
@@ -1592,7 +1592,7 @@ class Fusion {
     // Await the final 'restartround' message. It might take some time
     // to arrive since other players might be slow, and then the server
     // itself needs to check blockchain.
-    await IO.recv(['restartround'],
+    await IO.recv([ReceiveMessages.restartRound],
         socketWrapper: _socketWrapper!,
         connection: connection!,
         timeout: Duration(
