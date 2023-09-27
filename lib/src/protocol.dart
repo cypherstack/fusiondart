@@ -50,7 +50,7 @@ abstract final class Protocol {
   static const TS_EXPECTING_COMMITMENTS = 3.0;
 
   // Start time for submitting components in the protocol in [seconds].
-  static const T_START_COMPS = 5.0;
+  static const T_START_COMPS = 5;
 
   // Time spent expecting covert components in the protocol in [seconds].
   static const TS_EXPECTING_COVERT_COMPONENTS = 15.0;

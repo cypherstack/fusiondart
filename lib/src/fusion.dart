@@ -12,6 +12,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/covert.dart';
 import 'package:fusiondart/src/encrypt.dart';
+import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/io.dart';
 import 'package:fusiondart/src/models/address.dart';
@@ -970,30 +971,41 @@ class Fusion {
         "round starting at ${DateTime.now().millisecondsSinceEpoch / 1000}");
 
     // Calculate fees and sums for inputs and outputs.
-    final int inputFees = allocatedOutputs!.inputs.fold(
-        0,
-        (sum, input) =>
-            sum +
+    final inputFees = allocatedOutputs!.inputs.fold(
+      BigInt.zero,
+      (sum, input) =>
+          sum +
+          BigInt.from(
             Utilities.componentFee(
-                input.sizeOfInput(), serverParams!.componentFeeRate));
-    final outputFees = outputs.length *
-        Utilities.componentFee(
+                input.sizeOfInput(), serverParams!.componentFeeRate),
+          ),
+    );
+
+    final outputFees = BigInt.from(
+      outputs.length *
+          Utilities.componentFee(
             34, // 34 is the size of a P2PKH output.
-            serverParams!
-                .componentFeeRate); // See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/fusion.py#L820
-    int sumIn = allocatedOutputs!.inputs.fold(0, (sum, e) => sum + e.amount);
-    int sumOut = outputs.fold(0, (sum, e) => sum + e.value);
+            serverParams!.componentFeeRate,
+          ),
+    ); // See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/fusion.py#L820
+
+    final sumIn = allocatedOutputs!.inputs.fold(
+      BigInt.zero,
+      (sum, e) => sum + BigInt.from(e.amount),
+    );
+    final sumOut =
+        outputs.fold(BigInt.zero, (sum, e) => sum + BigInt.from(e.value));
 
     // Calculate total and excess fee for safety checks.
-    final int totalFee = sumIn - sumOut;
-    final int excessFee = totalFee - inputFees - outputFees;
+    final totalFee = sumIn - sumOut;
+    final excessFee = totalFee - inputFees - outputFees;
 
     // Perform the safety checks!
     final safeties = [
-      sumIn == allocatedOutputs!.safetySumIn,
-      excessFee == (allocatedOutputs!.safetyExcessFees[tier] ?? 0),
-      excessFee <= Protocol.MAX_EXCESS_FEE,
-      totalFee <= Protocol.MAX_FEE,
+      sumIn == BigInt.from(allocatedOutputs!.safetySumIn),
+      excessFee == BigInt.from(allocatedOutputs!.safetyExcessFees[tier] ?? 0),
+      excessFee <= BigInt.from(Protocol.MAX_EXCESS_FEE),
+      totalFee <= BigInt.from(Protocol.MAX_FEE),
     ];
 
     // Abort the round if the safety checks fail.
@@ -1040,11 +1052,12 @@ class Fusion {
       pedersenNonce.add(genComponentResult.pedersenNonce);
     }
     // Sanity checks on the generated components.
-    assert(excessFee ==
-        pedersenAmount
-            .map((value) =>
-                value.toInt() ?? 0) // Convert to int and handle null values
-            .fold(0, (a, b) => a + b)); // Sum the elements
+    assert(
+      excessFee ==
+          pedersenAmount
+              .map((value) => value)
+              .fold(BigInt.zero, (a, b) => a + b),
+    ); // Sum the elements
     assert(myComponents.toSet().length == myComponents.length); // no duplicates
 
     // Generate blind signature requests (see schnorr from Electron-Cash's schnorr.py)
@@ -1081,7 +1094,7 @@ class Fusion {
     await IO.send(
       PlayerCommit(
         initialCommitments: myCommitments,
-        excessFee: Int64(excessFee),
+        excessFee: Int64.parseHex(excessFee.toHex),
         pedersenTotalNonce: pedersenNonce.cast<int>(),
         randomNumberCommitment: crypto.sha256.convert(randomNumber).bytes,
         blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
@@ -1094,7 +1107,7 @@ class Fusion {
     msg = await IO.recv(['blindsigresponses'],
         socketWrapper: _socketWrapper!,
         connection: connection!,
-        timeout: Duration(seconds: Protocol.T_START_COMPS.toInt()));
+        timeout: Duration(seconds: Protocol.T_START_COMPS));
 
     // Validate type and length of the received message and perform a sanity-check on it.
     if (msg is BlindSigResponses) {
