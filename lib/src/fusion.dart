@@ -806,6 +806,7 @@ class Fusion {
         await _getUnusedReservedChangeAddresses(outAmounts?.length ?? 0);
 
     // Populate reservedAddresses and outputs with the prepared amounts and addresses.
+    // TODO: this [reservedAddresses] is never read from????
     reservedAddresses = outAddrs;
     outputs = Utilities.zip(outAmounts ?? [], outAddrs)
         .map((pair) => Output(value: pair[0] as int, addr: pair[1] as Address))
