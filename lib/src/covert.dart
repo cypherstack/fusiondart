@@ -205,7 +205,7 @@ class CovertSubmitter extends PrintError {
   int countEstablished = 0;
   int countAttempted = 0;
   Random rng = Random.secure();
-  int? randSpan;
+  final int randSpan;
   DateTime? stopTStart;
   List<CovertConnection> spareConnections = [];
   int submitTimeout = 0;
@@ -228,7 +228,7 @@ class CovertSubmitter extends PrintError {
     String torHost,
     int torPort,
     this.numSlots,
-    int randSpan,
+    this.randSpan,
     Duration submitTimeout,
   ) : slots = List<CovertSlot>.generate(
             numSlots, (index) => CovertSlot(submitTimeout));
