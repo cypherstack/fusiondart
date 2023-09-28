@@ -106,7 +106,7 @@ class CovertConnection {
 /// - [covConn] (optional): The CovertConnection object associated with the slot.
 /// - [_tSubmit] (optional): The time of the last submit action.
 class CovertSlot {
-  int submitTimeout;
+  Duration submitTimeout;
   pb.GeneratedMessage? subMsg; // The work to be done.
   bool done; // Whether last work requested is done.
   CovertConnection?
@@ -142,13 +142,12 @@ class CovertSlot {
     //
     // Send a Protocol Buffers message to initiate the work,
     // and set a timeout based on the submitTimeout property.
-    await sendPb(connection, CovertMessage, subMsg!,
-        timeout: Duration(seconds: submitTimeout));
+    await sendPb(connection, CovertMessage, subMsg!, timeout: submitTimeout);
 
     // Receive a Protocol Buffers message as a response.
     (GeneratedMessage, String) result = await recvPb(
         connection, CovertResponse, ['ok', 'error'],
-        timeout: Duration(seconds: submitTimeout));
+        timeout: submitTimeout);
 
     // TODO make sure this is a valid error check.
     if (result.$1.toString() == 'error') {
@@ -230,9 +229,9 @@ class CovertSubmitter extends PrintError {
       int torPort,
       this.numSlots,
       double randSpan, // Changed from `int` to `double`.
-      double submitTimeout) // Changed from `int` to `double`.
+      Duration submitTimeout)
       : slots = List<CovertSlot>.generate(
-            numSlots, (index) => CovertSlot(submitTimeout.toInt()));
+            numSlots, (index) => CovertSlot(submitTimeout));
 
   /// Wakes all connections for tasks.
   ///
