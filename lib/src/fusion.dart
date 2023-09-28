@@ -107,6 +107,13 @@ class Fusion {
   }) {
     _status = (status: status, info: info);
     _updateStatusCallback(_status.status);
+
+    Utilities.debugPrint(
+        "======= FusionStatus update ====================================");
+    Utilities.debugPrint("=~ Status: $status");
+    Utilities.debugPrint("=~   info: $info");
+    Utilities.debugPrint(
+        "================================================================");
   }
 
   // TODO parameterize; should these be fed in as parameters upon construction/instantiation?
@@ -387,11 +394,11 @@ class Fusion {
 
       // Set status to 'complete' with txid.
       _updateStatus(status: FusionStatus.complete, info: 'txid: $_txId');
-    } on FusionError catch (err) {
-      Utilities.debugPrint('Failed: $err');
+    } on FusionError catch (err, s) {
+      Utilities.debugPrint('Failed: $err\n$s');
       _updateStatus(status: FusionStatus.failed, info: err.toString());
-    } catch (exc) {
-      Utilities.debugPrint('Exception: $exc');
+    } catch (exc, s) {
+      Utilities.debugPrint('Exception: $exc\n$s');
       _updateStatus(status: FusionStatus.exception, info: exc.toString());
     } finally {
       clearCoins();
@@ -628,7 +635,7 @@ class Fusion {
       // Check if the field exists in the message, if not, throw an error.
       if (fieldInfo == null) {
         throw FusionError(
-            'Expected field not found in message: $ReceiveMessages.tierstatusupdate');
+            'Expected field not found in message: ${ReceiveMessages.tierStatusUpdate}');
       }
 
       // Determine if the message contains a "TierStatusUpdate"
@@ -859,6 +866,10 @@ class Fusion {
   ///   A `Future<CovertSubmitter>` that resolves to the initialized `CovertSubmitter`.
   Future<CovertSubmitter> startCovert() async {
     Utilities.debugPrint("DEBUG START COVERT!");
+
+    if (_serverParams == null) {
+      throw Exception("_serverParams is null in startCovert()");
+    }
 
     // set status record/tuple.
     _updateStatus(
