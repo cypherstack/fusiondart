@@ -654,10 +654,10 @@ class Fusion {
       // Utilities.debugPrint("DEBUG 8893 statuses: ${statuses!.entries}.");
 
       // Initialize variables to store the maximum fraction and tier numbers.
-      double maxfraction = 0.0;
-      List<int> maxtiers = <int>[];
-      int? besttime;
-      int? besttimetier;
+      double maxFraction = 0.0;
+      List<int> maxTiers = <int>[];
+      int? bestTime;
+      int? bestTimeTier;
 
       // Loop through each entry in statuses to find the maximum fraction and best time.
       for (var entry in statuses.entries) {
@@ -667,13 +667,13 @@ class Fusion {
         final double frac = ((entry.value.players.toInt())) /
             ((entry.value.minPlayers.toInt()));
 
-        // Update 'maxfraction' and 'maxtiers' if the current fraction is greater than or equal to the current 'maxfraction'.
-        if (frac >= maxfraction) {
-          if (frac > maxfraction) {
-            maxfraction = frac;
-            maxtiers.clear();
+        // Update 'maxFraction' and 'maxTiers' if the current fraction is greater than or equal to the current 'maxFraction'.
+        if (frac >= maxFraction) {
+          if (frac > maxFraction) {
+            maxFraction = frac;
+            maxTiers.clear();
           }
-          maxtiers.add(entry.key.toInt());
+          maxTiers.add(entry.key.toInt());
         }
 
         // // Check if "timeRemaining" field exists and find the smallest time.
@@ -693,10 +693,10 @@ class Fusion {
             // Convert 'timeRemaining' to integer
             int tr = entry.value.timeRemaining.toInt();
 
-            // Update 'besttime' and 'besttimetier' if this is the first time or if 'tr' is smaller than the current 'besttime'
-            if (besttime == null || tr < besttime) {
-              besttime = tr;
-              besttimetier = entry.key.toInt();
+            // Update 'bestTime' and 'bestTimeTier' if this is the first time or if 'tr' is smaller than the current 'bestTime'
+            if (bestTime == null || tr < bestTime) {
+              bestTime = tr;
+              bestTimeTier = entry.key.toInt();
             }
           }
         }
@@ -716,9 +716,9 @@ class Fusion {
             throw FusionError(
                 'server reported status on tier we are not registered for');
           }
-          if (tier == besttimetier) {
+          if (tier == bestTimeTier) {
             displayBest.insert(0, '**$tierStr**');
-          } else if (maxtiers.contains(tier)) {
+          } else if (maxTiers.contains(tier)) {
             displayBest.add('[$tierStr]');
           } else {
             displayMid.add(tierStr);
@@ -739,7 +739,7 @@ class Fusion {
       String tiersString = parts.join(' ');
 
       // Determine the overall status based on the best time and maximum fraction.
-      if (besttime == null) {
+      if (bestTime == null) {
         if (stopwatch.elapsedMilliseconds >
             INACTIVE_TIME_LIMIT.inMilliseconds) {
           throw FusionError('stopping due to inactivity');
@@ -749,12 +749,12 @@ class Fusion {
       // TODO handle else case
 
       // Final status assignment based on calculated variables
-      if (besttime != null) {
+      if (bestTime != null) {
         status = (
           status: 'waiting',
-          message: 'Starting in ${besttime}s. $tiersString',
+          message: 'Starting in ${bestTime}s. $tiersString',
         );
-      } else if (maxfraction >= 1) {
+      } else if (maxFraction >= 1) {
         status = (
           status: 'waiting',
           message: 'Starting soon. $tiersString',
@@ -762,7 +762,7 @@ class Fusion {
       } else if (displayBest.isNotEmpty || displayMid.isNotEmpty) {
         status = (
           status: 'waiting',
-          message: '${(maxfraction * 100).round()}% full. $tiersString',
+          message: '${(maxFraction * 100).round()}% full. $tiersString',
         );
       } else {
         status = (
