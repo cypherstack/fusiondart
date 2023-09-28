@@ -88,15 +88,6 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
     commitMessages.add(cmsg);
   }
 
-  final Uint8List hBytes =
-      Uint8List.fromList([0x02] + 'CashFusion gives us fungibility.'.codeUnits);
-  // final ECPoint? hMaybe = params.curve.decodePoint(hBytes);
-  // if (hMaybe == null) {
-  //   throw Exception('Failed to decode point');
-  // }
-  // final ECPoint H = hMaybe;
-  final PedersenSetup setup = PedersenSetup(hBytes);
-
   final Commitment claimedCommit;
   final Uint8List pointsum;
   // Verify pedersen commitment
@@ -107,7 +98,7 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
           .toList(),
       Utilities.secp256k1Params,
     );
-    claimedCommit = setup.commit(
+    claimedCommit = Utilities.pedersenSetup.commit(
       BigInt.from(msg.excessFee.toInt()),
       nonce: (Uint8List.fromList(msg.pedersenTotalNonce)).toBigInt,
     );
@@ -176,15 +167,6 @@ pb.InputComponent? validateProofInternal(
   List<int> badComponents,
   int componentFeerate,
 ) {
-  final Uint8List hBytes =
-      Uint8List.fromList([0x02] + 'CashFusion gives us fungibility.'.codeUnits);
-  // final ECPoint? hMaybe = params.curve.decodePoint(hBytes);
-  // if (hMaybe == null) {
-  //   throw Exception('Failed to decode point');
-  // }
-  // final ECPoint h = hMaybe;
-  PedersenSetup setup = PedersenSetup(hBytes);
-
   final msg = protoStrictParse(pb.Proof(), proofBlob);
 
   Uint8List componentBlob;
@@ -218,7 +200,7 @@ pb.InputComponent? validateProofInternal(
 
   final List<int> pCommitted = commitment.amountCommitment;
 
-  final Commitment claimedCommit = setup.commit(
+  final Commitment claimedCommit = Utilities.pedersenSetup.commit(
     BigInt.from(contrib),
     nonce: Uint8List.fromList(msg.pedersenNonce).toBigInt,
   );

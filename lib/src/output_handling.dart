@@ -6,7 +6,6 @@ import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
-import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/models/protobuf.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
@@ -461,11 +460,6 @@ abstract final class OutputHandling {
     // Initialize list of components.
     List<({Component component, BigInt value})> components = [];
 
-    // Set up Pedersen setup.
-    PedersenSetup setup = PedersenSetup(
-      '\x02CashFusion gives us fungibility.'.toUint8ListFromUtf8,
-    );
-
     // Generate components.
     for (Input input in inputs) {
       // Calculate fee.
@@ -540,7 +534,7 @@ abstract final class OutputHandling {
       Uint8List pubKey = keyPair.$2;
 
       // Generate amount commitment.
-      Commitment commitmentInstance = setup.commit(
+      Commitment commitmentInstance = Utilities.pedersenSetup.commit(
         componentRecord.value,
       );
       final amountCommitment = commitmentInstance.pointPUncompressed;

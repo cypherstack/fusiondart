@@ -9,7 +9,7 @@ import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
-import 'package:fusiondart/src/models/address.dart';
+import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
@@ -22,6 +22,10 @@ abstract class Utilities {
       print(object);
     }
   }
+
+  static PedersenSetup get pedersenSetup => PedersenSetup(
+        '\x02CashFusion gives us fungibility.'.toUint8ListFromUtf8,
+      );
 
   static ECDomainParameters get secp256k1Params =>
       ECDomainParameters('secp256k1');

@@ -1,9 +1,8 @@
 import 'dart:typed_data';
 
+import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
-
-import 'exceptions.dart';
 
 /// Class responsible for setting up a Pedersen commitment.
 class PedersenSetup {
