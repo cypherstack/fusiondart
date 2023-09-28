@@ -31,10 +31,10 @@ abstract final class Protocol {
   static const MIN_OUTPUT = 10000;
 
   // Timeout values and time windows for covert operations in [seconds]
-  static const COVERT_CONNECT_TIMEOUT = 15.0;
-  static const COVERT_CONNECT_WINDOW = 15.0;
-  static const COVERT_SUBMIT_TIMEOUT = 3.0;
-  static const COVERT_SUBMIT_WINDOW = 5.0;
+  static const COVERT_CONNECT_TIMEOUT = 15;
+  static const COVERT_CONNECT_WINDOW = 15;
+  static const COVERT_SUBMIT_TIMEOUT = 3;
+  static const COVERT_SUBMIT_WINDOW = 5;
 
   // Number of spare connections for covert operations.
   static const COVERT_CONNECT_SPARES = 6;

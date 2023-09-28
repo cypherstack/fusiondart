@@ -70,8 +70,8 @@ class Connection {
   static Future<Connection> openConnection(
     String host,
     int port, {
-    int connTimeout = 5,
-    int defaultTimeout = 5,
+    Duration connTimeout = const Duration(seconds: 5),
+    Duration defaultTimeout = const Duration(seconds: 5),
     bool ssl = false,
     dynamic socksOpts, // TODO type
   }) async {
@@ -88,9 +88,7 @@ class Connection {
       // Create a Connection object and return it.
       return Connection(
         socket: socket,
-        timeout: Duration(
-          seconds: defaultTimeout,
-        ),
+        timeout: defaultTimeout,
       );
     } catch (e) {
       throw 'Failed to open connection: $e';

@@ -222,15 +222,15 @@ class CovertSubmitter extends PrintError {
   /// - [randSpan]: The random span for the covert communication.
   /// - [submitTimeout]: The timeout for submitting tasks.
   CovertSubmitter(
-      String destAddr,
-      int destPort,
-      bool ssl,
-      String torHost,
-      int torPort,
-      this.numSlots,
-      double randSpan, // Changed from `int` to `double`.
-      Duration submitTimeout)
-      : slots = List<CovertSlot>.generate(
+    String destAddr,
+    int destPort,
+    bool ssl,
+    String torHost,
+    int torPort,
+    this.numSlots,
+    int randSpan,
+    Duration submitTimeout,
+  ) : slots = List<CovertSlot>.generate(
             numSlots, (index) => CovertSlot(submitTimeout));
 
   /// Wakes all connections for tasks.
@@ -308,8 +308,12 @@ class CovertSubmitter extends PrintError {
   ///
   /// Returns:
   ///  `void`
-  void scheduleConnections(DateTime tStart, Duration tSpan,
-      {int numSpares = 0, int connectTimeout = 10}) {
+  void scheduleConnections(
+    DateTime tStart,
+    Duration tSpan, {
+    int numSpares = 0,
+    Duration connectTimeout = const Duration(seconds: 10),
+  }) {
     // Prepare the list to store new connections.
     List<CovertConnection> newConns = <CovertConnection>[];
 
@@ -355,11 +359,15 @@ class CovertSubmitter extends PrintError {
           .add(Duration(seconds: (tSpan.inSeconds * randTrap(rng)).round()));
 
       // Calculate a random delay to add to the connection time.
-      double randDelay = (randSpan ?? 0) * randTrap(rng);
+      final randDelay = Duration(seconds: (randSpan! * randTrap(rng).toInt()));
 
       // Invoke the method to initiate and run the connection.
       runConnection(
-          covConn, connTime.millisecondsSinceEpoch, randDelay, connectTimeout);
+        covConn,
+        connTime.millisecondsSinceEpoch,
+        randDelay,
+        connectTimeout,
+      );
     }
   }
 
@@ -454,8 +462,12 @@ class CovertSubmitter extends PrintError {
   ///
   /// Returns:
   ///   A `Future<void>` whose resolution indicates completion.
-  Future<void> runConnection(CovertConnection covConn, int connTime,
-      double randDelay, int connectTimeout) async {
+  Future<void> runConnection(
+    CovertConnection covConn,
+    int connTime,
+    Duration randDelay,
+    Duration connectTimeout,
+  ) async {
     // Main loop for connection thread
     DateTime connDateTime =
         DateTime.fromMillisecondsSinceEpoch(connTime * 1000);
@@ -554,7 +566,7 @@ class CovertSubmitter extends PrintError {
           }
 
           // Add a random delay to the next time.
-          nextTime = nextTime.add(Duration(seconds: randDelay.toInt()));
+          nextTime = nextTime.add(randDelay);
 
           // Wait until the next time.
           if (await covConn.waitWakeupOrTime(nextTime)) {
@@ -582,9 +594,7 @@ class CovertSubmitter extends PrintError {
         // STATE 3 - Stopping.
         while (true) {
           // Wait for the stop time or the next wakeup.
-          final stopTime =
-              stopTStart?.add(Duration(seconds: randDelay.toInt())) ??
-                  DateTime.now();
+          final stopTime = stopTStart?.add(randDelay) ?? DateTime.now();
 
           // If we are woken up before the stop time, then just don't make a connection at all.
           if (!(await covConn.waitWakeupOrTime(stopTime))) {

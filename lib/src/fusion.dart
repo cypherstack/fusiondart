@@ -277,8 +277,8 @@ class Fusion {
         _connection = await Connection.openConnection(
           _fusionParams.serverHost,
           _fusionParams.serverPort,
-          connTimeout: 5,
-          defaultTimeout: 5,
+          connTimeout: Duration(seconds: 5),
+          defaultTimeout: Duration(seconds: 5),
           ssl: _fusionParams.serverSsl,
         );
       } catch (e) {
@@ -876,20 +876,25 @@ class Fusion {
 
     // Create a new CovertSubmitter instance.
     CovertSubmitter covert = CovertSubmitter(
-        covertDomain,
-        _covertPort,
-        _covertSSL,
-        proxyInfo.host.address,
-        proxyInfo.port,
-        _serverParams!.numComponents,
-        Protocol.COVERT_SUBMIT_WINDOW,
-        Protocol.COVERT_SUBMIT_TIMEOUT);
+      covertDomain,
+      _covertPort,
+      _covertSSL,
+      proxyInfo.host.address,
+      proxyInfo.port,
+      _serverParams!.numComponents,
+      Protocol.COVERT_SUBMIT_WINDOW,
+      Duration(seconds: Protocol.COVERT_SUBMIT_TIMEOUT),
+    );
     try {
       // Schedule Tor connections for the CovertSubmitter.
-      covert.scheduleConnections(_tFusionBegin,
-          Duration(seconds: Protocol.COVERT_CONNECT_WINDOW.toInt()),
-          numSpares: Protocol.COVERT_CONNECT_SPARES.toInt(),
-          connectTimeout: Protocol.COVERT_CONNECT_TIMEOUT.toInt());
+      covert.scheduleConnections(
+        _tFusionBegin,
+        Duration(seconds: Protocol.COVERT_CONNECT_WINDOW),
+        numSpares: Protocol.COVERT_CONNECT_SPARES,
+        connectTimeout: Duration(
+          seconds: Protocol.COVERT_CONNECT_TIMEOUT,
+        ),
+      );
 
       /*
       Utilities.debugPrint("DEBUG return early from covert");
