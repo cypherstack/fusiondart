@@ -12,6 +12,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/covert.dart';
 import 'package:fusiondart/src/encrypt.dart';
+import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/io.dart';
@@ -30,8 +31,6 @@ import 'package:fusiondart/src/status.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:fusiondart/src/validation.dart';
 import 'package:protobuf/protobuf.dart';
-
-import 'exceptions.dart';
 
 final bool kDebugPrintEnabled = true;
 
