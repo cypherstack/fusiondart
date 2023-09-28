@@ -60,6 +60,7 @@ class Fusion {
       _getUnusedReservedChangeAddresses;
   late final Future<({InternetAddress host, int port})> Function()
       _getSocksProxyAddress;
+  late final Future<int> Function() _getChainHeight;
 
   /// Constructor that sets up a Fusion object.
   Fusion(this._fusionParams);
@@ -75,12 +76,14 @@ class Fusion {
         getUnusedReservedChangeAddresses,
     required Future<({InternetAddress host, int port})> Function()
         getSocksProxyAddress,
+    required Future<int> Function() getChainHeight,
   }) async {
     _getAddresses = getAddresses;
     _getInputsByAddress = getInputsByAddress;
     _getTransactionsByAddress = getTransactionsByAddress;
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
     _getSocksProxyAddress = getSocksProxyAddress;
+    _getChainHeight = getChainHeight;
 
     // Load coinlib.
     await coinlib.loadCoinlib();
@@ -159,7 +162,7 @@ class Fusion {
   static const COIN_FRACTION_FUDGE_FACTOR = 10; // Heuristic factor
   // Guess that expected number of coins in wallet in equilibrium is = (this number) / fraction
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/plugin.py#L60
-  int localHeight = 0; // TODO replace with blockchain height getter.
+
   bool autofuseCoinbase = false; // TODO link to a setting in the wallet.
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/conf.py#L68
 
@@ -313,12 +316,14 @@ class Fusion {
           return;
         }
 
+        final currentChainHeight = await _getChainHeight();
+
         allocatedOutputs = await OutputHandling.allocateOutputs(
           connection: connection!,
           socketWrapper: _socketWrapper!,
           status: status.$1,
           coins: coins,
-          currentChainHeight: localHeight,
+          currentChainHeight: currentChainHeight,
           serverParams: serverParams!,
           getTransactionsByAddress: _getTransactionsByAddress,
           getInputsByAddress: _getInputsByAddress,
