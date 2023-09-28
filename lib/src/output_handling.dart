@@ -15,6 +15,7 @@ import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
+import 'package:fusiondart/src/status.dart';
 import 'package:fusiondart/src/util.dart';
 
 abstract final class OutputHandling {
@@ -261,7 +262,7 @@ abstract final class OutputHandling {
       })> allocateOutputs({
     required Connection connection,
     required SocketWrapper socketWrapper,
-    required String status, // should be an enum
+    required FusionStatus status,
     required List<Input> coins,
     required int currentChainHeight,
     required ({
@@ -279,8 +280,10 @@ abstract final class OutputHandling {
     Utilities.debugPrint("DBUG allocateoutputs 746");
     Utilities.debugPrint("CHECK socketwrapper 746");
 
-    // Initial sanity checks.
-    assert(['setup', 'connecting'].contains(status));
+    if (!(status == FusionStatus.connecting || status == FusionStatus.setup)) {
+      throw Exception(
+          "allocateOutputs called with unexpected FusionStatus: $status");
+    }
 
     // Get the coins.
     (

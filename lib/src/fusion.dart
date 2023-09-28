@@ -26,6 +26,7 @@ import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/receive_messages.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
+import 'package:fusiondart/src/status.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:fusiondart/src/validation.dart';
 import 'package:protobuf/protobuf.dart';
@@ -109,7 +110,19 @@ class Fusion {
   bool stoppingIfNotRunning = false; // Should fusion stop if it's not running?
   String stopReason = ""; // Specifies the reason for stopping the operation.
 
-  (String, String) status = ("", ""); // Holds the current status as a Record.
+  ///
+  /// Current status of the fusion process
+  ///
+  ({FusionStatus status, String info}) get status => _status;
+  late ({FusionStatus status, String info}) _status;
+  void _updateStatus({
+    required FusionStatus status,
+    required String info,
+  }) {
+    _status = (status: status, info: info);
+    // here we can do some notification when the status was updated if wanted
+  }
+
   Connection? connection; // Holds the active Connection object.
 
   // int numComponents = 0; // Tracks the number of components.
@@ -137,7 +150,6 @@ class Fusion {
     Map<int, int> safetyExcessFees,
   })? allocatedOutputs;
 
-  int inactiveTimeLimit = 600000; // [ms] 10 minutes in milliseconds.
   int tier = 0; // Currently selected CashFusion tier.
   double beginTime = 0.0; // [s] Represent time in seconds.
   List<int> lastHash = <int>[]; // Holds the last hash used in a fusion.
@@ -152,6 +164,7 @@ class Fusion {
   List<int> myCommitmentIndexes = []; // Holds the indexes for the commitments.
   Set<int> badComponents = {}; // The indexes of bad components.
 
+  static const INACTIVE_TIME_LIMIT = Duration(minutes: 10);
   static const int COINBASE_MATURITY = 100; // Maturity for coinbase UTXOs.
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash/bitcoin.py#L65
   static const int DEFAULT_MAX_COINS = 20; // Outputs to allocate for fusion.
@@ -163,7 +176,8 @@ class Fusion {
   // Guess that expected number of coins in wallet in equilibrium is = (this number) / fraction
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/plugin.py#L60
 
-  bool autofuseCoinbase = false; // TODO link to a setting in the wallet.
+  // Not currently used. If needed, this should be made private and accessed using set/get
+  // bool autofuseCoinbase = false; //   link to a setting in the wallet.
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/conf.py#L68
 
   SocketWrapper? _socketWrapper;
@@ -260,7 +274,7 @@ class Fusion {
       }
 
       // Connect to server.
-      status = ("connecting", "");
+      _updateStatus(status: FusionStatus.connecting, info: "");
       try {
         connection = await Connection.openConnection(
           _fusionParams.serverHost,
@@ -270,6 +284,8 @@ class Fusion {
           ssl: _fusionParams.serverSsl,
         );
       } catch (e) {
+        // TODO: _updateStatus with correct failure
+        //   _updateStatus(status: FusionStatus.???, info: "");
         Utilities.debugPrint("Connect failed: $e");
         String sslstr = _fusionParams.serverSsl ? ' SSL ' : '';
         throw FusionError(
@@ -321,7 +337,7 @@ class Fusion {
         allocatedOutputs = await OutputHandling.allocateOutputs(
           connection: connection!,
           socketWrapper: _socketWrapper!,
-          status: status.$1,
+          status: status.status,
           coins: coins,
           currentChainHeight: currentChainHeight,
           serverParams: serverParams!,
@@ -368,16 +384,16 @@ class Fusion {
       }
 
       // Set status to 'complete' with txid.
-      status = ('complete', 'txid: $txId');
+      _updateStatus(status: FusionStatus.complete, info: 'txid: $txId');
     } on FusionError catch (err) {
-      Utilities.debugPrint('Failed: ${err}');
-      status = ("failed", err.toString());
+      Utilities.debugPrint('Failed: $err');
+      _updateStatus(status: FusionStatus.failed, info: err.toString());
     } catch (exc) {
-      Utilities.debugPrint('Exception: ${exc}');
-      status = ("Exception", exc.toString());
+      Utilities.debugPrint('Exception: $exc');
+      _updateStatus(status: FusionStatus.exception, info: exc.toString());
     } finally {
       clearCoins();
-      if (status.$1 != 'complete') {
+      if (status.status != FusionStatus.complete) {
         for (Output output in outputs) {
           // TODO implement
           /*Util.unreserve_change_address(output.addr);*/
@@ -396,7 +412,10 @@ class Fusion {
   /// depend on the application's requirements.
   ///
   /// TODO implement.
-  void notifyServerStatus(bool b, {(String, String)? status}) {}
+  void notifyServerStatus(
+    bool b, {
+    ({FusionStatus status, String info})? status,
+  }) {}
 
   /// Stops the current operation with optional String [reason] (default: "stopped")
   /// and bool [notIfRunning] (default: false).
@@ -719,7 +738,8 @@ class Fusion {
 
       // Determine the overall status based on the best time and maximum fraction.
       if (besttime == null) {
-        if (stopwatch.elapsedMilliseconds > inactiveTimeLimit) {
+        if (stopwatch.elapsedMilliseconds >
+            INACTIVE_TIME_LIMIT.inMilliseconds) {
           throw FusionError('stopping due to inactivity');
         }
         // TODO handle else case
@@ -835,7 +855,10 @@ class Fusion {
     Utilities.debugPrint("DEBUG START COVERT!");
 
     // set status record/tuple.
-    status = ('running', 'Setting up Tor connections');
+    _updateStatus(
+      status: FusionStatus.running,
+      info: 'Setting up Tor connections',
+    );
 
     // Get the Tor host and port from the wallet configuration.
     final ({InternetAddress host, int port}) proxyInfo;
@@ -891,9 +914,11 @@ class Fusion {
             covert.spareConnections.where((c) => c.connection != null).length;
 
         // Update the status based on connection counts.
-        (String, String) status = (
-          'running',
-          'Setting up Tor connections ($numConnected+$numSpareConnected out of ${serverParams?.numComponents})'
+        _updateStatus(
+          status: FusionStatus.running,
+          info: "Setting up Tor connections "
+              "($numConnected+$numSpareConnected out"
+              " of ${serverParams?.numComponents})",
         );
 
         // Wait for 1 second before re-checking.
@@ -928,8 +953,11 @@ class Fusion {
     Utilities.debugPrint("START OF RUN ROUND");
 
     // Initial round status and timeout calculation.
-    (String, String) status =
-        ('running', 'Starting round ${roundCount.toString()}');
+    _updateStatus(
+      status: FusionStatus.running,
+      info: "Starting round ${roundCount.toString()}",
+    );
+
     int timeoutInSeconds =
         (2 * Protocol.WARMUP_SLOP + Protocol.STANDARD_TIMEOUT).toInt();
 
@@ -1041,8 +1069,9 @@ class Fusion {
     final List<Uint8List> myComponents = [];
     final List<Proof> myProofs = [];
     final List<Uint8List> privKeys = [];
-    // TODO type
     final List<BigInt> pedersenAmount = [];
+
+    // TODO type
     final List<dynamic> pedersenNonce = [];
 
     // Populate the lists with data from the generated components.
@@ -1156,7 +1185,10 @@ class Fusion {
 
     // Start covert component submissions
     Utilities.debugPrint("starting covert component submission");
-    status = ('running', 'covert submission: components');
+    _updateStatus(
+      status: FusionStatus.running,
+      info: "covert submission: components",
+    );
 
     // If we fail after this point, we want to stop connections gradually and
     // randomly. We don't want to stop them all at once, since if we had already
@@ -1257,7 +1289,10 @@ class Fusion {
     // Handle covert signature submission.
     if (!shareCovertComponentsMsg.skipSignatures) {
       Utilities.debugPrint("starting covert signature submission");
-      status = ('running', 'covert submission: signatures');
+      _updateStatus(
+        status: FusionStatus.running,
+        info: "covert submission: signatures",
+      );
 
       // Check for duplicate server components.
       if (allComponents.toSet().length != allComponents.length) {
@@ -1388,7 +1423,10 @@ class Fusion {
     covert.setStopTime((covertT0 + Protocol.T_START_CLOSE_BLAME).floor());
 
     // Update status to indicate that proofs are being sent.
-    status = ('running', 'round failed - sending proofs');
+    _updateStatus(
+      status: FusionStatus.running,
+      info: "round failed - sending proofs",
+    );
     Utilities.debugPrint("sending proofs");
 
     // Create a list of commitment indexes, but leaving out mine.
@@ -1453,7 +1491,10 @@ class Fusion {
     );
 
     // Update the status to indicate that the program is in the process of checking proofs.
-    status = ('running', 'round failed - checking proofs');
+    _updateStatus(
+      status: FusionStatus.running,
+      info: "round failed - checking proofs",
+    );
 
     // Receive the list of proofs from the other parties
     Utilities.debugPrint("receiving proofs");
@@ -1482,7 +1523,7 @@ class Fusion {
         // Obtain private key and commitment information for the current proof.
         privKey = privKeys[rp.dstKeyIdx];
         commitmentBlob = allCommitments[rp.srcCommitmentIdx];
-      } on RangeError catch (e) {
+      } on RangeError catch (_) {
         // If the indices are invalid, throw an error.
         throw FusionError("Server relayed bad proof indices");
       }
@@ -1498,7 +1539,7 @@ class Fusion {
         );
         proofBlob = result.decrypted;
         sKey = result.symmetricKey;
-      } on Exception catch (e) {
+      } on Exception catch (_) {
         // If decryption fails, add the proof to the blame list.
         Utilities.debugPrint("found an undecryptable proof");
         blames.add(
@@ -1516,7 +1557,7 @@ class Fusion {
       try {
         commitment.mergeFromBuffer(
             commitmentBlob as List<int>); // Method to parse protobuf data.
-      } on FormatException catch (e) {
+      } on FormatException catch (_) {
         // If the commitment data is invalid, throw an error.
         throw FusionError("Server relayed bad commitment");
       }
@@ -1592,7 +1633,10 @@ class Fusion {
     Utilities.debugPrint("sending blames");
 
     // Update the status to indicate that the program is waiting for the round to restart.
-    status = ('running', 'awaiting restart');
+    _updateStatus(
+      status: FusionStatus.running,
+      info: "awaiting restart",
+    );
 
     // Await the final 'restartround' message. It might take some time
     // to arrive since other players might be slow, and then the server
