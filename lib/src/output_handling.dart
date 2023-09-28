@@ -4,21 +4,16 @@ import 'dart:typed_data';
 import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/connection.dart';
+import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
-import 'package:fusiondart/src/models/address.dart';
-import 'package:fusiondart/src/models/input.dart';
-import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/models/protobuf.dart';
-import 'package:fusiondart/src/models/transaction.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/status.dart';
 import 'package:fusiondart/src/util.dart';
-
-import 'exceptions.dart';
 
 abstract final class OutputHandling {
   /// Selects coins for fusion.

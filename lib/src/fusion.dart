@@ -22,6 +22,7 @@ import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/models/protobuf.dart';
 import 'package:fusiondart/src/models/transaction.dart';
+import 'package:fusiondart/src/models/utxo_dto.dart';
 import 'package:fusiondart/src/output_handling.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
@@ -195,14 +196,7 @@ class Fusion {
   /// Returns:
   ///   Future<void> Returns a future that completes when the coins have been added.
   Future<void> addCoinsFromWallet(
-    List<
-            ({
-              String txid,
-              int vout,
-              int value,
-              List<int> pubKey,
-            })>
-        utxoList,
+    List<UtxoDTO> utxoList,
   ) async {
     // TODO sanity check the state of `coins` before adding to it.
 
