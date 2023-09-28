@@ -637,13 +637,17 @@ class Fusion {
       }
 
       // Initialize a map to store the statuses from the TierStatusUpdate message.
-      late Map<Int64, TierStatusUpdate_TierStatus> statuses;
+      final Map<Int64, TierStatusUpdate_TierStatus> statuses;
+
       // Populate the statuses map if "TierStatusUpdate" exists in the message.
       if (messageIsTierStatusUpdate) {
         /*TierStatusUpdate tierStatusUpdate = msg.tierstatusupdate;*/
         TierStatusUpdate tierStatusUpdate =
             msg.getField(fieldInfo.tagNumber) as TierStatusUpdate;
         statuses = tierStatusUpdate.statuses;
+      } else {
+        // TODO: Handle this differently?
+        throw Exception("messageIsTierStatusUpdate is false");
       }
 
       // Utilities.debugPrint("DEBUG 8892 statuses: $statuses.");
