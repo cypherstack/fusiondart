@@ -64,6 +64,7 @@ class Fusion {
   late final Future<({InternetAddress host, int port})> Function()
       _getSocksProxyAddress;
   late final Future<int> Function() _getChainHeight;
+  late final void Function(FusionStatus) _updateStatusCallback;
 
   /// Constructor that sets up a Fusion object.
   Fusion(this._fusionParams);
@@ -71,15 +72,17 @@ class Fusion {
   /// Method to initialize Fusion instance with necessary wallet methods.
   /// The methods injected here are used for various operations throughout the fusion process.
   Future<void> initFusion({
-    required Future<List<Address>> Function() getAddresses,
-    required Future<List<Input>> Function(String address) getInputsByAddress,
-    required Future<List<Transaction>> Function(String address)
+    required final Future<List<Address>> Function() getAddresses,
+    required final Future<List<Input>> Function(String address)
+        getInputsByAddress,
+    required final Future<List<Transaction>> Function(String address)
         getTransactionsByAddress,
-    required Future<List<Address>> Function(int numberOfAddresses)
+    required final Future<List<Address>> Function(int numberOfAddresses)
         getUnusedReservedChangeAddresses,
-    required Future<({InternetAddress host, int port})> Function()
+    required final Future<({InternetAddress host, int port})> Function()
         getSocksProxyAddress,
-    required Future<int> Function() getChainHeight,
+    required final Future<int> Function() getChainHeight,
+    required final void Function(FusionStatus) updateStatusCallback,
   }) async {
     _getAddresses = getAddresses;
     _getInputsByAddress = getInputsByAddress;
@@ -87,6 +90,7 @@ class Fusion {
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
     _getSocksProxyAddress = getSocksProxyAddress;
     _getChainHeight = getChainHeight;
+    _updateStatusCallback = updateStatusCallback;
 
     // Load coinlib.
     await coinlib.loadCoinlib();
@@ -102,7 +106,7 @@ class Fusion {
     required String info,
   }) {
     _status = (status: status, info: info);
-    // here we can do some notification when the status was updated if wanted
+    _updateStatusCallback(_status.status);
   }
 
   // TODO parameterize; should these be fed in as parameters upon construction/instantiation?

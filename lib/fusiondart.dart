@@ -7,3 +7,4 @@ export 'src/models/input.dart';
 export 'src/models/output.dart';
 export 'src/models/transaction.dart';
 export 'src/models/utxo_dto.dart';
+export 'src/status.dart';
