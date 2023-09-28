@@ -1045,10 +1045,15 @@ class Fusion {
     final totalFee = sumIn - sumOut;
     final excessFee = totalFee - inputFees - outputFees;
 
+    final safetyExcessFee = _allocatedOutputs!.safetyExcessFees[_tier];
+    if (safetyExcessFee == null) {
+      throw Exception("Safety excess fee not found for tire=$_tier");
+    }
+
     // Perform the safety checks!
     final safeties = [
       sumIn == BigInt.from(_allocatedOutputs!.safetySumIn),
-      excessFee == BigInt.from(_allocatedOutputs!.safetyExcessFees[_tier] ?? 0),
+      excessFee == BigInt.from(safetyExcessFee),
       excessFee <= BigInt.from(Protocol.MAX_EXCESS_FEE),
       totalFee <= BigInt.from(Protocol.MAX_FEE),
     ];
