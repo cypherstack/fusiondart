@@ -7,11 +7,7 @@ import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/pointycastle.dart' hide Mac;
 
-/// Custom exception class for encryption failures.
-class EncryptionFailed implements Exception {}
-
-/// Custom exception class for decryption failures.
-class DecryptionFailed implements Exception {}
+import 'exceptions.dart';
 
 /// Encrypts a message using a provided EC public key.
 ///

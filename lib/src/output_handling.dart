@@ -18,6 +18,8 @@ import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/status.dart';
 import 'package:fusiondart/src/util.dart';
 
+import 'exceptions.dart';
+
 abstract final class OutputHandling {
   /// Selects coins for fusion.
   ///

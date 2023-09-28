@@ -2,11 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:fusiondart/src/connection.dart';
-import 'package:fusiondart/src/fusion.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart';
+
+import 'exceptions.dart';
 
 /// Type definition for a function that creates a new instance of a Protobuf GeneratedMessage.
 typedef PbCreateFunc = GeneratedMessage Function();

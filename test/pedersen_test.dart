@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/pedersen.dart';

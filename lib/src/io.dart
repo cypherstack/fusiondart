@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
@@ -9,6 +8,8 @@ import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart';
+
+import 'exceptions.dart';
 
 abstract final class IO {
   static Future<GeneratedMessage> recv(

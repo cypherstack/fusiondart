@@ -12,12 +12,7 @@ import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/export.dart';
 import 'package:protobuf/protobuf.dart';
 
-class ValidationError implements Exception {
-  final String message;
-  ValidationError(this.message);
-  @override
-  String toString() => 'Validation error: $message';
-}
+import 'exceptions.dart';
 
 int componentContrib(pb.Component component, int feerate) {
   if (component.hasInput()) {

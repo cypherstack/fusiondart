@@ -31,6 +31,8 @@ import 'package:fusiondart/src/util.dart';
 import 'package:fusiondart/src/validation.dart';
 import 'package:protobuf/protobuf.dart';
 
+import 'exceptions.dart';
+
 final bool kDebugPrintEnabled = true;
 
 final class FusionParams {
@@ -1652,17 +1654,4 @@ class Fusion {
     // Return true to indicate successful execution of this part.
     return true;
   } // /run_round()
-}
-
-/// Custom exception class for Fusion related errors.
-class FusionError implements Exception {
-  /// The error message describing the issue.
-  final String message;
-
-  /// Constructs a new FusionError with the provided message.
-  FusionError(this.message);
-
-  /// Custom string representation of the FusionError, useful for debugging.
-  @override
-  String toString() => "FusionError: $message";
 }

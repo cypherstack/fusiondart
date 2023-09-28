@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:fusiondart/src/encrypt.dart';
+import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:test/test.dart';
 

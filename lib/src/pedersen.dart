@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
 
+import 'exceptions.dart';
+
 /// Class responsible for setting up a Pedersen commitment.
 class PedersenSetup {
   late final ECPoint _pointH;
@@ -252,54 +254,4 @@ class Commitment {
       pointPUncompressed: pointPUncompressed,
     );
   }
-}
-
-// ======================== Custom Exceptions ==================================
-
-// Custom exception classes to provide detailed error information.
-class NullPointError implements Exception {
-  /// Returns a string representation of the error.
-  String errMsg() => 'NullPointError: Either Hpoint or HGpoint is null.';
-}
-
-/// Represents an error when the nonce value is not within a valid range.
-class NonceRangeError implements Exception {
-  /// The error message String.
-  final String message;
-
-  /// Creates a new [NonceRangeError] with an optional error [message].
-  NonceRangeError(
-      [this.message = "Nonce value must be in the range 0 < nonce < order"]);
-
-  /// Returns a string representation of the error.
-  @override
-  String toString() => "NonceRangeError: $message";
-}
-
-/// Represents an error when the result is at infinity.
-class ResultAtInfinity implements Exception {
-  /// The error message String.
-  final String message;
-
-  /// Creates a new [ResultAtInfinity] with an optional error [message].
-  ResultAtInfinity([this.message = "Result is at infinity"]);
-
-  /// Returns a string representation of the error.
-  @override
-  String toString() => "ResultAtInfinity: $message";
-}
-
-/// Represents an error when the H point has a known discrete logarithm.
-class InsecureHPoint implements Exception {
-  /// The error message String.
-  final String message;
-
-  /// Creates a new [InsecureHPoint] with an optional error [message].
-  InsecureHPoint(
-      [this.message =
-          "The H point has a known discrete logarithm, which means the commitment setup is broken"]);
-
-  /// Returns a string representation of the error.
-  @override
-  String toString() => "InsecureHPoint: $message";
 }

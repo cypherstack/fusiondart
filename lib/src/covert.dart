@@ -11,6 +11,8 @@ import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart' as pb;
 import 'package:protobuf/protobuf.dart';
 
+import 'exceptions.dart';
+
 // Cool down time for Tor connections, in seconds.
 const int torCoolDownTime = 660;
 
@@ -795,22 +797,4 @@ double randTrap(Random rng) {
     // Calculate using the formula for the middle trapezoid.
     return 0.75 * f + 0.125;
   }
-}
-
-/// Represents a Fusion error.
-///
-/// Attributes:
-/// - [cause]: The cause of the error as a String.
-class FusionError implements Exception {
-  /// The cause of the error as a String.
-  String cause;
-
-  /// Constructor that initializes the FusionError with a given [cause].
-  FusionError(this.cause);
-}
-
-/// Represents an unrecoverable Fusion error.
-class Unrecoverable extends FusionError {
-  /// Constructor that initializes the Unrecoverable error with a given [cause].
-  Unrecoverable(String cause) : super(cause);
 }
