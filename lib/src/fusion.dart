@@ -1091,12 +1091,11 @@ class Fusion {
       pedersenNonce.add(genComponentResult.pedersenNonce);
     }
     // Sanity checks on the generated components.
-    assert(
-      excessFee ==
-          pedersenAmount
-              .map((value) => value)
-              .fold(BigInt.zero, (a, b) => a + b),
-    ); // Sum the elements
+    assert(excessFee ==
+        pedersenAmount.fold(
+            BigInt.zero,
+            (BigInt accumulator, BigInt value) =>
+                accumulator + value)); // Sum the elements
     assert(myComponents.toSet().length == myComponents.length); // no duplicates
 
     // Generate blind signature requests (see schnorr from Electron-Cash's schnorr.py)
