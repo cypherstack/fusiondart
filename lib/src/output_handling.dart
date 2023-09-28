@@ -7,11 +7,9 @@ import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/models/protobuf.dart';
-import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
-import 'package:fusiondart/src/status.dart';
 import 'package:fusiondart/src/util.dart';
 
 abstract final class OutputHandling {
@@ -448,14 +446,20 @@ abstract final class OutputHandling {
   ///
   /// Returns:
   ///   A list of `ComponentResult` objects containing all the components needed for the transaction.
-  static List<ComponentResult> genComponents(
+  static ({
+    List<ComponentResult> results,
+    BigInt sumAmounts,
+    Uint8List pedersenTotalNonce,
+  }) genComponents(
     int numBlanks,
     List<Input> inputs,
     List<Output> outputs,
     int feerate,
   ) {
     // Sanity check.
-    assert(numBlanks >= 0);
+    if (numBlanks < 0) {
+      throw Exception("genComponents called with numBlanks less than 0");
+    }
 
     // Initialize list of components.
     List<({Component component, BigInt value})> components = [];
@@ -520,44 +524,43 @@ abstract final class OutputHandling {
 
     // Initialize result list.
     List<ComponentResult> resultList = [];
+    BigInt sumAmounts = BigInt.zero;
+    BigInt sumNonce = BigInt.zero;
 
     // Generate commitments.
     components.asMap().forEach((cnum, componentRecord) {
       // Generate salt.
-      Uint8List salt = Utilities.tokenBytes(32);
+      final salt = Utilities.tokenBytes(32);
       componentRecord.component.saltCommitment = Utilities.sha256(salt);
-      Uint8List compser = componentRecord.component.writeToBuffer();
+      final compser = componentRecord.component.writeToBuffer();
+
+      final pedersenCommitment = Utilities.pedersenSetup.commit(
+        componentRecord.value,
+      );
+      sumAmounts += componentRecord.value;
+      sumNonce += pedersenCommitment.nonce;
 
       // Generate keypair.
       (Uint8List, Uint8List) keyPair = Utilities.genKeypair();
-      Uint8List privateKey = keyPair.$1;
-      Uint8List pubKey = keyPair.$2;
-
-      // Generate amount commitment.
-      Commitment commitmentInstance = Utilities.pedersenSetup.commit(
-        componentRecord.value,
-      );
-      final amountCommitment = commitmentInstance.pointPUncompressed;
-
-      // Convert BigInt nonce to Uint8List.
-      final pedersenNonce = commitmentInstance.nonce.toBytes;
+      final privateKey = keyPair.$1;
+      final pubKey = keyPair.$2;
 
       // Generating initial commitment.
-      InitialCommitment commitment = InitialCommitment(
+      final commitment = InitialCommitment(
         saltedComponentHash:
-            Utilities.sha256(Uint8List.fromList([...compser, ...salt])),
-        amountCommitment: amountCommitment,
+            Utilities.sha256(Uint8List.fromList(compser + salt)),
+        amountCommitment: pedersenCommitment.pointPUncompressed,
         communicationKey: pubKey,
       );
 
       // Write commitment to buffer.
-      Uint8List commitser = commitment.writeToBuffer();
+      final commitser = commitment.writeToBuffer();
 
       // Generate proof.
       Proof proof = Proof(
         componentIdx: cnum,
         salt: salt,
-        pedersenNonce: pedersenNonce,
+        pedersenNonce: pedersenCommitment.nonce.toBytes,
       );
 
       // Add result to list.
@@ -568,13 +571,15 @@ abstract final class OutputHandling {
           compser,
           proof,
           privateKey,
-          pedersenAmount: componentRecord.value,
         ),
       );
-      // TODO What about pedersenNonce?
     });
 
-    return resultList;
+    return (
+      results: resultList,
+      sumAmounts: sumAmounts,
+      pedersenTotalNonce: sumNonce.toBytes,
+    );
   }
 
   /// Generates random outputs given specific parameters.

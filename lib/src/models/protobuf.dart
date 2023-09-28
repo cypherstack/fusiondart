@@ -20,12 +20,13 @@ class ComponentResult {
   final Uint8List component; // Actual component as Uint8List.
   final Proof proof; // Proof for this component.
   final Uint8List privateKey; // Private key for this component.
-  // TODO type
-  final BigInt? pedersenAmount; // Pedersen amount.
-  final dynamic pedersenNonce; // Pedersen nonce, type to be determined.
 
   /// Constructor for the ComponentResult class.
-  ComponentResult(this.commitment, this.counter, this.component, this.proof,
-      this.privateKey,
-      {this.pedersenAmount, this.pedersenNonce});
+  ComponentResult(
+    this.commitment,
+    this.counter,
+    this.component,
+    this.proof,
+    this.privateKey,
+  );
 }

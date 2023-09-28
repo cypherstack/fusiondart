@@ -20,7 +20,6 @@ import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/blind_signature_request.dart';
 import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
-import 'package:fusiondart/src/models/protobuf.dart';
 import 'package:fusiondart/src/models/transaction.dart';
 import 'package:fusiondart/src/models/utxo_dto.dart';
 import 'package:fusiondart/src/output_handling.dart';
@@ -1086,9 +1085,12 @@ class Fusion {
     int numBlanks = _serverParams!.numComponents -
         _allocatedOutputs!.inputs.length -
         _outputs.length;
-    final List<ComponentResult> genComponentsResults =
-        OutputHandling.genComponents(
-            numBlanks, _coins, _outputs, _serverParams!.componentFeeRate);
+    final genComponentsResults = OutputHandling.genComponents(
+      numBlanks,
+      _coins,
+      _outputs,
+      _serverParams!.componentFeeRate,
+    );
 
     // Initialize lists to store various parts of the component data.
     final List<Uint8List> myCommitments = [];
@@ -1096,29 +1098,22 @@ class Fusion {
     final List<Uint8List> myComponents = [];
     final List<Proof> myProofs = [];
     final List<Uint8List> privKeys = [];
-    final List<BigInt> pedersenAmount = [];
-
-    // TODO type
-    final List<dynamic> pedersenNonce = [];
 
     // Populate the lists with data from the generated components.
-    for (ComponentResult genComponentResult in genComponentsResults) {
-      myCommitments.add(genComponentResult.commitment);
-      myComponentSlots.add(genComponentResult.counter);
-      myComponents.add(genComponentResult.component);
-      myProofs.add(genComponentResult.proof);
-      privKeys.add(genComponentResult.privateKey);
-      if (genComponentResult.pedersenAmount != null) {
-        pedersenAmount.add(genComponentResult.pedersenAmount!);
-      }
-      pedersenNonce.add(genComponentResult.pedersenNonce);
+    for (final result in genComponentsResults.results) {
+      myCommitments.add(result.commitment);
+      myComponentSlots.add(result.counter);
+      myComponents.add(result.component);
+      myProofs.add(result.proof);
+      privKeys.add(result.privateKey);
     }
     // Sanity checks on the generated components.
-    assert(excessFee ==
-        pedersenAmount.fold(
-            BigInt.zero,
-            (BigInt accumulator, BigInt value) =>
-                accumulator + value)); // Sum the elements
+
+    Utilities.debugPrint("excessFee=$excessFee");
+    Utilities.debugPrint(
+        "genComponentsResults.sumAmounts=${genComponentsResults.sumAmounts}");
+
+    assert(excessFee == genComponentsResults.sumAmounts);
     assert(myComponents.toSet().length == myComponents.length); // no duplicates
 
     // Generate blind signature requests (see schnorr from Electron-Cash's schnorr.py)
@@ -1156,7 +1151,7 @@ class Fusion {
       PlayerCommit(
         initialCommitments: myCommitments,
         excessFee: Int64.parseHex(excessFee.toHex),
-        pedersenTotalNonce: pedersenNonce.cast<int>(),
+        pedersenTotalNonce: genComponentsResults.pedersenTotalNonce,
         randomNumberCommitment: crypto.sha256.convert(randomNumber).bytes,
         blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
       ),
