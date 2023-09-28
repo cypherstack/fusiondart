@@ -1087,7 +1087,7 @@ class Fusion {
         _outputs.length;
     final genComponentsResults = OutputHandling.genComponents(
       numBlanks,
-      _coins,
+      _allocatedOutputs!.inputs,
       _outputs,
       _serverParams!.componentFeeRate,
     );
