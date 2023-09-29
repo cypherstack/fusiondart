@@ -197,20 +197,19 @@ class CovertSubmitter extends PrintError {
   /// A list of slots that can take covert tasks.
   List<CovertSlot> slots;
   bool done = true;
-  int numSlots;
+  final int numSlots;
   String? failureException;
 
   bool stopping = false;
   Map<String, dynamic>? proxyOpts;
   String? randTag;
-  String? destAddr;
-  int? destPort;
-  bool ssl = false;
-  Object lock = Object();
+  final String destAddr;
+  final int destPort;
+  final bool ssl;
   int countFailed = 0;
   int countEstablished = 0;
   int countAttempted = 0;
-  Random rng = Random.secure();
+  final Random rng = Random.secure();
   final int randSpan;
   DateTime? stopTStart;
   List<CovertConnection> spareConnections = [];
@@ -228,9 +227,9 @@ class CovertSubmitter extends PrintError {
   /// - [randSpan]: The random span for the covert communication.
   /// - [submitTimeout]: The timeout for submitting tasks.
   CovertSubmitter(
-    String destAddr,
-    int destPort,
-    bool ssl,
+    this.destAddr,
+    this.destPort,
+    this.ssl,
     String torHost,
     int torPort,
     this.numSlots,
@@ -508,8 +507,8 @@ class CovertSubmitter extends PrintError {
         // Attempt to open a connection.
         try {
           final connection = await Connection.openConnection(
-            destAddr!,
-            destPort!,
+            destAddr,
+            destPort,
             connTimeout: connectTimeout,
             ssl: ssl,
 
