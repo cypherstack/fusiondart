@@ -54,23 +54,19 @@ class CovertConnection {
       return false;
     }
 
-    if (wakeup.isCompleted) {
-      // insta return completed value
-      final wasSet = await wakeup.future;
-      wakeup = Completer();
-      return wasSet;
-    }
-
     // Calculate the remaining time until `t`.
     int remTime = t.difference(DateTime.now()).inMilliseconds;
     remTime = remTime > 0 ? remTime : 0;
 
-    // start timer to complete completer
-    unawaited(Future<void>.delayed(Duration(milliseconds: remTime)).then((_) {
-      if (!wakeup.isCompleted) {
-        wakeup.complete(true);
-      }
-    }));
+    // wait for the first one of the following futures to complete
+    await Future.any([
+      Future<void>.delayed(Duration(milliseconds: remTime)).then((_) {
+        if (!wakeup.isCompleted) {
+          wakeup.complete(true);
+        }
+      }),
+      wakeup.future,
+    ]);
 
     // Return whether the connection was woken up.
     final wasSet = await wakeup.future;
