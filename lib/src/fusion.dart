@@ -372,7 +372,13 @@ class Fusion {
         await registerAndWait(_socketWrapper!);
 
         // launch the covert submitter
-        CovertSubmitter covert = await startCovert();
+        final covert = await startCovert(
+          covertPort: _covertPort,
+          covertSSL: _covertSSL,
+          covertDomainB: _covertDomainB,
+          tFusionBegin: _tFusionBegin,
+          serverParams: _serverParams!,
+        );
         try {
           // Pool started. Keep running rounds until fail or complete.
           while (true) {
@@ -869,12 +875,20 @@ class Fusion {
   ///
   /// Returns:
   ///   A `Future<CovertSubmitter>` that resolves to the initialized `CovertSubmitter`.
-  Future<CovertSubmitter> startCovert() async {
+  Future<CovertSubmitter> startCovert({
+    required int covertPort,
+    required bool covertSSL,
+    required Uint8List covertDomainB,
+    required DateTime tFusionBegin,
+    required ({
+      int numComponents,
+      int componentFeeRate,
+      int minExcessFee,
+      int maxExcessFee,
+      List<int> availableTiers,
+    }) serverParams,
+  }) async {
     Utilities.debugPrint("DEBUG START COVERT!");
-
-    if (_serverParams == null) {
-      throw Exception("_serverParams is null in startCovert()");
-    }
 
     // set status record/tuple.
     _updateStatus(
@@ -893,7 +907,7 @@ class Fusion {
     // Decode the covert domain and validate it.
     String covertDomain;
     try {
-      covertDomain = utf8.decode(_covertDomainB);
+      covertDomain = utf8.decode(covertDomainB);
     } catch (e) {
       throw FusionError('badly encoded covert domain');
     }
@@ -901,18 +915,18 @@ class Fusion {
     // Create a new CovertSubmitter instance.
     CovertSubmitter covert = CovertSubmitter(
       covertDomain,
-      _covertPort,
-      _covertSSL,
+      covertPort,
+      covertSSL,
       proxyInfo.host.address,
       proxyInfo.port,
-      _serverParams!.numComponents,
+      serverParams.numComponents,
       Protocol.COVERT_SUBMIT_WINDOW,
       Duration(seconds: Protocol.COVERT_SUBMIT_TIMEOUT),
     );
     try {
       // Schedule Tor connections for the CovertSubmitter.
       covert.scheduleConnections(
-        _tFusionBegin,
+        tFusionBegin,
         Duration(seconds: Protocol.COVERT_CONNECT_WINDOW),
         numSpares: Protocol.COVERT_CONNECT_SPARES,
         connectTimeout: Duration(
@@ -928,7 +942,7 @@ class Fusion {
       */
 
       // Loop a bit before we're expecting startRound, watching for status updates.
-      final tend = _tFusionBegin.add(Duration(
+      final tend = tFusionBegin.add(Duration(
           seconds: (Protocol.WARMUP_TIME - Protocol.WARMUP_SLOP - 1).round()));
 
       // Poll the status of the connections until the ending time.
@@ -945,7 +959,7 @@ class Fusion {
           status: FusionStatus.running,
           info: "Setting up Tor connections "
               "($numConnected+$numSpareConnected out"
-              " of ${_serverParams?.numComponents})",
+              " of ${serverParams.numComponents})",
         );
 
         // Wait for 1 second before re-checking.
