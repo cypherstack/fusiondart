@@ -20,15 +20,6 @@ const int torCoolDownTime = 660;
 const int TIMEOUT_INACTIVE_CONNECTION = 120;
 
 /// Represents a covert connection.
-///
-/// This class maintains state information for a covert connection, including ping times and delays.
-///
-/// Attributes:
-/// - [connection]: The Connection object for the covert connection.
-/// - [slotNum]: The slot number for the covert connection.
-/// - [tPing]: The time of the last ping.
-/// - [connNumber]: The connection number.
-/// - [delay] (optional): The delay for the connection.
 class CovertConnection {
   Connection? connection;
   int? slotNum;
@@ -38,16 +29,6 @@ class CovertConnection {
   double? delay;
 
   /// Waits for the connection to wake up or for a timeout.
-  ///
-  /// This method waits for the connection to become active again
-  /// based on the given DateTime [t] or times out if [t] is null.
-  ///
-  /// Parameters:
-  /// - [t]: The DateTime object representing the time to wait until.
-  ///
-  /// Returns:
-  ///   A `Future<bool>` which resolves to `true` if the connection woke up;
-  ///   otherwise, `false`.
   Future<bool> waitWakeupOrTime(DateTime? t) async {
     // Check `t`'s validity.
     if (t == null) {
@@ -75,12 +56,6 @@ class CovertConnection {
   }
 
   /// Sends a ping message to keep the connection alive.
-  ///
-  /// This method sends a 'Ping' message to the server to keep the connection
-  /// active. It is called at intervals to ensure that the connection doesn't time out.
-  ///
-  /// Returns:
-  ///   `void`
   void ping() {
     // If the connection exists, send a `Ping` message.
     if (connection != null) {
@@ -92,25 +67,12 @@ class CovertConnection {
   }
 
   /// Indicates the connection is inactive and throws an unrecoverable error.
-  ///
-  /// This method is currently not implemented.
-  ///
-  /// TODO implement.
   void inactive() {
     throw Unrecoverable("Timed out from inactivity (this is a bug!)");
   }
 }
 
 /// Represents a slot in a covert communication setup.
-///
-/// This class maintains state information for work to be done in a given slot of a covert system.
-///
-/// Attributes:
-/// - [submitTimeout]: The timeout for submitting work.
-/// - [subMsg]: The work to be done.
-/// - [done]: Whether the work is done.
-/// - [covConn] (optional): The CovertConnection object associated with the slot.
-/// - [_tSubmit] (optional): The time of the last submit action.
 class CovertSlot {
   /// Constructor that initializes the covert slot with a given submission timeout.
   CovertSlot(this.submitTimeout) : done = true;
@@ -127,15 +89,6 @@ class CovertSlot {
   DateTime? get tSubmit => _tSubmit;
 
   /// Submits the work to be done within the slot.
-  ///
-  /// This method is responsible for sending a message for the work to be
-  /// performed, waiting for a response, and then setting the state accordingly.
-  ///
-  /// Returns:
-  ///  A `Future<void>` whose resolution represents completion.
-  ///
-  /// Throws:
-  /// - Unrecoverable: if the connection is null.
   Future<void> submit() async {
     // Attempt to get the connection object from the covert connection.
     Connection? connection = covConn!.connection;
@@ -175,23 +128,11 @@ class CovertSlot {
 /// Manages submission of covert tasks.
 ///
 /// This class manages the submission of covert tasks to a server.
-///
-/// Attributes:
-/// - [slots]: A list of slots that can take covert tasks.
-/// - [numSlots]: The number of covert slots to use.
-/// - [failureException] (optional): The exception that caused the stop.
-/// - [proxyInfo] (optional): The proxy options for the covert communication.
-/// - [randTag] (optional): The random tag for the covert communication.
-/// - [destAddr] (optional): The destination address for the covert communication.
-/// - [destPort] (optional): The destination port for the covert communication.
-/// - [rng] (optional): The random number generator for the covert communication.
-/// - [randSpan] (optional): The random span for the covert communication.
-/// - [stopTStart] (optional): The start time for stopping in seconds since epoch.
 class CovertSubmitter {
   final String destAddr;
   final int destPort;
   final bool ssl;
-  final ({InternetAddress host, int port})? proxyInfo;
+  final ({InternetAddress host, int port}) proxyInfo;
   final int numSlots;
   final int randSpan;
   final int submitTimeout = 0;
@@ -211,21 +152,11 @@ class CovertSubmitter {
   List<CovertConnection> spareConnections = [];
 
   /// Constructor to initialize the CovertSubmitter.
-  ///
-  /// Parameters:
-  /// - [destAddr]: The destination address for the covert communication.
-  /// - [destPort]: The destination port for the covert communication.
-  /// - [ssl]: Whether to use SSL for the covert communication.
-  /// - [torHost]: The host address for the Tor proxy.
-  /// - [torPort]: The port for the Tor proxy.
-  /// - [numSlots]: The number of covert slots to use.
-  /// - [randSpan]: The random span for the covert communication.
-  /// - [submitTimeout]: The timeout for submitting tasks.
   CovertSubmitter({
     required this.destAddr,
     required this.destPort,
     required this.ssl,
-    this.proxyInfo,
+    required this.proxyInfo,
     required this.numSlots,
     required this.randSpan,
     required Duration submitTimeout,
@@ -253,12 +184,6 @@ class CovertSubmitter {
   }
 
   /// Sets the time to stop all tasks.
-  ///
-  /// Parameters:
-  ///  - [tStart]: The start time for stopping in seconds since epoch.
-  ///
-  /// Returns:
-  ///  `void`
   void setStopTime(int tStart) {
     // Set the time at which to stop.
     stopTStart = DateTime.fromMillisecondsSinceEpoch(tStart * 1000);
@@ -270,12 +195,6 @@ class CovertSubmitter {
   }
 
   /// Stops all tasks and closes the connections.
-  ///
-  /// Parameters:
-  ///   - [exception] (optional): The exception that caused the stop.
-  ///
-  /// Returns:
-  ///  `void`
   void stop([Exception? exception]) {
     if (stopping) {
       // Already requested!
@@ -295,18 +214,7 @@ class CovertSubmitter {
 
   /// Schedules connections for tasks and runs them unawaited.
   ///
-  /// This method is responsible for scheduling the connections required for covert communication.
-  /// It prepares connections needed for each covert slot, as well as handling spare connections that might be used later.
   /// TODO implement multithreading, which ElectronCash does in Python
-  ///
-  /// Parameters:
-  /// - [tStart]: The DateTime object representing the start time for scheduling.
-  /// - [tSpan]: The Duration object representing the time span within which to schedule the connections.
-  /// - [numSpares] (optional): The number of spare connections to maintain. Default is 0.
-  /// - [connectTimeout] (optional): The timeout duration for connections in seconds. Default is 10 seconds.
-  ///
-  /// Returns:
-  ///  `void`
   void scheduleConnectionsAndStartRunningThem(
     DateTime tStart,
     Duration tSpan, {
@@ -375,14 +283,6 @@ class CovertSubmitter {
   /// Schedules a task to be submitted.
   ///
   /// This method schedules a submission or ping task for the specified covert slot.
-  ///
-  /// Parameters:
-  /// - [slotNum]: The slot number for the covert slot.
-  /// - [tStart]: The DateTime object representing the start time for scheduling.
-  /// - [subMsg]: The message to be submitted.
-  ///
-  /// Returns:
-  ///  `void`
   void scheduleSubmit(
       int slotNum, DateTime tStart, pb.GeneratedMessage subMsg) {
     // Get the covert slot for the specified slot number.
@@ -403,22 +303,6 @@ class CovertSubmitter {
   }
 
   /// Schedules tasks for all available slots.
-  ///
-  /// This method schedules the submissions or ping tasks for all available covert slots.
-  /// If a slot does not have a message to submit, a ping task will be scheduled instead.
-  /// This ensures that all slots are either actively submitting a message or keeping the connection alive through a ping.
-  ///
-  /// Parameters:
-  /// - [tStart]: The DateTime object representing the start time for scheduling tasks.
-  /// - [slotMessages]: A List of messages, one for each slot, that are to be submitted.
-  ///                   These messages should be of type `pb.GeneratedMessage` or null.
-  ///
-  /// Returns:
-  ///  `void`
-  ///
-  /// Note:
-  /// - The length of `slotMessages` must equal the number of available slots (`slots.length`).
-  /// - The method updates the `t_submit` and `subMsg` fields of each `CovertSlot` as needed.
   void scheduleSubmissions(DateTime tStart, List<dynamic> slotMessages) {
     // Convert to list (Dart does not have tuples)
     slotMessages = List.from(slotMessages);
@@ -454,15 +338,6 @@ class CovertSubmitter {
   }
 
   /// Runs a connection thread for the provided covert connection.
-  ///
-  /// Parameters:
-  /// - [covConn] - The CovertConnection object to be handled.
-  /// - [connTime] - The time for the connection in milliseconds since epoch.
-  /// - [randDelay] - Random delay factor to be applied.
-  /// - [connectTimeout] - Connection timeout in seconds.
-  ///
-  /// Returns:
-  ///   A `Future<void>` whose resolution indicates completion.
   Future<void> _runConnection(
     CovertConnection covConn,
     int connTime,
@@ -623,12 +498,6 @@ class CovertSubmitter {
   }
 
   /// Checks for any failure exceptions and throws them if they exist.
-  ///
-  /// Returns:
-  ///   `void`
-  ///
-  /// Throws:
-  /// - FusionError: if a failure exception exists.
   void checkOk() {
     var e = failureException;
     if (e != null) {
@@ -637,12 +506,6 @@ class CovertSubmitter {
   }
 
   /// Verifies all slots are connected.
-  ///
-  /// Returns:
-  ///   `void`
-  ///
-  /// Throws:
-  ///  - FusionError: if not all slots are connected.
   void checkConnected() {
     checkOk();
     var numMissing = slots.where((s) => s.covConn?.connection == null).length;
@@ -653,12 +516,6 @@ class CovertSubmitter {
   }
 
   /// Verifies all submissions are done.
-  ///
-  /// Returns:
-  ///   `void`
-  ///
-  /// Throws:
-  /// - FusionError: if not all submissions are completed.
   void checkDone() {
     checkOk();
     int numMissing = slots.where((s) => !s.done).length;
@@ -670,18 +527,6 @@ class CovertSubmitter {
 }
 
 /// Checks if a specific port on a host is running a Tor service.
-///
-/// This function tries to connect to a given a [host] and [port],
-/// and then sends a "GET" request to check for the typical Tor error message.
-/// This is a simple heuristic to identify Tor.
-///
-/// Parameters:
-///  - [host]: The host address to check.
-///  - [port]: The port to check.
-///
-/// Returns:
-///   A `Future<bool>` that resolves to `true` if the port appears to be running Tor,
-///   and `false` otherwise.
 Future<bool> isTorPort(String host, int port) async {
   // Validate the port range
   if (port < 0 || port > 65535) {
@@ -716,12 +561,6 @@ Future<bool> isTorPort(String host, int port) async {
 }
 
 /// A rate limiter for Tor connections.
-///
-/// This class maintains a queue of timestamps to keep track of the usage.
-/// It cleans up the old timestamps and limits the usage based on a lifetime value.
-///
-/// Attributes:
-/// - [lifetime]: The lifetime of the timestamps.
 class TorLimiter {
   Queue<DateTime> deque = Queue<DateTime>();
   int lifetime;
@@ -753,16 +592,6 @@ class TorLimiter {
 TorLimiter limiter = TorLimiter(torCoolDownTime);
 
 /// Generates a random number based on a trapezoidal distribution.
-///
-/// Uses a random number generator [rng].
-///
-/// TODO move this to the Utilities class or use a package implementation.
-///
-/// Parameters:
-/// - [rng]: The random number generator to use.
-///
-/// Returns:
-///   A random double based on a trapezoidal distribution.
 double randTrap(Random rng) {
   // Define a constant for one-sixth, which we'll use for comparisons.
   final sixth = 1.0 / 6;
