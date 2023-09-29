@@ -174,7 +174,6 @@ class Fusion {
   Transaction _currentTransaction = Transaction();
   List<int> _myComponentIndexes = []; // Holds the indexes for the components.
   List<int> _myCommitmentIndexes = []; // Holds the indexes for the commitments.
-  Set<int> _badComponents = {}; // The indexes of bad components.
 
   static const INACTIVE_TIME_LIMIT = Duration(minutes: 10);
   static const int COINBASE_MATURITY = 100; // Maturity for coinbase UTXOs.
@@ -1371,6 +1370,8 @@ class Fusion {
       throw FusionError('Session hash mismatch (bug!)');
     }
 
+    final Set<int> badComponents = {};
+
     // Handle covert signature submission.
     if (!shareCovertComponentsMsg.skipSignatures) {
       Utilities.debugPrint("starting covert signature submission");
@@ -1490,12 +1491,13 @@ class Fusion {
         Utilities.updateWalletLabel(_txId, label);
       } else {
         // If not successful, identify bad components.
-        _badComponents = msg.badComponents.toSet();
-        if (_badComponents
+        badComponents.clear();
+        badComponents.addAll(msg.badComponents);
+        if (badComponents
             .intersection(_myComponentIndexes.toSet())
             .isNotEmpty) {
           Utilities.debugPrint(
-              "bad components: ${_badComponents.toList()} mine: ${_myComponentIndexes.toList()}");
+              "bad components: $badComponents mine: $_myComponentIndexes");
           throw FusionError("server thinks one of my components is bad!");
         }
       }
@@ -1658,7 +1660,7 @@ class Fusion {
             .map((component) => Uint8List.fromList(component))
             .toList();
         // Convert badComponents to List<int>
-        List<int> badComponentsList = _badComponents.toList();
+        List<int> badComponentsList = badComponents.toList();
         // Convert componentFeeRate to int if it's double.
         int componentFeerateInt = _serverParams!.componentFeeRate;
 
