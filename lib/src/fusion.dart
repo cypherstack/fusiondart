@@ -172,8 +172,6 @@ class Fusion {
   List<int>? _txInputIndices; // Indices for transaction inputs.
 
   Transaction _currentTransaction = Transaction();
-  List<int> _myComponentIndexes = []; // Holds the indexes for the components.
-  List<int> _myCommitmentIndexes = []; // Holds the indexes for the commitments.
 
   static const INACTIVE_TIME_LIMIT = Duration(minutes: 10);
   static const int COINBASE_MATURITY = 100; // Maturity for coinbase UTXOs.
@@ -1307,12 +1305,16 @@ class Fusion {
     if (allCommitments.toSet().length != allCommitments.length) {
       throw FusionError('Commitments list includes duplicates.');
     }
+
+    final List<int> myCommitmentIndexes = [];
+
     try {
       List<Uint8List> allCommitmentsBytes = allCommitments
           .map((commitment) => commitment.writeToBuffer())
           .toList();
-      _myCommitmentIndexes =
-          myCommitments.map((c) => allCommitmentsBytes.indexOf(c)).toList();
+      myCommitmentIndexes.addAll(
+        myCommitments.map((c) => allCommitmentsBytes.indexOf(c)),
+      );
     } on Exception {
       throw FusionError('One or more of my commitments missing.');
     }
@@ -1340,12 +1342,15 @@ class Fusion {
 
     covert.checkDone();
 
+    final List<int> myComponentIndexes = [];
+
     try {
-      _myComponentIndexes = myComponents
-          .map((c) => allComponents
-              .indexWhere((element) => ListEquality<int>().equals(element, c)))
-          .toList();
-      if (_myComponentIndexes.contains(-1)) {
+      myComponentIndexes.addAll(
+        myComponents.map((c) => allComponents
+            .indexWhere((element) => ListEquality<int>().equals(element, c))),
+      );
+
+      if (myComponentIndexes.contains(-1)) {
         throw FusionError('One or more of my components missing.');
       }
     } on StateError {
@@ -1407,7 +1412,7 @@ class Fusion {
         Input inp = myCombined[i].$2;
 
         // Skip if not my input.
-        int myCompIdx = _myComponentIndexes.indexOf(cIdx);
+        int myCompIdx = myComponentIndexes.indexOf(cIdx);
         if (myCompIdx == -1) continue; // not my input
 
         // Extract public and private keys.
@@ -1493,11 +1498,9 @@ class Fusion {
         // If not successful, identify bad components.
         badComponents.clear();
         badComponents.addAll(msg.badComponents);
-        if (badComponents
-            .intersection(_myComponentIndexes.toSet())
-            .isNotEmpty) {
+        if (badComponents.intersection(myComponentIndexes.toSet()).isNotEmpty) {
           Utilities.debugPrint(
-              "bad components: $badComponents mine: $_myComponentIndexes");
+              "bad components: $badComponents mine: $myComponentIndexes");
           throw FusionError("server thinks one of my components is bad!");
         }
       }
@@ -1521,7 +1524,7 @@ class Fusion {
     // Create a list of commitment indexes, but leaving out mine.
     List<int> othersCommitmentIdxes = [];
     for (int i = 0; i < allCommitments.length; i++) {
-      if (!_myCommitmentIndexes.contains(i)) {
+      if (!myCommitmentIndexes.contains(i)) {
         othersCommitmentIdxes.add(i);
       }
     }
@@ -1548,7 +1551,7 @@ class Fusion {
     for (int i = 0; i < dstCommits.length; i++) {
       InitialCommitment msg = dstCommits[i];
       Proof proof = myProofs[i];
-      proof.componentIdx = _myComponentIndexes[i];
+      proof.componentIdx = myComponentIndexes[i];
 
       try {
         // Encrypt the proof using the communication key.
