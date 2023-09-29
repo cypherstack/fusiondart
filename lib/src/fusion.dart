@@ -291,13 +291,19 @@ class Fusion {
       // Connect to server.
       _updateStatus(status: FusionStatus.connecting, info: "");
       try {
-        connection = await Connection.openConnection(
-          _fusionParams.serverHost,
-          _fusionParams.serverPort,
-          connTimeout: Duration(seconds: 5),
-          defaultTimeout: Duration(seconds: 5),
-          ssl: _fusionParams.serverSsl,
-        );
+        try {
+          connection = await Connection.openConnection(
+            host: _fusionParams.serverHost,
+            port: _fusionParams.serverPort,
+            connTimeout: Duration(seconds: 5),
+            defaultTimeout: Duration(seconds: 5),
+            ssl: _fusionParams.serverSsl,
+            // proxyInfo null, connect directly.
+            // TODO use proxyInfo for optional privacy for normally-overt comms.
+          );
+        } catch (e, s) {
+          Utilities.debugPrint("$s");
+        }
       } catch (e) {
         // TODO: _updateStatus with correct failure
         //   _updateStatus(status: FusionStatus.???, info: "");
@@ -321,10 +327,15 @@ class Fusion {
         await socketWrapper.connect();
 
         // Version check and download server params.
-        _serverParams = await IO.greet(
-          connection: connection,
-          socketWrapper: socketWrapper,
-        );
+        try {
+          _serverParams = await IO.greet(
+            connection: connection!,
+            socketWrapper: socketWrapper,
+          );
+        } catch (e, s) {
+          Utilities.debugPrint("Exception greeting server: $e");
+          Utilities.debugPrint("$s");
+        }
 
         socketWrapper.status();
 
@@ -348,7 +359,8 @@ class Fusion {
         final currentChainHeight = await _getChainHeight();
 
         _allocatedOutputs = await OutputHandling.allocateOutputs(
-          connection: connection,
+          connection:
+              connection!, // A non-null [connection] would've been caught by IO.greet()'s try-catch above, no need to check or handle it here.
           socketWrapper: socketWrapper,
           status: status.status,
           coins: inputsFromWallet,
@@ -392,7 +404,13 @@ class Fusion {
           covert.stop();
         }
       } finally {
-        await connection.close();
+        try {
+          // Close connection.
+          await connection!.close();
+        } catch (e, s) {
+          Utilities.debugPrint("Exception closing connection: $e");
+          Utilities.debugPrint("$s");
+        }
         await socketWrapper?.close();
       }
 
@@ -948,14 +966,13 @@ class Fusion {
 
     // Create a new CovertSubmitter instance.
     CovertSubmitter covert = CovertSubmitter(
-      covertDomain,
-      covertPort,
-      covertSSL,
-      proxyInfo.host.address,
-      proxyInfo.port,
-      serverParams.numComponents,
-      Protocol.COVERT_SUBMIT_WINDOW,
-      Duration(seconds: Protocol.COVERT_SUBMIT_TIMEOUT),
+      destAddr: covertDomain,
+      destPort: covertPort,
+      ssl: covertSSL,
+      proxyInfo: proxyInfo,
+      numSlots: serverParams.numComponents,
+      randSpan: Protocol.COVERT_SUBMIT_WINDOW,
+      submitTimeout: Duration(seconds: Protocol.COVERT_SUBMIT_TIMEOUT),
     );
     try {
       // Schedule Tor connections for the CovertSubmitter.

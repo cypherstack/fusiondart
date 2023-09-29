@@ -63,18 +63,20 @@ class Connection {
   /// - [connTimeout] (optional): The connection timeout duration.
   /// - [defaultTimeout] (optional): The default timeout duration.
   /// - [ssl] (optional): Whether to use SSL.
-  /// - [socksOpts] (optional): Socks options.
+  /// - [proxyInfo] (optional): Socks options.
   ///
   /// Returns:
   ///  A Future<Connection> object.
-  static Future<Connection> openConnection(
-    String host,
-    int port, {
+  static Future<Connection> openConnection({
+    required String host,
+    required int port,
     Duration connTimeout = const Duration(seconds: 5),
     Duration defaultTimeout = const Duration(seconds: 5),
     bool ssl = false,
-    dynamic socksOpts, // TODO type
+    ({InternetAddress host, int port})? proxyInfo,
   }) async {
+    // Before we connect to host and port, if proxyInfo is not null, we should connect to the proxy first.
+
     try {
       // Connect to host and port.
       // Dart's Socket class handles connection timeout internally.

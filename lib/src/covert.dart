@@ -180,7 +180,7 @@ class CovertSlot {
 /// - [slots]: A list of slots that can take covert tasks.
 /// - [numSlots]: The number of covert slots to use.
 /// - [failureException] (optional): The exception that caused the stop.
-/// - [proxyOpts] (optional): The proxy options for the covert communication.
+/// - [proxyInfo] (optional): The proxy options for the covert communication.
 /// - [randTag] (optional): The random tag for the covert communication.
 /// - [destAddr] (optional): The destination address for the covert communication.
 /// - [destPort] (optional): The destination port for the covert communication.
@@ -188,25 +188,27 @@ class CovertSlot {
 /// - [randSpan] (optional): The random span for the covert communication.
 /// - [stopTStart] (optional): The start time for stopping in seconds since epoch.
 class CovertSubmitter {
-  /// A list of slots that can take covert tasks.
-  final List<CovertSlot> slots;
-  final int numSlots;
-  String? failureException;
-
-  bool stopping = false;
-  Map<String, dynamic>? proxyOpts;
-  String? randTag;
   final String destAddr;
   final int destPort;
   final bool ssl;
+  final ({InternetAddress host, int port})? proxyInfo;
+  final int numSlots;
+  final int randSpan;
+  final int submitTimeout = 0;
+
+  /// A list of slots that can take covert tasks.
+  final List<CovertSlot> slots;
+
+  /// More instance variables.
+  String? failureException;
+  bool stopping = false;
+  String? randTag;
   int countFailed = 0;
   int countEstablished = 0;
   int countAttempted = 0;
   final Random rng = Random.secure();
-  final int randSpan;
   DateTime? stopTStart;
   List<CovertConnection> spareConnections = [];
-  int submitTimeout = 0;
 
   /// Constructor to initialize the CovertSubmitter.
   ///
@@ -219,16 +221,15 @@ class CovertSubmitter {
   /// - [numSlots]: The number of covert slots to use.
   /// - [randSpan]: The random span for the covert communication.
   /// - [submitTimeout]: The timeout for submitting tasks.
-  CovertSubmitter(
-    this.destAddr,
-    this.destPort,
-    this.ssl,
-    String torHost,
-    int torPort,
-    this.numSlots,
-    this.randSpan,
-    Duration submitTimeout,
-  ) : slots = List<CovertSlot>.generate(
+  CovertSubmitter({
+    required this.destAddr,
+    required this.destPort,
+    required this.ssl,
+    this.proxyInfo,
+    required this.numSlots,
+    required this.randSpan,
+    required Duration submitTimeout,
+  }) : slots = List<CovertSlot>.generate(
             numSlots, (index) => CovertSlot(submitTimeout));
 
   /// Wakes all connections for tasks.
@@ -482,34 +483,17 @@ class CovertSubmitter {
 
       try {
         // STATE 1 - connecting
-        Map<String, dynamic> proxyOpts;
-
-        // Check proxy options.
-        if (this.proxyOpts == null) {
-          proxyOpts = {};
-        } else {
-          final unique = 'CF${randTag}_${covConn.connNumber}';
-          proxyOpts = {
-            'proxy_username': unique,
-            'proxy_password': unique,
-          };
-          proxyOpts.addAll(this.proxyOpts!);
-        }
-
         // Increment the total number of attempted connections.
         limiter.bump();
 
         // Attempt to open a connection.
         try {
           final connection = await Connection.openConnection(
-            destAddr,
-            destPort,
+            host: destAddr,
+            port: destPort,
             connTimeout: connectTimeout,
             ssl: ssl,
-
-            // openConnection ignores socksOpts
-            // TODO: does this need to be handled?
-            socksOpts: proxyOpts,
+            proxyInfo: proxyInfo,
           );
           covConn.connection = connection;
         } catch (e) {
