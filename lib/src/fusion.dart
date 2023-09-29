@@ -491,13 +491,6 @@ class Fusion {
     _coins = [];
   }
 
-  /// Adds new coins to the internal `coins` list.
-  ///
-  /// Takes a list of `Input` [newCoins] objects representing new coins and appends them to the internal coin list.
-  void addCoins(List<Input> newCoins) {
-    _coins.addAll(newCoins);
-  }
-
   /// Notifies the UI layer about changes to the `coins` list.
   ///
   /// Updates the UI to reflect changes in the internal list of coins.
