@@ -117,14 +117,10 @@ class Fusion {
 
   // TODO parameterize; should these be fed in as parameters upon construction/instantiation?
 
-  int _covertPort = 0; // Covert connection port.
-  bool _covertSSL = false; // Use SSL for covert connection?
-
   int _roundCount = 0; // Tracks the number of CashFusion rounds.
   String _txId = ""; // Holds a transaction ID. << you don't say!?
 
   // Various state variables.
-  List<Output> _outputs = [];
   // List<Address> changeAddresses = [];
 
   bool _serverConnectedAndGreeted = false; // Have we connected to the server?
@@ -163,13 +159,18 @@ class Fusion {
     Map<int, int> safetyExcessFees,
   })? _allocatedOutputs;
 
-  int _tier = 0; // Currently selected CashFusion tier.
-  double _beginTime = 0.0; // [s] Represent time in seconds.
-  List<int> _lastHash = <int>[]; // Holds the last hash used in a fusion.
+  ({
+    int tier,
+    int covertPort,
+    bool covertSSL,
+    Uint8List covertDomainB,
+    double beginTime,
+    List<Output> outputs,
+    List<int> lastHash,
+  })? _registerAndWaitResult;
+
   List<Address> _reservedAddresses = <Address>[]; // List of reserved addresses.
-  // int safetyExcessFee = 0; // Safety excess fee for the operation.
   DateTime _tFusionBegin = DateTime.now(); // The timestamp when Fusion began.
-  Uint8List _covertDomainB = Uint8List(0); // Holds the covert domain in bytes.
 
   // not used ???
   List<int>? _txInputIndices; // Indices for transaction inputs.
@@ -369,13 +370,17 @@ class Fusion {
         // In principle we can hook a pause in here -- user can tweak tier_outputs, perhaps cancelling some unwanted tiers.
 
         // Register for tiers, wait for a pool.
-        await registerAndWait(_socketWrapper!);
+        _registerAndWaitResult = await registerAndWait(
+          socketWrapper: _socketWrapper!,
+          connection: _connection!,
+          allocatedOutputs: _allocatedOutputs!,
+        );
 
         // launch the covert submitter
         final covert = await startCovert(
-          covertPort: _covertPort,
-          covertSSL: _covertSSL,
-          covertDomainB: _covertDomainB,
+          covertPort: _registerAndWaitResult!.covertPort,
+          covertSSL: _registerAndWaitResult!.covertSSL,
+          covertDomainB: _registerAndWaitResult!.covertDomainB,
           tFusionBegin: _tFusionBegin,
           serverParams: _serverParams!,
         );
@@ -421,7 +426,7 @@ class Fusion {
     } finally {
       // clearCoins();
       if (status.status != FusionStatus.complete) {
-        for (Output output in _outputs) {
+        for (Output output in _registerAndWaitResult?.outputs ?? []) {
           // TODO implement
           /*Util.unreserve_change_address(output.addr);*/
         }
@@ -536,14 +541,32 @@ class Fusion {
   ///
   /// This method is responsible for the client-side setup and management of the
   /// CashFusion protocol. It sends registration messages to the server,
-  /// maintains state, and listens for updates through a [socketwrapper]
+  /// maintains state, and listens for updates through a [socketWrapper]
   ///
   /// Returns:
   ///   A Future that resolves when the fusion process starts.
   ///
   /// Throws:
   /// - FusionError: in case of any unexpected behavior.
-  Future<void> registerAndWait(SocketWrapper socketwrapper) async {
+  Future<
+      ({
+        int tier,
+        int covertPort,
+        bool covertSSL,
+        Uint8List covertDomainB,
+        double beginTime,
+        List<Output> outputs,
+        List<int> lastHash,
+      })> registerAndWait({
+    required SocketWrapper socketWrapper,
+    required Connection connection,
+    required ({
+      List<Input> inputs,
+      Map<int, List<int>> tierOutputs,
+      int safetySumIn,
+      Map<int, int> safetyExcessFees,
+    }) allocatedOutputs,
+  }) async {
     // Initialize a stopwatch to measure elapsed time.
     Stopwatch stopwatch = Stopwatch()..start();
 
@@ -554,7 +577,7 @@ class Fusion {
     GeneratedMessage msg;
 
     // Initialize a map to store the outputs for each tier.
-    Map<int, List<int>> tierOutputs = _allocatedOutputs!.tierOutputs;
+    Map<int, List<int>> tierOutputs = allocatedOutputs.tierOutputs;
 
     // Sort the tiers in ascending order.
     List<int> tiersSorted = tierOutputs.keys.toList()..sort();
@@ -590,14 +613,11 @@ class Fusion {
     // Send the message to the server.
     await IO.send(
       clientMessage,
-      socketWrapper: _socketWrapper!,
-      connection: _connection!,
+      socketWrapper: socketWrapper,
+      connection: connection,
     );
 
-    ({String status, String message}) status = (
-      status: 'waiting',
-      message: 'Registered for tiers',
-    );
+    _updateStatus(status: FusionStatus.waiting, info: 'Registered for tiers');
 
     // TODO make Entry class or otherwise type this section.
     Map<dynamic, String> tiersStrings = {
@@ -611,8 +631,8 @@ class Fusion {
       Utilities.debugPrint("RECEIVE LOOP 870............DEBUG");
       msg = await IO.recv(
           [ReceiveMessages.tierStatusUpdate, ReceiveMessages.fusionBegin],
-          socketWrapper: _socketWrapper!,
-          connection: _connection!,
+          socketWrapper: socketWrapper,
+          connection: connection,
           timeout: Duration(seconds: 10));
 
       /*if (msg == null) continue;*/
@@ -772,24 +792,24 @@ class Fusion {
 
       // Final status assignment based on calculated variables
       if (bestTime != null) {
-        status = (
-          status: 'waiting',
-          message: 'Starting in ${bestTime}s. $tiersString',
+        _updateStatus(
+          status: FusionStatus.waiting,
+          info: 'Starting in ${bestTime}s. $tiersString',
         );
       } else if (maxFraction >= 1) {
-        status = (
-          status: 'waiting',
-          message: 'Starting soon. $tiersString',
+        _updateStatus(
+          status: FusionStatus.waiting,
+          info: 'Starting soon. $tiersString',
         );
       } else if (displayBest.isNotEmpty || displayMid.isNotEmpty) {
-        status = (
-          status: 'waiting',
-          message: '${(maxFraction * 100).round()}% full. $tiersString',
+        _updateStatus(
+          status: FusionStatus.waiting,
+          info: '${(maxFraction * 100).round()}% full. $tiersString',
         );
       } else {
-        status = (
-          status: 'waiting',
-          message: tiersString,
+        _updateStatus(
+          status: FusionStatus.waiting,
+          info: tiersString,
         );
       }
     } // End of while loop.  Loop exits with a break if a FusionBegin message is received.
@@ -835,34 +855,51 @@ class Fusion {
     }
 
     // Retrieve the tier in which the fusion process will occur.
-    _tier = fusionBeginMsg.tier.toInt();
+    final tier = fusionBeginMsg.tier.toInt();
 
     // Populate covertDomainB with the received covert domain information.
-    _covertDomainB = Uint8List.fromList(fusionBeginMsg.covertDomain);
+    final covertDomainB = Uint8List.fromList(fusionBeginMsg.covertDomain);
 
     // Retrieve additional information such as port, SSL status, and server time for the fusion process.
-    _covertPort = fusionBeginMsg.covertPort;
-    _covertSSL = fusionBeginMsg.covertSsl;
-    _beginTime = fusionBeginMsg.serverTime.toDouble();
+    final covertPort = fusionBeginMsg.covertPort;
+    final covertSSL = fusionBeginMsg.covertSsl;
+    final beginTime = fusionBeginMsg.serverTime.toDouble();
 
     // Calculate the initial hash value for the fusion process
-    _lastHash = Utilities.calcInitialHash(
-        _tier, _covertDomainB, _covertPort, _covertSSL, _beginTime);
+    final lastHash = Utilities.calcInitialHash(
+      tier,
+      covertDomainB,
+      covertPort,
+      covertSSL,
+      beginTime,
+    );
 
     // Retrieve the output amounts for the given tier and prepare the output addresses.
-    List<int>? outAmounts = tierOutputs[_tier];
+    // TODO: can this be empty? If not then an exception should be thrown
+    List<int>? outAmounts = tierOutputs[tier];
     List<Address> outAddrs =
         await _getUnusedReservedChangeAddresses(outAmounts?.length ?? 0);
 
     // Populate reservedAddresses and outputs with the prepared amounts and addresses.
     // TODO: this [reservedAddresses] is never read from????
     _reservedAddresses = outAddrs;
-    _outputs = Utilities.zip(outAmounts ?? [], outAddrs)
+
+    final outputs = Utilities.zip(outAmounts ?? [], outAddrs)
         .map((pair) => Output(value: pair[0] as int, addr: pair[1] as Address))
         .toList();
 
     Utilities.debugPrint(
-        "starting fusion rounds at tier $_tier: ${_allocatedOutputs!.inputs.length} inputs and ${_outputs.length} outputs");
+        "starting fusion rounds at tier $tier: ${allocatedOutputs.inputs.length} inputs and ${outputs.length} outputs");
+
+    return (
+      tier: tier,
+      covertPort: covertPort,
+      covertSSL: covertSSL,
+      covertDomainB: covertDomainB,
+      beginTime: beginTime,
+      outputs: outputs,
+      lastHash: lastHash,
+    );
   }
 
   /// Starts a CovertSubmitter and schedules Tor connections.
@@ -1057,7 +1094,7 @@ class Fusion {
     );
 
     final outputFees = BigInt.from(
-      _outputs.length *
+      _registerAndWaitResult!.outputs.length *
           Utilities.componentFee(
             34, // 34 is the size of a P2PKH output.
             _serverParams!.componentFeeRate,
@@ -1068,16 +1105,18 @@ class Fusion {
       BigInt.zero,
       (sum, e) => sum + BigInt.from(e.amount),
     );
-    final sumOut =
-        _outputs.fold(BigInt.zero, (sum, e) => sum + BigInt.from(e.value));
+    final sumOut = _registerAndWaitResult!.outputs
+        .fold(BigInt.zero, (sum, e) => sum + BigInt.from(e.value));
 
     // Calculate total and excess fee for safety checks.
     final totalFee = sumIn - sumOut;
     final excessFee = totalFee - inputFees - outputFees;
 
-    final safetyExcessFee = _allocatedOutputs!.safetyExcessFees[_tier];
+    final safetyExcessFee =
+        _allocatedOutputs!.safetyExcessFees[_registerAndWaitResult!.tier];
     if (safetyExcessFee == null) {
-      throw Exception("Safety excess fee not found for tire=$_tier");
+      throw Exception(
+          "Safety excess fee not found for tire=${_registerAndWaitResult!.tier}");
     }
 
     // Perform the safety checks!
@@ -1104,11 +1143,11 @@ class Fusion {
     // Generate components and related data
     int numBlanks = _serverParams!.numComponents -
         _allocatedOutputs!.inputs.length -
-        _outputs.length;
+        _registerAndWaitResult!.outputs.length;
     final genComponentsResults = OutputHandling.genComponents(
       numBlanks,
       _allocatedOutputs!.inputs,
-      _outputs,
+      _registerAndWaitResult!.outputs,
       _serverParams!.componentFeeRate,
     );
 
@@ -1321,8 +1360,12 @@ class Fusion {
     List<List<int>> allCommitmentsBytes = allCommitments
         .map((commitment) => commitment.writeToBuffer().toList())
         .toList();
-    List<int> sessionHash = Utilities.calcRoundHash(_lastHash, roundPubKey,
-        roundTime.toInt(), allCommitmentsBytes, allComponents);
+    List<int> sessionHash = Utilities.calcRoundHash(
+        _registerAndWaitResult!.lastHash,
+        roundPubKey,
+        roundTime.toInt(),
+        allCommitmentsBytes,
+        allComponents);
 
     // Validate session hash to prevent mismatch error.
     if (!shareCovertComponentsMsg.sessionHash.equals(sessionHash)) {
@@ -1443,7 +1486,7 @@ class Fusion {
         String feeLoc = 'fee';
 
         String label =
-            "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_outputs.length}, $sumInStr BCH (−$feeStr sats $feeLoc)";
+            "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_registerAndWaitResult!.outputs.length}, $sumInStr BCH (−$feeStr sats $feeLoc)";
 
         Utilities.updateWalletLabel(_txId, label);
       } else {
