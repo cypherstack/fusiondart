@@ -496,6 +496,7 @@ class CovertSubmitter extends PrintError {
           proxyOpts.addAll(this.proxyOpts!);
         }
 
+        // Increment the total number of attempted connections.
         limiter.bump();
 
         // Attempt to open a connection.
@@ -741,9 +742,14 @@ class TorLimiter {
   Queue<DateTime> deque = Queue<DateTime>();
   int lifetime;
 
-  // Internal count to track the number of operations.
+  /// Internal count to track the number of operations.
   // Declare a lock here, may need a special Dart package for this... how about a mutex?
-  /*int _count = 0;*/
+  int _count = 0;
+
+  /// Getter for the current count of operations.
+  int get count {
+    return _count;
+  }
 
   /// Constructor that initializes the limiter with a given [lifetime].
   TorLimiter(this.lifetime);
@@ -752,17 +758,11 @@ class TorLimiter {
   /// This method is currently not implemented.
   void cleanup() {}
 
-  /// Getter for the current count of operations.
-  ///
-  /// For now, it returns a default value of zero.
-  int get count {
-    // return some default value for now
-    return 0;
-  }
-
   /// Increases the internal count.
-  /// This method is currently not implemented.
-  void bump() {}
+  void bump() {
+    _count++;
+    // TODO decrement the count after disconnection.
+  }
 }
 
 // Placeholder for the value of TOR_COOLDOWN_TIME. Replace as necessary.
