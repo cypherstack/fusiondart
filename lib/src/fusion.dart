@@ -124,8 +124,6 @@ class Fusion {
   String _txId = ""; // Holds a transaction ID. << you don't say!?
 
   // Various state variables.
-  List<Input> _coins = []; // "coins"≈"inputs" in the python source.
-  // List<Input> inputs = [];
   List<Output> _outputs = [];
   // List<Address> changeAddresses = [];
 
@@ -205,22 +203,24 @@ class Fusion {
   ///
   /// Returns:
   ///   Future<void> Returns a future that completes when the coins have been added.
-  Future<void> addCoinsFromWallet(
+  Future<List<Input>> addCoinsFromWallet(
     List<UtxoDTO> utxoList,
   ) async {
     // TODO sanity check the state of `coins` before adding to it.
 
     // Convert each UTXO info to an Input and add to 'coins'.
-    for (final utxoInfo in utxoList) {
-      _coins.add(
-        Input.fromWallet(
-          txId: utxoInfo.txid,
-          vout: utxoInfo.vout,
-          value: utxoInfo.value,
-          pubKey: utxoInfo.pubKey,
-        ),
-      );
-    }
+
+    return utxoList
+        .map(
+          (e) => Input.fromWallet(
+            txId: e.txid,
+            vout: e.vout,
+            value: e.value,
+            pubKey: e.pubKey,
+          ),
+        )
+        .toList();
+
     // TODO add validation and throw error if invalid UTXO detected
   }
 
@@ -246,8 +246,18 @@ class Fusion {
   /// Throws:
   /// - FusionError: If any step in the fusion operation fails.
   /// - Exception: For general exceptions.
-  Future<void> fuse() async {
+  Future<void> fuse({required List<Input> inputsFromWallet}) async {
     Utilities.debugPrint("DEBUG FUSION 223...fusion run....");
+
+    try {
+      if (inputsFromWallet.isEmpty) {
+        throw FusionError('Started with no coins');
+      }
+    } catch (e, s) {
+      Utilities.debugPrint("$e\n$s");
+      return;
+    }
+
     try {
       try {
         // Check compatibility  - This was done in python version to see if fast libsec installed.
@@ -330,15 +340,18 @@ class Fusion {
         notifyServerStatus(true);
 
         // In principle we can hook a pause in here -- user can insert coins after seeing server params.
-
-        try {
-          if (_coins.isEmpty) {
-            throw FusionError('Started with no coins');
-          }
-        } catch (e) {
-          Utilities.debugPrint(e);
-          return;
-        }
+        // If this can/will be done then this function should be broken in two
+        //
+        //
+        // move this further up for now
+        // try {
+        //   if (_coins.isEmpty) {
+        //     throw FusionError('Started with no coins');
+        //   }
+        // } catch (e) {
+        //   Utilities.debugPrint(e);
+        //   return;
+        // }
 
         final currentChainHeight = await _getChainHeight();
 
@@ -346,7 +359,7 @@ class Fusion {
           connection: _connection!,
           socketWrapper: _socketWrapper!,
           status: status.status,
-          coins: _coins,
+          coins: inputsFromWallet,
           currentChainHeight: currentChainHeight,
           serverParams: _serverParams!,
           getTransactionsByAddress: _getTransactionsByAddress,
@@ -400,7 +413,7 @@ class Fusion {
       Utilities.debugPrint('Exception: $exc\n$s');
       _updateStatus(status: FusionStatus.exception, info: exc.toString());
     } finally {
-      clearCoins();
+      // clearCoins();
       if (status.status != FusionStatus.complete) {
         for (Output output in _outputs) {
           // TODO implement
@@ -484,12 +497,12 @@ class Fusion {
     return;
   }
 
-  /// Clears all coins from the internal `coins` list.
-  ///
-  /// Resets the internal coin list, effectively removing all stored coins.
-  void clearCoins() {
-    _coins = [];
-  }
+  // /// Clears all coins from the internal `coins` list.
+  // ///
+  // /// Resets the internal coin list, effectively removing all stored coins.
+  // void clearCoins() {
+  //   _coins = [];
+  // }
 
   /// Notifies the UI layer about changes to the `coins` list.
   ///
@@ -843,7 +856,7 @@ class Fusion {
         .toList();
 
     Utilities.debugPrint(
-        "starting fusion rounds at tier $_tier: ${_coins.length} inputs and ${_outputs.length} outputs");
+        "starting fusion rounds at tier $_tier: ${_allocatedOutputs!.inputs.length} inputs and ${_outputs.length} outputs");
   }
 
   /// Starts a CovertSubmitter and schedules Tor connections.
@@ -1416,7 +1429,7 @@ class Fusion {
         String feeLoc = 'fee';
 
         String label =
-            "CashFusion ${_coins.length}⇢${_outputs.length}, $sumInStr BCH (−$feeStr sats $feeLoc)";
+            "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_outputs.length}, $sumInStr BCH (−$feeStr sats $feeLoc)";
 
         Utilities.updateWalletLabel(_txId, label);
       } else {
