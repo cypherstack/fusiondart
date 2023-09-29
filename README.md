@@ -1,26 +1,13 @@
-<!-- 
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
-
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/guides/libraries/writing-package-pages). 
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-library-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/developing-packages). 
--->
-
 # FusionDart
 
 A Dart package for interacting with CashFusion servers.
 
-# WARNGING
+# WARNING
 
  - Do not test this with a wallet with significant funds.
  - Do not test this with a wallet with tokens.
 
-These actions may result in loss of funds, tokens, or both.
+These actions may result in loss of funds, tokens, or both.  Outputs are not currently checked for tokens and their use in CashFusion transactions will almost certainly lead to their loss.
 
 ## Features
 
@@ -40,7 +27,7 @@ These actions may result in loss of funds, tokens, or both.
 
 ### Building
 
-FusionDart uses [coinlib](https://github.com/peercoin/coinlib) for cryptocurrency calculations, which [needs to be built](https://github.com/peercoin/coinlib/tree/master/coinlib#building-for-linux).  Build it according to their documentation ([macOS instructions here](https://github.com/peercoin/coinlib/tree/master/coinlib#building-for-macos).)
+FusionDart uses [coinlib](https://github.com/peercoin/coinlib) for cryptocurrency calculations, which [needs to be built](https://github.com/peercoin/coinlib/tree/master/coinlib#building-for-linux).  Build it according to their documentation ([macOS instructions here](https://github.com/peercoin/coinlib/tree/master/coinlib#building-for-macos)).
 
 ### Example
 
