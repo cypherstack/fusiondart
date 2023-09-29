@@ -604,9 +604,7 @@ class CovertSubmitter extends PrintError {
 
         Utilities.debugPrint("[${covConn.connNumber}] closing from stop");
       } catch (e) {
-        // In case of any problem, record the exception and if we have a slot, reassign it.
-        final exception = e;
-
+        // In case of any problem, if we have a slot, reassign it.
         final slotNum = covConn.slotNum;
         if (slotNum != null) {
           try {
@@ -623,11 +621,12 @@ class CovertSubmitter extends PrintError {
           } catch (e) {
             // We failed, and there are no spares.  Party is over!
 
-            if (exception is Exception) {
+            if (e is Exception) {
               // Stop the covert submitter with the exception.
-              stop(exception);
+              stop(e);
             } else {
               // Handle the case where the exception is not an instance of Exception.
+              stop(Exception("runConnection exception: $e"));
             }
           }
         }
