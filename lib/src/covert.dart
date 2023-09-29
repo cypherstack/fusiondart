@@ -112,14 +112,15 @@ class CovertConnection {
 /// - [covConn] (optional): The CovertConnection object associated with the slot.
 /// - [_tSubmit] (optional): The time of the last submit action.
 class CovertSlot {
-  Duration submitTimeout;
-  pb.GeneratedMessage? subMsg; // The work to be done.
-  bool done; // Whether last work requested is done.
-  CovertConnection?
-      covConn; // which CovertConnection is assigned to work on this slot.
-
   /// Constructor that initializes the covert slot with a given submission timeout.
   CovertSlot(this.submitTimeout) : done = true;
+
+  final Duration submitTimeout;
+  bool done; // Whether last work requested is done.
+
+  pb.GeneratedMessage? subMsg; // The work to be done.
+  CovertConnection?
+      covConn; // which CovertConnection is assigned to work on this slot.
   DateTime? _tSubmit;
 
   /// Getter for the time of the last submit action.
@@ -137,7 +138,7 @@ class CovertSlot {
   /// - Unrecoverable: if the connection is null.
   Future<void> submit() async {
     // Attempt to get the connection object from the covert connection.
-    Connection? connection = covConn?.connection;
+    Connection? connection = covConn!.connection;
 
     // Throw an unrecoverable exception if the connection is null.
     if (connection == null) {
@@ -163,19 +164,12 @@ class CovertSlot {
     // Set the done flag to true to indicate that the work has been completed.
     done = true;
 
-    // Update the time of the last submit action.
-    _tSubmit = DateTime.fromMillisecondsSinceEpoch(0);
+    _tSubmit = null;
 
     // Reset the ping time for the associated covert connection.
     // If a submission has been successfully made, no ping is needed.
-    covConn?.tPing = DateTime.fromMillisecondsSinceEpoch(
-        0); // if a submission is done, no ping is needed.
+    covConn!.tPing = null; // if a submission is done, no ping is needed.
   }
-}
-
-/// Class to handle errors related to printing.
-class PrintError {
-  // Declare properties here
 }
 
 /// Manages submission of covert tasks.
@@ -193,10 +187,9 @@ class PrintError {
 /// - [rng] (optional): The random number generator for the covert communication.
 /// - [randSpan] (optional): The random span for the covert communication.
 /// - [stopTStart] (optional): The start time for stopping in seconds since epoch.
-class CovertSubmitter extends PrintError {
+class CovertSubmitter {
   /// A list of slots that can take covert tasks.
-  List<CovertSlot> slots;
-  bool done = true;
+  final List<CovertSlot> slots;
   final int numSlots;
   String? failureException;
 
