@@ -547,7 +547,7 @@ class CovertSubmitter extends PrintError {
             '[${covConn.connNumber}] connection established after ${((tEnd - tBegin) / 1000).toStringAsFixed(3)}s');
 
         // Set the ping time for the connection.
-        covConn.delay = randTrap(rng) * (randSpan ?? 0);
+        covConn.delay = randTrap(rng) * (randSpan ?? 1);
 
         // Note the time at which the ping was sent.
         int lastActionTime = DateTime.now().millisecondsSinceEpoch;
