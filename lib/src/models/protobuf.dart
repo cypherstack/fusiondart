@@ -22,11 +22,11 @@ class ComponentResult {
   final Uint8List privateKey; // Private key for this component.
 
   /// Constructor for the ComponentResult class.
-  ComponentResult(
-    this.commitment,
-    this.counter,
-    this.component,
-    this.proof,
-    this.privateKey,
-  );
+  ComponentResult({
+    required this.commitment,
+    required this.counter,
+    required this.component,
+    required this.proof,
+    required this.privateKey,
+  });
 }

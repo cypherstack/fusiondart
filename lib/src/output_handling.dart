@@ -566,20 +566,35 @@ abstract final class OutputHandling {
       // Add result to list.
       resultList.add(
         ComponentResult(
-          commitser,
-          cnum,
-          compser,
-          proof,
-          privateKey,
+          commitment: commitser,
+          counter: cnum,
+          component: compser,
+          proof: proof,
+          privateKey: privateKey,
         ),
       );
     });
+
+    // Sort resultList by commitser.
+    resultList.sort((ComponentResult a, ComponentResult b) =>
+        compareUint8List(a.commitment, b.commitment));
 
     return (
       results: resultList,
       sumAmounts: sumAmounts,
       pedersenTotalNonce: sumNonce.toBytes,
     );
+  }
+
+  /// Compare two Uint8Lists for sorting purposes.
+  static int compareUint8List(Uint8List a, Uint8List b) {
+    for (int i = 0; i < a.length && i < b.length; i++) {
+      if (a[i] < b[i]) return -1;
+      if (a[i] > b[i]) return 1;
+    }
+    if (a.length < b.length) return -1;
+    if (a.length > b.length) return 1;
+    return 0;
   }
 
   /// Generates random outputs given specific parameters.
