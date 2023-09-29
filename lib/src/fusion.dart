@@ -959,7 +959,7 @@ class Fusion {
     );
     try {
       // Schedule Tor connections for the CovertSubmitter.
-      covert.scheduleConnections(
+      covert.scheduleConnectionsAndStartRunningThem(
         tFusionBegin,
         Duration(seconds: Protocol.COVERT_CONNECT_WINDOW),
         numSpares: Protocol.COVERT_CONNECT_SPARES,

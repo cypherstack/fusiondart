@@ -292,7 +292,7 @@ class CovertSubmitter {
     wakeAll();
   }
 
-  /// Schedules connections for tasks.
+  /// Schedules connections for tasks and runs them unawaited.
   ///
   /// This method is responsible for scheduling the connections required for covert communication.
   /// It prepares connections needed for each covert slot, as well as handling spare connections that might be used later.
@@ -306,7 +306,7 @@ class CovertSubmitter {
   ///
   /// Returns:
   ///  `void`
-  void scheduleConnections(
+  void scheduleConnectionsAndStartRunningThem(
     DateTime tStart,
     Duration tSpan, {
     int numSpares = 0,
@@ -320,14 +320,10 @@ class CovertSubmitter {
       CovertSlot s = slots[sNum];
       if (s.covConn == null) {
         // Initialize a new covert connection and associate it with the slot.
-        s.covConn = CovertConnection();
-        s.covConn?.slotNum = sNum;
-        CovertConnection? myCovConn = s.covConn;
+        s.covConn = CovertConnection()..slotNum = sNum;
 
-        if (myCovConn != null) {
-          // Add the new connection to the list of new connections.
-          newConns.add(myCovConn);
-        }
+        // Add the new connection to the list of new connections.
+        newConns.add(s.covConn!);
       }
     }
 
@@ -344,6 +340,10 @@ class CovertSubmitter {
     // Add new spare connections to the list of new connections.
     newConns.addAll(newSpares);
 
+    // Holds all the runConnection futures in case we want to return them at some
+    // point. For now they are run unawaited.
+    final List<Future<void>> runConnectionFutures = [];
+
     // Loop through each new connection to schedule it.
     for (CovertConnection covConn in newConns) {
       // Assign a unique connection number for tracking.
@@ -357,14 +357,16 @@ class CovertSubmitter {
           .add(Duration(seconds: (tSpan.inSeconds * randTrap(rng)).round()));
 
       // Calculate a random delay to add to the connection time.
-      final randDelay = Duration(seconds: (randSpan! * randTrap(rng).toInt()));
+      final randDelay = Duration(seconds: (randSpan * randTrap(rng).toInt()));
 
-      // Invoke the method to initiate and run the connection.
-      runConnection(
-        covConn,
-        connTime.millisecondsSinceEpoch,
-        randDelay,
-        connectTimeout,
+      // Invoke the method to initiate and run the connection unawaited.
+      runConnectionFutures.add(
+        _runConnection(
+          covConn,
+          connTime.millisecondsSinceEpoch,
+          randDelay,
+          connectTimeout,
+        ),
       );
     }
   }
@@ -460,7 +462,7 @@ class CovertSubmitter {
   ///
   /// Returns:
   ///   A `Future<void>` whose resolution indicates completion.
-  Future<void> runConnection(
+  Future<void> _runConnection(
     CovertConnection covConn,
     int connTime,
     Duration randDelay,
