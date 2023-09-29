@@ -772,7 +772,7 @@ TorLimiter limiter = TorLimiter(torCoolDownTime);
 ///
 /// Uses a random number generator [rng].
 ///
-/// TODO move this to the Utilities class.
+/// TODO move this to the Utilities class or use a package implementation.
 ///
 /// Parameters:
 /// - [rng]: The random number generator to use.
