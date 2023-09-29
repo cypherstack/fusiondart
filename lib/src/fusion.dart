@@ -1126,8 +1126,10 @@ class Fusion {
       final m = myComponents[index];
       final messageHash = crypto.sha256.convert(m).bytes;
 
-      return BlindSignatureRequest(Uint8List.fromList(roundPubKey),
-          Uint8List.fromList(R), Uint8List.fromList(messageHash));
+      return BlindSignatureRequest(
+          pubkey: Uint8List.fromList(roundPubKey),
+          R: Uint8List.fromList(R),
+          messageHash: Uint8List.fromList(messageHash));
     });
 
     /*

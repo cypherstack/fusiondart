@@ -66,7 +66,8 @@ class BlindSignatureRequest {
   late Uint8List pubKeyCompressed;
 
   /// Constructor: Initializes various fields and performs initial calculations.
-  BlindSignatureRequest(this.pubkey, this.R, this.messageHash)
+  BlindSignatureRequest(
+      {required this.pubkey, required this.R, required this.messageHash})
       : order = ECCurve_secp256r1().n,
         fieldsize = BigInt.from(ECCurve_secp256r1().curve.fieldSize) {
     // Check argument validity
