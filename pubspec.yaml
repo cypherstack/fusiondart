@@ -17,6 +17,8 @@ dependencies:
   protobuf: ^2.0.0
   coinlib: ^1.0.0
   hex: ^0.2.0
+  socks_socket:
+    path: ./socks_socket
 
 dev_dependencies:
   lints: ^2.0.0
