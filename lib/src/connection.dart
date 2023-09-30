@@ -6,6 +6,7 @@ import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
 import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
+import 'package:socks_socket/socks_socket.dart';
 
 // TODO
 // This file might need some fixing up because each time we call fillBuf, we're trying to
@@ -76,24 +77,73 @@ class Connection {
     ({InternetAddress host, int port})? proxyInfo,
   }) async {
     // Before we connect to host and port, if proxyInfo is not null, we should connect to the proxy first.
+    if (proxyInfo != null) {
+      /*
+      // CoPilot suggested this code!  It might actually work.  I thought SocketWrapper was
+      // for this anyways, but I was going to use socks_socket...  I should probably try this
+      // out and see if it or similar works.  Better to have less dependencies.  Anyways...
 
-    try {
-      // Connect to host and port.
-      // Dart's Socket class handles connection timeout internally.
-      final Socket socket;
-      if (ssl) {
-        socket = await SecureSocket.connect(host, port);
-      } else {
-        socket = await Socket.connect(host, port);
+      // Connect to the proxy.
+      final SocketWrapper socketwrapper =
+          SocketWrapper(proxyInfo.host.address, proxyInfo.port);
+      await socketwrapper.connect();
+
+      // Send the CONNECT message.
+      final msg = <int>[]
+        ..addAll([0x05, 0x01, 0x00])
+        ..addAll([0x03, host.length])
+        ..addAll(utf8.encode(host))
+        ..addAll([port >> 8, port & 0xff]);
+      await socketwrapper.send(msg);
+
+      // Receive the response.
+      final response = await socketwrapper.receive(10);
+      if (response[0] != 0x05 || response[1] != 0x00) {
+        throw 'Failed to connect to proxy: ${hex.encode(response)}';
       }
+      */
 
-      // Create a Connection object and return it.
+      // From https://github.com/cypherstack/tor/blob/53b1c97a41542956fc6887878ba3147abae20ccd/example/lib/main.dart#L166
+
+      // Instantiate a socks socket at localhost and on the port selected by the tor service.
+      var socksSocket = await SOCKSSocket.create(
+        proxyHost: proxyInfo.host.address,
+        proxyPort: proxyInfo.port,
+        sslEnabled: true, // TODO is this an SSL connection?
+      );
+
+      // Connect to the socks instantiated above.
+      await socksSocket.connect();
+
+      // Connect to CashFusion server.
+      await socksSocket.connectTo(host, port);
+
       return Connection(
-        socket: socket,
+        socket: socksSocket.socket, // This might not "just work", but it might.
         timeout: defaultTimeout,
       );
-    } catch (e) {
-      throw 'Failed to open connection: $e';
+      // TODO Close the socket.
+      // await socksSocket.close();
+    } else {
+      try {
+        // Connect to host and port.
+        //
+        // Dart's Socket class handles connection timeout internally.
+        final Socket socket;
+        if (ssl) {
+          socket = await SecureSocket.connect(host, port);
+        } else {
+          socket = await Socket.connect(host, port);
+        }
+
+        // Create a Connection object and return it.
+        return Connection(
+          socket: socket,
+          timeout: defaultTimeout,
+        );
+      } catch (e) {
+        throw 'Failed to open connection: $e';
+      }
     }
   }
 
