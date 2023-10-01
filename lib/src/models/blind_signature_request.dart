@@ -7,42 +7,37 @@ import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
 
-/// A class representing a blind signature request.
+/// Schnorr blind signature creator for the requester side.
 ///
-/// This class is used to create a blind signature request, which is then sent
-/// to the server.  The server will respond with a blind signature, which can
-/// then be unblinded to get the actual signature.
+/// This is set up with two elliptic curve points
+/// (serialized as bytes) - the Blind signer's public key, and
+/// a nonce point whose secret is known by the signer. Also, the
+/// 32-byte message_hash should be provided.
 ///
-/// The blind signature request is created by generating a random number `a`
-/// and calculating `Rnew = R + (G * a) + (pubkey * b)`.  The request is then
-/// sent to the server, which will respond with `e` and `enew`.  The actual
-/// signature is calculated as `snew = (c * (s + a)) % order`, where `c` is
-/// calculated as `c = jacobi(Rnew.y)`.  The final signature is then
-/// `sig = (Rxnew, snew)`.
+/// Upon construction, this creates and remembers the blinding factors,
+/// and also performs the expensive math needed to create the blind
+/// signature request. Once initialized, use `get_request` method to obtain
+/// the 32-byte request that should be sent to the signer. After receiving
+/// the 32-byte response from the signer, call `finalize`.
 ///
-/// The `finalize` method is used to unblind the signature.  It takes the
-/// signature `sBytes` and calculates `snew = (c * (s + a)) % order`.  It then
-/// returns the final signature as a `Uint8List`.
+/// The resultant Schnorr signatures follow the standard BCH Schnorr
+/// convention (using Jacobi symbol, pubkey prefixing, and SHA256).
 ///
-/// The `check` parameter to `finalize` is used to verify the signature before
-/// returning it.  If `check` is `true` (the default), then the signature is
-/// verified before returning it.  If `check` is `false`, then the signature is
-/// returned without being verified.
+/// Internally, two random blinding factors a, b are used. Due to the jacobi
+/// property, a signflip factor c = +/- 1 is also included.
 ///
-/// The `check` parameter should only be set to `false` if the signature has
-/// already been verified.  This is useful when the signature is being verified
-/// by the server, which is the case when the server is signing a transaction.
+/// [signer provides: R = k*G]
+/// R' = c*(R + a*G + b*P)
+/// Choose c = +1 or -1 such that jacobi(R'.y(), fieldsize) = +1
+/// e' = Hash(R'.x | ser_compressed(P) | message32)
+/// e = c*e' + b mod n
+/// [send to signer: e]
+/// [signer provides: s = k + e*x]
+/// s' = c*(s + a) mod n
 ///
-/// The `check` parameter should be set to `true` when the signature is being
-/// verified by the client.  This is the case when the client is signing a
-/// transaction.
+/// The resulting unblinded signature is: (R'.x, s')
 ///
-/// Attributes:
-/// - [order]: The order of the ECDSA curve.
-/// - [fieldsize]: The field size of the ECDSA curve.
-/// - [pubkey]: The public key as a Uint8List.
-/// - [R]: The R value as a Uint8List.
-/// - [messageHash]: The message hash as a Uint8List.
+/// Reference: [https://blog.cryptographyengineering.com/a-note-on-blind-signature-schemes/]
 class BlindSignatureRequest {
   // Curve properties.
   final BigInt order; // ECDSA curve order.
@@ -89,15 +84,14 @@ class BlindSignatureRequest {
     eNew = eHash % order;
   }
 
+  Uint8List get request {
+    // Return the request as a Uint8List
+    return e.toBytes;
+  }
+
   /// Generates a random BigInt value, up to [maxValue]
   ///
-  /// TODO move this to the Utilities class
-  ///
-  /// Parameters:
-  /// - [maxValue]: The maximum value for the random BigInt
-  ///
-  /// Returns:
-  /// - A random BigInt value, up to [maxValue]
+  /// TODO move this to the Utilities class?
   BigInt _randomBigInt(BigInt maxValue) {
     final random = Random.secure();
 
@@ -158,13 +152,6 @@ class BlindSignatureRequest {
   /// Jacobi function of [a] and [n].
   ///
   /// TODO use something built in rather than implementing here.
-  ///
-  /// Parameters:
-  /// - [a]: The first BigInt value.
-  /// - [n]: The second BigInt value.
-  ///
-  /// Returns:
-  ///   The Jacobi symbol of [a] and [n]
   int jacobi(BigInt a, BigInt n) {
     // Check that n is positive and odd.
     assert(n > BigInt.zero && n.isOdd);
@@ -212,41 +199,12 @@ class BlindSignatureRequest {
     }
   }
 
-  /// Returns the request as a Uint8List.
-  ///
-  /// Returns:
-  ///   The request as a Uint8List
-  Uint8List get request {
-    // Return the request as a Uint8List
-    return e.toBytes;
-  }
-
   /// Finalizes the blind signature request.
   ///
-  /// The signature is calculated as `snew = (c * (s + a)) % order`, where `c` is
-  /// calculated as `c = jacobi(Rnew.y)`.  The final signature is then
-  /// `sig = (Rxnew, snew)`.
-  ///
-  /// The `check` parameter is used to verify the signature before returning it.
-  /// If `check` is `true` (the default), then the signature is verified before
-  /// returning it.  If `check` is `false`, then the signature is returned
-  /// without being verified.
-  ///
-  /// The `check` parameter should only be set to `false` if the signature has
-  /// already been verified.  This is useful when the signature is being
-  /// verified by the server, which is the case when the server is signing a
-  /// transaction.
-  ///
-  /// The `check` parameter should be set to `true` when the signature is being
-  /// verified by the client.  This is the case when the client is signing a
-  /// transaction.
-  ///
-  /// Parameters:
-  /// - [sBytes]: The signature as a Uint8List.
-  /// - [check]: Whether or not to verify the signature before returning it.
-  ///
-  /// Returns:
-  ///  The signature as a Uint8List.
+  /// Expects 32 bytes s value, returns 64 byte finished signature.
+  /// If check=True (default) this will perform a verification of the result.
+  /// Upon failure it raises RuntimeError. The cause for this error is that
+  /// the blind signer has provided an incorrect blinded s value.
   Uint8List finalize(Uint8List sBytes, {bool check = true}) {
     // Check argument validity
     if (sBytes.length != 32) {
