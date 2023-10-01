@@ -372,12 +372,16 @@ class Fusion {
         );
         // In principle we can hook a pause in here -- user can tweak tier_outputs, perhaps cancelling some unwanted tiers.
 
+        Utilities.debugPrint("Registering for tiers, waiting for a pool...");
+
         // Register for tiers, wait for a pool.
         _registerAndWaitResult = await registerAndWait(
           socketWrapper: socketWrapper,
           connection: connection,
           allocatedOutputs: _allocatedOutputs!,
         );
+
+        Utilities.debugPrint("Starting covert submitter...");
 
         // launch the covert submitter
         final covert = await startCovert(
@@ -387,10 +391,15 @@ class Fusion {
           tFusionBegin: _tFusionBegin,
           serverParams: _serverParams!,
         );
+
+        _updateStatus(
+            status: FusionStatus.running, info: "Running fusion rounds.");
+
         try {
           // Pool started. Keep running rounds until fail or complete.
           while (true) {
             _roundCount += 1;
+            Utilities.debugPrint("Running round $_roundCount...");
             final success = await runRound(
               covert: covert,
               connection: connection,
@@ -1197,6 +1206,8 @@ class Fusion {
     /*
     final blindSigRequests = blindNoncePoints.map((e) => Schnorr.BlindSignatureRequest(roundPubKey, e, sha256(myComponents.elementAt(e)))).toList();
     */
+
+    Utilities.debugPrint("Generating blind signature requests.");
     List<BlindSignatureRequest> blindSigRequests =
         List.generate(blindNoncePoints.length, (index) {
       final R = blindNoncePoints[index];
@@ -1208,6 +1219,7 @@ class Fusion {
           R: Uint8List.fromList(R),
           messageHash: Uint8List.fromList(messageHash));
     });
+    Utilities.debugPrint("Generated blind signature requests.");
 
     /*
     Utilities.debugPrint("RETURNING EARLY FROM run round .....");
@@ -1219,6 +1231,8 @@ class Fusion {
     covert.checkOk();
     checkStop();
     checkCoins();
+
+    Utilities.debugPrint("Sending initial commitments etc.");
 
     // Send initial commitments, fees, and other data to the server.
     await IO.send(
@@ -1232,6 +1246,8 @@ class Fusion {
       socketWrapper: socketWrapper,
       connection: connection,
     );
+
+    Utilities.debugPrint("Awaiting signature responses from the server...");
 
     // Await blind signature responses from the server
     msg = await IO.recv([ReceiveMessages.blindSigResponses],
@@ -1262,6 +1278,8 @@ class Fusion {
         }
       },
     );
+
+    Utilities.debugPrint("Waiting for covert component submission phase...");
 
     // Sleep until the covert component phase really starts, to catch covert connection failures.
     double remainingTime = Protocol.T_START_COMPS - covertClock();
