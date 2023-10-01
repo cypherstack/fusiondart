@@ -6,7 +6,6 @@ import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
-import 'package:pointycastle/ecc/curves/secp256r1.dart';
 
 /// A class representing a blind signature request.
 ///
@@ -68,8 +67,8 @@ class BlindSignatureRequest {
   /// Constructor: Initializes various fields and performs initial calculations.
   BlindSignatureRequest(
       {required this.pubkey, required this.R, required this.messageHash})
-      : order = ECCurve_secp256r1().n,
-        fieldsize = BigInt.from(ECCurve_secp256r1().curve.fieldSize) {
+      : order = Utilities.secp256k1Params.n,
+        fieldsize = BigInt.from(Utilities.secp256k1Params.curve.fieldSize) {
     // Check argument validity
     if (pubkey.length != 33 || R.length != 33 || messageHash.length != 32) {
       throw ArgumentError('Invalid argument lengths.');
