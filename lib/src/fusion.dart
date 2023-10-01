@@ -1231,7 +1231,6 @@ class Fusion {
     covert.checkOk();
     checkStop();
     checkCoins();
-    print(131313);
 
     Utilities.debugPrint("Sending initial commitments etc.");
 
