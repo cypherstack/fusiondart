@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/extensions/on_big_int.dart';
-import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
 
@@ -100,12 +99,17 @@ class BlindSignatureRequest {
   /// - A random BigInt value, up to [maxValue]
   BigInt _randomBigInt(BigInt maxValue) {
     final random = Random.secure();
-    final builder = BytesBuilder();
-    for (BigInt i = BigInt.zero; i < maxValue; i += BigInt.one) {
-      builder.addByte(random.nextInt(256));
-    }
-    final bytes = builder.toBytes();
-    return bytes.toBigInt;
+
+    // Calculate the number of bytes needed
+    int byteLength = (maxValue.bitLength + 7) ~/ 8;
+
+    BigInt result;
+    do {
+      final bytes = List<int>.generate(byteLength, (i) => random.nextInt(256));
+      result = Uint8List.fromList(bytes).toBigInt;
+    } while (result >= maxValue);
+
+    return result;
   }
 
   /// Performs initial calculations needed for blind signature generation.
