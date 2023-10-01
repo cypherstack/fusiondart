@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/extensions/on_big_int.dart';
+import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
 
@@ -211,22 +212,6 @@ class BlindSignatureRequest {
     }
   }
 
-  /// Converts a byte array [bytes] to a BigInt.
-  ///
-  /// TODO move this to the Utilities class.
-  ///
-  /// Parameters:
-  /// - [bytes]: The byte array to convert.
-  ///
-  /// Returns:
-  ///   The BigInt representation of [bytes]
-  BigInt bytesToBigInt(Uint8List bytes) {
-    // Return the BigInt representation of bytes
-    return BigInt.parse(
-        bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(),
-        radix: 16);
-  }
-
   /// Returns the request as a Uint8List.
   ///
   /// Returns:
@@ -269,7 +254,7 @@ class BlindSignatureRequest {
     }
 
     // Calculate snew.
-    BigInt s = bytesToBigInt(sBytes);
+    BigInt s = sBytes.toBigInt;
     BigInt snew = (c * (s + a)) % order;
 
     // Calculate the final signature.
