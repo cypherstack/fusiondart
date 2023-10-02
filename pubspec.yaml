@@ -21,7 +21,7 @@ dependencies:
   socks_socket:
     git:
       url: https://github.com/cypherstack/socks_socket.git
-      ref: ac6d721fe655208a6d488a088a35bab0ddc25702
+      ref: master
 
 dev_dependencies:
   lints: ^2.0.0
