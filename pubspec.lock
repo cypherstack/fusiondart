@@ -324,9 +324,11 @@ packages:
   socks_socket:
     dependency: "direct main"
     description:
-      path: socks_socket
-      relative: true
-    source: path
+      path: "."
+      ref: ac6d721fe655208a6d488a088a35bab0ddc25702
+      resolved-ref: ac6d721fe655208a6d488a088a35bab0ddc25702
+      url: "https://github.com/cypherstack/socks_socket.git"
+    source: git
     version: "0.1.0"
   source_map_stack_trace:
     dependency: transitive

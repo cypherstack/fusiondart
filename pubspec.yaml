@@ -17,8 +17,11 @@ dependencies:
   protobuf: ^2.0.0
   coinlib: ^1.0.0
   hex: ^0.2.0
+
   socks_socket:
-    path: ./socks_socket
+    git:
+      url: https://github.com/cypherstack/socks_socket.git
+      ref: ac6d721fe655208a6d488a088a35bab0ddc25702
 
 dev_dependencies:
   lints: ^2.0.0
