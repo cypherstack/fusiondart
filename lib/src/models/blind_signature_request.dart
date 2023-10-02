@@ -40,8 +40,8 @@ import 'package:pointycastle/ecc/api.dart';
 /// Reference: [https://blog.cryptographyengineering.com/a-note-on-blind-signature-schemes/]
 class BlindSignatureRequest {
   // Curve properties.
-  final BigInt order; // ECDSA curve order.
-  final BigInt fieldsize; // ECDSA curve field size.
+  final BigInt _order; // ECDSA curve order.
+  final BigInt _fieldSize; // ECDSA curve field size.
 
   // Other fields needed for blind signature generation.
   final Uint8List pubkey;
@@ -49,46 +49,46 @@ class BlindSignatureRequest {
   final Uint8List messageHash;
 
   // Private variables used in calculations.
-  late BigInt a;
-  late BigInt b;
-  late BigInt c;
-  late BigInt e;
-  late BigInt eNew;
+  late BigInt _a;
+  late BigInt _b;
+  late BigInt _c;
+  late BigInt _e;
+  late BigInt _eNew;
 
   // Storage for intermediary and final results.
-  late Uint8List pointRxNew;
-  late Uint8List pubKeyCompressed;
+  late Uint8List _pointRxNew;
+  late Uint8List _pubKeyCompressed;
 
   /// Constructor: Initializes various fields and performs initial calculations.
   BlindSignatureRequest({
     required this.pubkey,
     required this.R,
     required this.messageHash,
-  })  : order = Utilities.secp256k1Params.n,
-        fieldsize = BigInt.from(Utilities.secp256k1Params.curve.fieldSize) {
+  })  : _order = Utilities.secp256k1Params.n,
+        _fieldSize = BigInt.from(Utilities.secp256k1Params.curve.fieldSize) {
     // Check argument validity
     if (pubkey.length != 33 || R.length != 33 || messageHash.length != 32) {
       throw ArgumentError('Invalid argument lengths.');
     }
 
     // Generate random `BigInt`s `a` and `b`.
-    a = _randomBigInt(order);
-    b = _randomBigInt(order);
+    _a = _randomBigInt(_order);
+    _b = _randomBigInt(_order);
 
     // Perform initial calculations.
     _calcInitial();
 
     // Calculate `e` and `eNew`.
     final digest =
-        crypto.sha256.convert(pointRxNew + pubKeyCompressed + messageHash);
+        crypto.sha256.convert(_pointRxNew + _pubKeyCompressed + messageHash);
     final eHash = BigInt.parse(digest.toString(), radix: 16);
-    e = (c * eHash + b) % order;
-    eNew = eHash % order;
+    _e = (_c * eHash + _b) % _order;
+    _eNew = eHash % _order;
   }
 
   Uint8List get request {
     // Return the request as a Uint8List
-    return e.toBytes;
+    return _e.toBytes;
   }
 
   /// Generates a random BigInt value, up to [maxValue]
@@ -116,10 +116,10 @@ class BlindSignatureRequest {
     ECPoint? pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
 
     // Compress public key
-    pubKeyCompressed = Utilities.pointToSer(pubPoint, true);
+    _pubKeyCompressed = Utilities.pointToSer(pubPoint, true);
 
     // Calculate intermediateR
-    ECPoint? intermediateR = pointR + (Utilities.secp256k1Params.G * a);
+    ECPoint? intermediateR = pointR + (Utilities.secp256k1Params.G * _a);
 
     // Check that intermediateR is not null
     if (intermediateR == null) {
@@ -128,7 +128,7 @@ class BlindSignatureRequest {
     }
 
     // Calculate pointRnew
-    ECPoint? pointRnew = intermediateR + (pubPoint * b);
+    ECPoint? pointRnew = intermediateR + (pubPoint * _b);
 
     // Check that pointRnew is not null
     if (pointRnew == null || pointRnew.x?.toBigInteger() == null) {
@@ -137,7 +137,7 @@ class BlindSignatureRequest {
     }
 
     // Convert pointRnew.x to bytes
-    pointRxNew = pointRnew.x!.toBigInteger()!.toBytes;
+    _pointRxNew = pointRnew.x!.toBigInteger()!.toBytes;
 
     // Calculate y for the Jacobi symbol c
     BigInt? y = pointRnew.y?.toBigInteger();
@@ -148,7 +148,7 @@ class BlindSignatureRequest {
     }
 
     // Calculate Jacobi symbol c
-    c = BigInt.from(jacobi(y, fieldsize));
+    _c = BigInt.from(jacobi(y, _fieldSize));
   }
 
   /// Jacobi function of [a] and [n].
@@ -215,10 +215,10 @@ class BlindSignatureRequest {
 
     // Calculate snew.
     BigInt s = sBytes.toBigInt;
-    BigInt snew = (c * (s + a)) % order;
+    BigInt snew = (_c * (s + _a)) % _order;
 
     // Calculate the final signature.
-    List<int> sig = pointRxNew + snew.toBytes;
+    List<int> sig = _pointRxNew + snew.toBytes;
 
     // Verify the signature if requested.
     ECPoint? pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
