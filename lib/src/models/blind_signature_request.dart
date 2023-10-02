@@ -223,8 +223,8 @@ class BlindSignatureRequest {
         s = s * negOne;
       }
 
-      a = a1;
-      n = n % a1;
+      a = n % a1;
+      n = a1;
     }
 
     if (a == BigInt.zero) {
