@@ -1143,7 +1143,7 @@ class Fusion {
         _allocatedOutputs!.safetyExcessFees[_registerAndWaitResult!.tier];
     if (safetyExcessFee == null) {
       throw Exception(
-          "Safety excess fee not found for tire=${_registerAndWaitResult!.tier}");
+          "Safety excess fee not found for tier=${_registerAndWaitResult!.tier}");
     }
 
     // Perform the safety checks!
