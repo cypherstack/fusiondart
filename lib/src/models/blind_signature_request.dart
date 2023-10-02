@@ -44,9 +44,9 @@ class BlindSignatureRequest {
   final BigInt fieldsize; // ECDSA curve field size.
 
   // Other fields needed for blind signature generation.
-  late final Uint8List pubkey;
-  late final Uint8List R;
-  late final Uint8List messageHash;
+  final Uint8List pubkey;
+  final Uint8List R;
+  final Uint8List messageHash;
 
   // Private variables used in calculations.
   late BigInt a;
@@ -60,9 +60,11 @@ class BlindSignatureRequest {
   late Uint8List pubKeyCompressed;
 
   /// Constructor: Initializes various fields and performs initial calculations.
-  BlindSignatureRequest(
-      {required this.pubkey, required this.R, required this.messageHash})
-      : order = Utilities.secp256k1Params.n,
+  BlindSignatureRequest({
+    required this.pubkey,
+    required this.R,
+    required this.messageHash,
+  })  : order = Utilities.secp256k1Params.n,
         fieldsize = BigInt.from(Utilities.secp256k1Params.curve.fieldSize) {
     // Check argument validity
     if (pubkey.length != 33 || R.length != 33 || messageHash.length != 32) {
