@@ -4,7 +4,6 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
-import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:socks_socket/socks_socket.dart';
 
@@ -25,7 +24,9 @@ class Connection {
   Duration timeout = Duration(seconds: 1);
 
   // The actual socket object.
-  Socket? socket;
+  final Socket socket;
+
+  final Stream<List<int>> receiveStream;
 
   // Buffer to store incoming data, initialized to zero-length.
   final Uint8List recvbuf = Uint8List(0);
@@ -45,16 +46,10 @@ class Connection {
   ///
   /// Returns:
   ///   A Connection object.
-  Connection({required this.socket, this.timeout = const Duration(seconds: 1)});
-
-  /// Constructor to initialize a Connection object without a socket.
-  ///
-  /// Parameters:
-  /// - [timeout] (optional): The timeout duration.
-  ///
-  /// Returns:
-  ///   A Connection object.
-  Connection.withoutSocket({this.timeout = const Duration(seconds: 1)});
+  Connection._({
+    required this.socket,
+    this.timeout = const Duration(seconds: 1),
+  }) : receiveStream = socket.asBroadcastStream();
 
   /// Asynchronous function to open a new connection.
   ///
@@ -94,7 +89,7 @@ class Connection {
         // Connect to CashFusion server.
         await socksSocket.connectTo(host, port);
 
-        return Connection(
+        return Connection._(
           socket:
               socksSocket.socket, // This might not "just work", but it might.
           timeout: defaultTimeout,
@@ -118,53 +113,13 @@ class Connection {
         }
 
         // Create a Connection object and return it.
-        return Connection(
+        return Connection._(
           socket: socket,
           timeout: defaultTimeout,
         );
       } catch (e) {
         throw 'openConnection(): Failed to open direct connection: $e';
       }
-    }
-  }
-
-  /// Asynchronous method to send a message with a socket wrapper.
-  ///
-  /// Parameters:
-  /// - [socketwrapper]: The socket wrapper to use.
-  /// - [msg]: The message to send.
-  /// - [timeout] (optional): The timeout duration.
-  ///
-  /// Returns:
-  ///   A Future<void> object.
-  Future<void> sendMessageWithSocketWrapper(
-      SocketWrapper socketwrapper, List<int> msg,
-      {Duration? timeout}) async {
-    // Use class-level timeout if no argument-level timeout is provided.
-    timeout ??= this.timeout;
-
-    // Prepare the 4-byte length header for the message.
-    Utilities.debugPrint("DEBUG sendmessage msg sending ");
-    Utilities.debugPrint(msg);
-    final lengthBytes = Uint8List(4);
-    final byteData = ByteData.view(lengthBytes.buffer);
-    byteData.setUint32(0, msg.length, Endian.big);
-
-    // Construct the frame to send. The frame includes:
-    // - The "magic" bytes for validation
-    // - The 4-byte length header
-    // - The message itself
-    final frame = <int>[]
-      ..addAll(Connection.magic)
-      ..addAll(lengthBytes)
-      ..addAll(msg);
-
-    // Send the frame.
-    try {
-      await socketwrapper.send(frame);
-      // TODO should this be unawaited?
-    } on SocketException catch (e) {
-      throw TimeoutException('Socket write timed out ($e)', timeout);
     }
   }
 
@@ -223,55 +178,6 @@ class Connection {
   ///   A Future<dynamic> object.
   Future<dynamic>? close() {
     return socket?.close();
-  }
-
-  /// Fill a buffer with data from a socket.
-  ///
-  /// Parameters:
-  /// - [socketwrapper]: The socket wrapper to use.
-  /// - [recvBuf]: The buffer to fill.
-  /// - [n]: The number of bytes to read.
-  /// - [timeout] (optional): The timeout duration.
-  ///
-  /// Returns:
-  ///   A Future<List<int>> object.
-  Future<List<int>> fillBuf2(
-      SocketWrapper socketwrapper, List<int> recvBuf, int n,
-      {Duration? timeout}) async {
-    // Sets the time when this operation should timeout.
-    final maxTime = timeout != null ? DateTime.now().add(timeout) : null;
-
-    // Listen for incoming data from the socket
-    await for (List<int> data in socketwrapper.socket!.cast<List<int>>()) {
-      // Checks for timeout.
-      Utilities.debugPrint("DEBUG fillBuf2 1 - new data received: $data");
-      if (maxTime != null && DateTime.now().isAfter(maxTime)) {
-        throw SocketException('Timeout');
-      }
-
-      // Checks for unexpected end of connection.
-      if (data.isEmpty) {
-        if (recvBuf.isNotEmpty) {
-          throw SocketException('Connection ended mid-message.');
-        } else {
-          throw SocketException('Connection ended while awaiting message.');
-        }
-      }
-
-      // Adds incoming data to the buffer.
-      recvBuf.addAll(data);
-      Utilities.debugPrint(
-          "DEBUG fillBuf2 2 - data added to recvBuf, new length: ${recvBuf.length}");
-
-      // Breaks out of the loop if the buffer has enough data.
-      if (recvBuf.length >= n) {
-        Utilities.debugPrint(
-            "DEBUG fillBuf2 3 - breaking loop, recvBuf is big enough");
-        break;
-      }
-    }
-
-    return recvBuf;
   }
 
   /// Fill a buffer with data from a socket.
@@ -339,8 +245,9 @@ class Connection {
   ///
   /// Returns:
   ///   A Future<List<int>> object.
-  Future<List<int>> recvMessage2(SocketWrapper socketwrapper,
-      {Duration? timeout}) async {
+  Future<List<int>> recvMessage({
+    Duration? timeout,
+  }) async {
     Utilities.debugPrint("START OF RECV2");
     // Use class-level timeout if no argument-level timeout is provided.
     timeout ??= this.timeout;
@@ -358,7 +265,7 @@ class Connection {
 
     try {
       // Loop to read incoming data from the socket.
-      await for (List<int> data in socketwrapper.receiveStream) {
+      await for (List<int> data in receiveStream) {
         // Check if the operation has timed out.
         if (DateTime.now().isAfter(maxTime)) {
           throw SocketException('Timeout');
@@ -430,29 +337,14 @@ class Connection {
           }
         }
       }
-    } on SocketException catch (e) {
+
+      throw Exception("No message found??");
+    } catch (e, s) {
       // Handle any SocketExceptions that may occur.
+      Utilities.debugPrint('recvMessage exception: $e\n$s');
       rethrow;
       // Disable this rethrow if it causes too many issues, previously we just printed the exception
-      // Utilities.debugPrint('Socket exception: $e');
     }
-
-    // This is a default return in case of exceptions.
-    return [];
-  }
-
-  /// Receive a message.
-  ///
-  /// [DEPRECATED]
-  ///
-  /// Parameters:
-  /// - [timeout] (optional): The timeout duration.
-  ///
-  /// Returns:
-  ///   A Future<List<int>> object.
-  Future<List<int>> recvMessage({Duration? timeout}) async {
-    // DEPRECATED
-    return [];
   }
 } // end of Connection class.
 

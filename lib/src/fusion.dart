@@ -26,7 +26,6 @@ import 'package:fusiondart/src/output_handling.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/receive_messages.dart';
-import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/status.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:fusiondart/src/validation.dart';
@@ -253,7 +252,6 @@ class Fusion {
     }
 
     Connection? connection;
-    SocketWrapper? socketWrapper;
 
     try {
       try {
@@ -319,25 +317,15 @@ class Fusion {
       //
       // Within this block, version checks, downloads server params, handles coins and runs rounds.
       try {
-        socketWrapper = SocketWrapper(
-          _fusionParams.serverHost,
-          _fusionParams.serverPort,
-        );
-
-        await socketWrapper.connect();
-
         // Version check and download server params.
         try {
           _serverParams = await IO.greet(
             connection: connection!,
-            socketWrapper: socketWrapper,
           );
         } catch (e, s) {
           Utilities.debugPrint("Exception greeting server: $e");
           Utilities.debugPrint("$s");
         }
-
-        socketWrapper.status();
 
         _serverConnectedAndGreeted = true;
         notifyServerStatus(true);
@@ -361,7 +349,7 @@ class Fusion {
         _allocatedOutputs = await OutputHandling.allocateOutputs(
           connection:
               connection!, // A non-null [connection] would've been caught by IO.greet()'s try-catch above, no need to check or handle it here.
-          socketWrapper: socketWrapper,
+
           status: status.status,
           coins: inputsFromWallet,
           currentChainHeight: currentChainHeight,
@@ -376,7 +364,6 @@ class Fusion {
 
         // Register for tiers, wait for a pool.
         _registerAndWaitResult = await registerAndWait(
-          socketWrapper: socketWrapper,
           connection: connection,
           allocatedOutputs: _allocatedOutputs!,
         );
@@ -403,7 +390,6 @@ class Fusion {
             final success = await runRound(
               covert: covert,
               connection: connection,
-              socketWrapper: socketWrapper,
             );
             if (success) {
               break;
@@ -420,7 +406,6 @@ class Fusion {
           Utilities.debugPrint("Exception closing connection: $e");
           Utilities.debugPrint("$s");
         }
-        await socketWrapper?.close();
       }
 
       Utilities.debugPrint("RETURNING early in fuse....");
@@ -582,7 +567,6 @@ class Fusion {
         List<Output> outputs,
         List<int> lastHash,
       })> registerAndWait({
-    required SocketWrapper socketWrapper,
     required Connection connection,
     required ({
       List<Input> inputs,
@@ -637,7 +621,6 @@ class Fusion {
     // Send the message to the server.
     await IO.send(
       clientMessage,
-      socketWrapper: socketWrapper,
       connection: connection,
     );
 
@@ -655,9 +638,7 @@ class Fusion {
       Utilities.debugPrint("RECEIVE LOOP 870............DEBUG");
       msg = await IO.recv(
           [ReceiveMessages.tierStatusUpdate, ReceiveMessages.fusionBegin],
-          socketWrapper: socketWrapper,
-          connection: connection,
-          timeout: Duration(seconds: 10));
+          connection: connection, timeout: Duration(seconds: 10));
 
       /*if (msg == null) continue;*/
 
@@ -1052,7 +1033,6 @@ class Fusion {
   ///   A `Future<bool>` indicating the success or failure of the round.
   Future<bool> runRound({
     required CovertSubmitter covert,
-    required SocketWrapper socketWrapper,
     required Connection connection,
   }) async {
     Utilities.debugPrint("START OF RUN ROUND");
@@ -1068,9 +1048,7 @@ class Fusion {
 
     // Await the start of round message from the server.
     GeneratedMessage msg = await IO.recv([ReceiveMessages.startRound],
-        socketWrapper: socketWrapper,
-        connection: connection,
-        timeout: Duration(seconds: timeoutInSeconds));
+        connection: connection, timeout: Duration(seconds: timeoutInSeconds));
 
     // Initialize the covert timer base
     final covertT0 = DateTime.now().millisecondsSinceEpoch / 1000;
@@ -1243,7 +1221,6 @@ class Fusion {
         randomNumberCommitment: crypto.sha256.convert(randomNumber).bytes,
         blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
       ),
-      socketWrapper: socketWrapper,
       connection: connection,
     );
 
@@ -1251,7 +1228,6 @@ class Fusion {
 
     // Await blind signature responses from the server
     msg = await IO.recv([ReceiveMessages.blindSigResponses],
-        socketWrapper: socketWrapper,
         connection: connection,
         timeout: Duration(seconds: Protocol.T_START_COMPS));
 
@@ -1327,7 +1303,6 @@ class Fusion {
 
     // While submitting, we download the (large) full commitment list.
     msg = await IO.recv([ReceiveMessages.allCommitments],
-        socketWrapper: socketWrapper,
         connection: connection,
         timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()));
     AllCommitments allCommitmentsMsg = msg as AllCommitments;
@@ -1361,7 +1336,6 @@ class Fusion {
 
     // Once all components are received, the server shares them with us:
     msg = await IO.recv([ReceiveMessages.shareCovertComponents],
-        socketWrapper: socketWrapper,
         connection: connection,
         timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()));
 
@@ -1487,9 +1461,7 @@ class Fusion {
           .toInt();
       Duration timeout = Duration(milliseconds: timeoutMillis);
       msg = await IO.recv([ReceiveMessages.fusionResult],
-          socketWrapper: socketWrapper,
-          connection: connection,
-          timeout: timeout);
+          connection: connection, timeout: timeout);
 
       // Critical check on server's response timing.
       if (covertClock() > Protocol.T_EXPECTING_CONCLUSION) {
@@ -1614,7 +1586,6 @@ class Fusion {
     await IO.send(
       MyProofsList(
           encryptedProofs: encodedEncproofs, randomNumber: randomNumber),
-      socketWrapper: socketWrapper,
       connection: connection,
     );
 
@@ -1627,7 +1598,6 @@ class Fusion {
     // Receive the list of proofs from the other parties
     Utilities.debugPrint("receiving proofs");
     msg = await IO.recv([ReceiveMessages.theirProofsList],
-        socketWrapper: socketWrapper,
         connection: connection,
         timeout: Duration(seconds: (2 * Protocol.STANDARD_TIMEOUT).round()));
 
@@ -1755,7 +1725,6 @@ class Fusion {
     // TODO should this be unawaited?
     await IO.send(
       Blames(blames: blames),
-      socketWrapper: socketWrapper,
       connection: connection,
     );
     Utilities.debugPrint("sending blames");
@@ -1770,7 +1739,6 @@ class Fusion {
     // to arrive since other players might be slow, and then the server
     // itself needs to check blockchain.
     await IO.recv([ReceiveMessages.restartRound],
-        socketWrapper: socketWrapper,
         connection: connection,
         timeout: Duration(
             seconds: 2 *

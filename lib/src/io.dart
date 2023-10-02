@@ -3,24 +3,20 @@ import 'dart:typed_data';
 
 import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
+import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
-import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart';
-
-import 'exceptions.dart';
 
 abstract final class IO {
   static Future<GeneratedMessage> recv(
     List<String> expectedMsgNames, {
     Duration? timeout,
     required Connection connection,
-    required SocketWrapper socketWrapper,
   }) async {
     // Receive the message from the server.
-    final (GeneratedMessage, String) result = await recvPb2(
-      socketWrapper,
+    final (GeneratedMessage, String) result = await recvPb(
       connection,
       ServerMessage,
       expectedMsgNames,
@@ -44,11 +40,14 @@ abstract final class IO {
     GeneratedMessage submsg, {
     Duration? timeout,
     required Connection connection,
-    required SocketWrapper socketWrapper,
   }) async {
     // Send the message to the server.
-    return await sendPb2(socketWrapper, connection, ClientMessage, submsg,
-        timeout: timeout);
+    return await sendPb(
+      connection,
+      ClientMessage,
+      submsg,
+      timeout: timeout,
+    );
   }
 
   static Future<
@@ -60,7 +59,6 @@ abstract final class IO {
         List<int> availableTiers,
       })> greet({
     required Connection connection,
-    required SocketWrapper socketWrapper,
   }) async {
     // Create the ClientHello message with version and genesis hash.
     final clientHello = ClientHello(
@@ -74,14 +72,12 @@ abstract final class IO {
     await send(
       clientMessage,
       connection: connection,
-      socketWrapper: socketWrapper,
     );
 
     // Wait for a ServerHello message in reply.
     GeneratedMessage replyMsg = await recv(
       ['serverhello'],
       connection: connection,
-      socketWrapper: socketWrapper,
     );
 
     // Process the ServerHello message.

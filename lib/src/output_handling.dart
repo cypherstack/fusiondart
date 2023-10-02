@@ -9,7 +9,6 @@ import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/models/protobuf.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
-import 'package:fusiondart/src/socketwrapper.dart';
 import 'package:fusiondart/src/util.dart';
 
 abstract final class OutputHandling {
@@ -255,7 +254,6 @@ abstract final class OutputHandling {
         Map<int, int> safetyExcessFees,
       })> allocateOutputs({
     required Connection connection,
-    required SocketWrapper socketWrapper,
     required FusionStatus status,
     required List<Input> coins,
     required int currentChainHeight,
