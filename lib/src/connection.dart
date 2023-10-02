@@ -79,34 +79,6 @@ class Connection {
     // Before we connect to host and port, if proxyInfo is not null, we should connect to the proxy first.
     if (proxyInfo != null) {
       try {
-        /*
-        // CoPilot suggested this code!  It might actually work.  I thought SocketWrapper was
-        // for this anyways, but I was going to use socks_socket...  I should probably try this
-        // out and see if it or similar works.  Better to have less dependencies.  Anyways...
-
-        // Connect to the proxy.
-        final SocketWrapper socketwrapper =
-        SocketWrapper(proxyInfo.host.address, proxyInfo.port);
-        await socketwrapper.connect();
-
-        // Send the CONNECT message.
-        final msg = <int>[]
-          ..addAll([0x05, 0x01, 0x00])
-          ..addAll([0x03, host.length])
-          ..addAll(utf8.encode(host)) // import convert.
-          ..addAll([port >> 8, port & 0xff]);
-        await socketwrapper.send(msg);
-
-        // Receive the response.
-        final response = await socketwrapper.receive(10);
-        if (response[0] != 0x05 || response[1] != 0x00) {
-          throw 'Failed to connect to proxy: ${hex.encode(response)}';
-        }
-
-        // Connect to the host and port through the proxy.
-        socketwrapper.connectTo(host, port); // connectTo doesn't exist.  So close, CoPilot.
-        */
-
         // From https://github.com/cypherstack/tor/blob/53b1c97a41542956fc6887878ba3147abae20ccd/example/lib/main.dart#L166
 
         // Instantiate a socks socket at localhost and on the port selected by the tor service.
