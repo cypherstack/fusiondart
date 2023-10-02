@@ -6,7 +6,6 @@ import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
-import 'package:pointycastle/ecc/api.dart';
 
 /// Schnorr blind signature creator for the requester side.
 ///
@@ -107,14 +106,14 @@ class BlindSignatureRequest {
     }
 
     // Calculate sNew.
-    BigInt s = sBytes.toBigInt;
-    BigInt sNew = (_c * (s + _a)) % _order;
+    final s = sBytes.toBigInt;
+    final sNew = (_c * (s + _a)) % _order;
 
     // Calculate the final signature.
-    List<int> sig = _pointRxNew + sNew.toBytes;
+    final sig = _pointRxNew + sNew.toBytes;
 
     // Verify the signature if requested.
-    ECPoint? pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
+    final pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
 
     // Check that pubPoint is not null.
     if (check && !Utilities.schnorrVerify(pubPoint, sig, messageHash)) {
@@ -133,7 +132,7 @@ class BlindSignatureRequest {
     final random = Random.secure();
 
     // Calculate the number of bytes needed
-    int byteLength = (maxValue.bitLength + 7) ~/ 8;
+    final byteLength = (maxValue.bitLength + 7) ~/ 8;
 
     BigInt result;
     do {
