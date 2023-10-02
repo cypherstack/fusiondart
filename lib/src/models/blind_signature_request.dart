@@ -6,6 +6,7 @@ import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
+import 'package:pointycastle/ecc/ecc_fp.dart' as fp;
 
 /// Schnorr blind signature creator for the requester side.
 ///
@@ -41,7 +42,6 @@ import 'package:fusiondart/src/util.dart';
 class BlindSignatureRequest {
   // Curve properties.
   final BigInt _order; // ECDSA curve order.
-  final BigInt _fieldSize; // ECDSA curve field size.
 
   // Other fields needed for blind signature generation.
   final Uint8List pubkey;
@@ -66,8 +66,7 @@ class BlindSignatureRequest {
     required this.pubkey,
     required this.R,
     required this.messageHash,
-  })  : _order = Utilities.secp256k1Params.n,
-        _fieldSize = BigInt.from(Utilities.secp256k1Params.curve.fieldSize) {
+  }) : _order = Utilities.secp256k1Params.n {
     // Check argument validity
     if (pubkey.length != 33 || R.length != 33 || messageHash.length != 32) {
       throw ArgumentError('Invalid argument lengths.');
@@ -182,17 +181,22 @@ class BlindSignatureRequest {
     }
 
     // Calculate Jacobi symbol c
-    _c = _jacobi(y, _fieldSize);
+    _c = _jacobi(y, (Utilities.secp256k1Params.curve as fp.ECCurve).q!);
   }
 
   /// port of https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/schnorr.py#L61
   BigInt _jacobi(BigInt a, BigInt n) {
-    final negOne = BigInt.from(-1);
-    final three = BigInt.from(3);
-    final seven = BigInt.from(7);
+    // assert(n & BigInt.one == BigInt.one);
+    if (n & BigInt.one != BigInt.one) {
+      throw Exception(
+          "n & BigInt.one != BigInt.one FAlSE where n=$n and n&1=${n & BigInt.one}");
+    }
 
+    final three = BigInt.from(3);
     assert(n >= three);
-    assert(n & BigInt.one == BigInt.one);
+
+    final negOne = BigInt.from(-1);
+    final seven = BigInt.from(7);
 
     a = a % n;
     BigInt s = BigInt.one;
