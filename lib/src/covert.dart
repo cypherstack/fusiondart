@@ -59,7 +59,11 @@ class CovertConnection {
   void ping() {
     // If the connection exists, send a `Ping` message.
     if (connection != null) {
-      sendPb(connection!, CovertMessage, Ping(), timeout: Duration(seconds: 1));
+      sendPb(
+        connection!,
+        CovertMessage()..ping = Ping(),
+        timeout: Duration(seconds: 1),
+      );
     }
 
     // Reset the ping time, as a ping has just been sent.
@@ -98,11 +102,25 @@ class CovertSlot {
       throw Unrecoverable('connection is null');
     }
 
+    // TODO: this is probably not the right way to handle this?
+    final message = CovertMessage();
+    switch (subMsg!.runtimeType) {
+      case CovertComponent:
+        message.component = subMsg as CovertComponent;
+      case CovertTransactionSignature:
+        message.signature = subMsg as CovertTransactionSignature;
+      case Ping:
+        message.ping = subMsg as Ping;
+
+      default:
+        throw Exception("CTRL+F this error text and see TODO message");
+    }
+
     // Start the work.
     //
     // Send a Protocol Buffers message to initiate the work,
     // and set a timeout based on the submitTimeout property.
-    await sendPb(connection, CovertMessage, subMsg!, timeout: submitTimeout);
+    await sendPb(connection, message, timeout: submitTimeout);
 
     // Receive a Protocol Buffers message as a response.
     (GeneratedMessage, String) result = await recvPb(

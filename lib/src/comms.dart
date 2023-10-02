@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
-import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart';
 
 /// Type definition for a function that creates a new instance of a Protobuf GeneratedMessage.
@@ -62,19 +61,10 @@ Map<Type, PbCreateFunc> pbClassCreators = {
 /// Throws:
 ///   FusionError: If any step in the sending process fails.
 Future<void> sendPb(
-    Connection connection, Type pbClass, GeneratedMessage subMsg,
-    {Duration? timeout}) async {
-  // Construct the outer message with the submessage.
-  if (pbClassCreators[pbClass] == null) {
-    Utilities.debugPrint('pbClassCreators[pbClass] is null');
-    // TODO should we throw an exception here?
-    return;
-  }
-
-  // Construct the outer message by merging it with the submessage.
-  GeneratedMessage pbMessage = pbClassCreators[pbClass]!()
-    ..mergeFromMessage(subMsg);
-
+  Connection connection,
+  GeneratedMessage pbMessage, {
+  Duration? timeout,
+}) async {
   // Convert the Protobuf message to bytes.
   final msgBytes = pbMessage.writeToBuffer();
 

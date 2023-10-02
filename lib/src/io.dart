@@ -36,20 +36,6 @@ abstract final class IO {
     return submsg;
   }
 
-  static Future<void> send(
-    GeneratedMessage submsg, {
-    Duration? timeout,
-    required Connection connection,
-  }) async {
-    // Send the message to the server.
-    return await sendPb(
-      connection,
-      ClientMessage,
-      submsg,
-      timeout: timeout,
-    );
-  }
-
   static Future<
       ({
         int numComponents,
@@ -69,9 +55,9 @@ abstract final class IO {
     ClientMessage clientMessage = ClientMessage()..clienthello = clientHello;
 
     // Send the message to the server.
-    await send(
+    await sendPb(
+      connection,
       clientMessage,
-      connection: connection,
     );
 
     // Wait for a ServerHello message in reply.

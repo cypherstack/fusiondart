@@ -9,6 +9,7 @@ import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fixnum/fixnum.dart';
+import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/covert.dart';
 import 'package:fusiondart/src/encrypt.dart';
@@ -619,9 +620,9 @@ class Fusion {
     ClientMessage clientMessage = ClientMessage()..joinpools = joinPools;
 
     // Send the message to the server.
-    await IO.send(
+    await sendPb(
+      connection,
       clientMessage,
-      connection: connection,
     );
 
     _updateStatus(status: FusionStatus.waiting, info: 'Registered for tiers');
@@ -1213,15 +1214,16 @@ class Fusion {
     Utilities.debugPrint("Sending initial commitments etc.");
 
     // Send initial commitments, fees, and other data to the server.
-    await IO.send(
-      PlayerCommit(
-        initialCommitments: myCommitments,
-        excessFee: Int64.parseHex(excessFee.toHex),
-        pedersenTotalNonce: genComponentsResults.pedersenTotalNonce,
-        randomNumberCommitment: crypto.sha256.convert(randomNumber).bytes,
-        blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
-      ),
-      connection: connection,
+    await sendPb(
+      connection,
+      ClientMessage()
+        ..playercommit = PlayerCommit(
+          initialCommitments: myCommitments,
+          excessFee: Int64.parseHex(excessFee.toHex),
+          pedersenTotalNonce: genComponentsResults.pedersenTotalNonce,
+          randomNumberCommitment: crypto.sha256.convert(randomNumber).bytes,
+          blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
+        ),
     );
 
     Utilities.debugPrint("Awaiting signature responses from the server...");
@@ -1582,11 +1584,11 @@ class Fusion {
     // Send the encrypted proofs and the random number used to the server.
     // The comment is asking if this call should be awaited or not,
     // depending on whether the program needs to pause execution until the data is sent.
-    // TODO should this be unawaited?
-    await IO.send(
-      MyProofsList(
-          encryptedProofs: encodedEncproofs, randomNumber: randomNumber),
-      connection: connection,
+    await sendPb(
+      connection,
+      ClientMessage()
+        ..myproofslist = MyProofsList(
+            encryptedProofs: encodedEncproofs, randomNumber: randomNumber),
     );
 
     // Update the status to indicate that the program is in the process of checking proofs.
@@ -1722,10 +1724,9 @@ class Fusion {
         "checked ${msg.proofs.length} proofs, $countInputs of them inputs");
 
     // Send the blame list to the server
-    // TODO should this be unawaited?
-    await IO.send(
-      Blames(blames: blames),
-      connection: connection,
+    await sendPb(
+      connection,
+      ClientMessage()..blames = Blames(blames: blames),
     );
     Utilities.debugPrint("sending blames");
 
