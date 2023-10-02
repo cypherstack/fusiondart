@@ -153,7 +153,7 @@ class BlindSignatureRequest {
 
   /// Jacobi function of [a] and [n].
   ///
-  /// TODO use something built in rather than implementing here.
+  /// port of https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/schnorr.py#L61
   BigInt jacobi(BigInt a, BigInt n) {
     final negOne = BigInt.from(-1);
     final three = BigInt.from(3);
