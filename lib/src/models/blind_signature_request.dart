@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/extensions/on_big_int.dart';
+import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
@@ -53,6 +54,8 @@ class BlindSignatureRequest {
   late BigInt _b;
   late BigInt _c;
   late BigInt _e;
+
+  // written to but never read?
   late BigInt _eNew;
 
   // Storage for intermediary and final results.
@@ -81,7 +84,7 @@ class BlindSignatureRequest {
     // Calculate `e` and `eNew`.
     final digest =
         crypto.sha256.convert(_pointRxNew + _pubKeyCompressed + messageHash);
-    final eHash = BigInt.parse(digest.toString(), radix: 16);
+    final eHash = digest.toString().toBigIntFromHex;
     _e = (_c * eHash + _b) % _order;
     _eNew = eHash % _order;
   }
@@ -90,6 +93,38 @@ class BlindSignatureRequest {
     // Return the request as a Uint8List
     return _e.toBytes;
   }
+
+  /// Finalizes the blind signature request.
+  ///
+  /// Expects 32 bytes s value, returns 64 byte finished signature.
+  /// If check=True (default) this will perform a verification of the result.
+  /// Upon failure it raises RuntimeError. The cause for this error is that
+  /// the blind signer has provided an incorrect blinded s value.
+  Uint8List finalize(Uint8List sBytes, {bool check = true}) {
+    // Check argument validity
+    if (sBytes.length != 32) {
+      throw ArgumentError('Invalid length for sBytes');
+    }
+
+    // Calculate sNew.
+    BigInt s = sBytes.toBigInt;
+    BigInt sNew = (_c * (s + _a)) % _order;
+
+    // Calculate the final signature.
+    List<int> sig = _pointRxNew + sNew.toBytes;
+
+    // Verify the signature if requested.
+    ECPoint? pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
+
+    // Check that pubPoint is not null.
+    if (check && !Utilities.schnorrVerify(pubPoint, sig, messageHash)) {
+      throw Exception('Blind signature verification failed.');
+    }
+
+    return Uint8List.fromList(sig.toList());
+  }
+
+  // ================== Private functions ======================================
 
   /// Generates a random BigInt value, up to [maxValue]
   ///
@@ -112,14 +147,14 @@ class BlindSignatureRequest {
   /// Performs initial calculations needed for blind signature generation.
   void _calcInitial() {
     // Convert byte representations to ECPoints
-    ECPoint? pointR = Utilities.serToPoint(R, Utilities.secp256k1Params);
-    ECPoint? pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
+    final pointR = Utilities.serToPoint(R, Utilities.secp256k1Params);
+    final pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
 
     // Compress public key
     _pubKeyCompressed = Utilities.pointToSer(pubPoint, true);
 
     // Calculate intermediateR
-    ECPoint? intermediateR = pointR + (Utilities.secp256k1Params.G * _a);
+    final intermediateR = pointR + (Utilities.secp256k1Params.G * _a);
 
     // Check that intermediateR is not null
     if (intermediateR == null) {
@@ -127,20 +162,20 @@ class BlindSignatureRequest {
           'Failed to perform elliptic curve operation pointR + (params.G * a).');
     }
 
-    // Calculate pointRnew
-    ECPoint? pointRnew = intermediateR + (pubPoint * _b);
+    // Calculate pointRNew
+    final pointRNew = intermediateR + (pubPoint * _b);
 
-    // Check that pointRnew is not null
-    if (pointRnew == null || pointRnew.x?.toBigInteger() == null) {
+    // Check that pointRNew is not null
+    if (pointRNew == null || pointRNew.x?.toBigInteger() == null) {
       throw ArgumentError(
           'Failed to perform elliptic curve operation intermediateR + (pubPoint * b).');
     }
 
-    // Convert pointRnew.x to bytes
-    _pointRxNew = pointRnew.x!.toBigInteger()!.toBytes;
+    // Convert pointRNew.x to bytes
+    _pointRxNew = pointRNew.x!.toBigInteger()!.toBytes;
 
     // Calculate y for the Jacobi symbol c
-    BigInt? y = pointRnew.y?.toBigInteger();
+    final y = pointRNew.y?.toBigInteger();
 
     // Check that y is not null
     if (y == null) {
@@ -148,13 +183,11 @@ class BlindSignatureRequest {
     }
 
     // Calculate Jacobi symbol c
-    _c = jacobi(y, _fieldSize);
+    _c = _jacobi(y, _fieldSize);
   }
 
-  /// Jacobi function of [a] and [n].
-  ///
   /// port of https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/schnorr.py#L61
-  BigInt jacobi(BigInt a, BigInt n) {
+  BigInt _jacobi(BigInt a, BigInt n) {
     final negOne = BigInt.from(-1);
     final three = BigInt.from(3);
     final seven = BigInt.from(7);
@@ -198,35 +231,5 @@ class BlindSignatureRequest {
     } else {
       throw Exception("jacobi() Unexpected a value of $a");
     }
-  }
-
-  /// Finalizes the blind signature request.
-  ///
-  /// Expects 32 bytes s value, returns 64 byte finished signature.
-  /// If check=True (default) this will perform a verification of the result.
-  /// Upon failure it raises RuntimeError. The cause for this error is that
-  /// the blind signer has provided an incorrect blinded s value.
-  Uint8List finalize(Uint8List sBytes, {bool check = true}) {
-    // Check argument validity
-    if (sBytes.length != 32) {
-      throw ArgumentError('Invalid length for sBytes');
-    }
-
-    // Calculate snew.
-    BigInt s = sBytes.toBigInt;
-    BigInt snew = (_c * (s + _a)) % _order;
-
-    // Calculate the final signature.
-    List<int> sig = _pointRxNew + snew.toBytes;
-
-    // Verify the signature if requested.
-    ECPoint? pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
-
-    // Check that pubPoint is not null.
-    if (check && !Utilities.schnorrVerify(pubPoint, sig, messageHash)) {
-      throw Exception('Blind signature verification failed.');
-    }
-
-    return Uint8List.fromList(sig.toList());
   }
 }
