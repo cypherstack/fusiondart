@@ -148,56 +148,55 @@ class BlindSignatureRequest {
     }
 
     // Calculate Jacobi symbol c
-    _c = BigInt.from(jacobi(y, _fieldSize));
+    _c = jacobi(y, _fieldSize);
   }
 
   /// Jacobi function of [a] and [n].
   ///
   /// TODO use something built in rather than implementing here.
-  int jacobi(BigInt a, BigInt n) {
-    // Check that n is positive and odd.
-    assert(n > BigInt.zero && n.isOdd);
+  BigInt jacobi(BigInt a, BigInt n) {
+    final negOne = BigInt.from(-1);
+    final three = BigInt.from(3);
+    final seven = BigInt.from(7);
 
-    // Initialize the result variable t to 1.
-    BigInt t = BigInt.one;
+    assert(n >= three);
+    assert(n & BigInt.one == BigInt.one);
 
-    // Main loop to process `a` until it becomes zero.
-    while (a != BigInt.zero) {
-      // Remove all the factors of 2 in `a` and adjust `t` based on `n`.
-      while (a.isEven) {
-        a = a >> 1; // Divide a by 2.
+    a = a % n;
+    BigInt s = BigInt.one;
 
-        // Calculate n mod 8.
-        BigInt r = n % BigInt.from(8);
+    while (a > BigInt.one) {
+      BigInt a1 = a;
+      BigInt e = BigInt.zero;
 
-        // If r is 3 or 5, then flip the sign of t.
-        if (r == BigInt.from(3) || r == BigInt.from(5)) {
-          t = -t;
-        }
+      while (a1 & BigInt.one == BigInt.zero) {
+        a1 = a1 >> 1;
+        e = e + BigInt.one;
       }
 
-      // Swap the values of `a` and `n`.
-      BigInt temp = a;
-      a = n;
-      n = temp;
-
-      // Special case: If both a and n give remainder 3 when divided by 4,
-      // flip the sign of t.
-      if (a % BigInt.from(4) == BigInt.from(3) &&
-          n % BigInt.from(4) == BigInt.from(3)) {
-        t = -t;
+      if (!(e & BigInt.one == BigInt.zero || n & seven == BigInt.one) ||
+          n & seven == seven) {
+        s = s * negOne;
       }
 
-      // Reduce `a` modulo `n`
-      a = a % n;
+      if (a1 == BigInt.one) {
+        return s;
+      }
+
+      if (n & three == three && a1 & three == three) {
+        s = s * negOne;
+      }
+
+      a = a1;
+      n = n % a1;
     }
 
-    // If `n` became 1, return the Jacobi symbol as int.
-    if (n == BigInt.one) {
-      return t.toInt();
+    if (a == BigInt.zero) {
+      return BigInt.zero;
+    } else if (a == BigInt.one) {
+      return s;
     } else {
-      // If 'n' is not 1, then return 0 as Jacobi symbol is defined only for n = 1.
-      return 0;
+      throw Exception("jacobi() Unexpected a value of $a");
     }
   }
 
