@@ -1236,16 +1236,16 @@ class Fusion {
 
     // Send initial commitments, fees, and other data to the server.
     await IO.send(
-      PlayerCommit(
-        initialCommitments: myCommitments,
-        excessFee: Int64.parseHex(excessFee.toHex),
-        pedersenTotalNonce: genComponentsResults.pedersenTotalNonce,
-        randomNumberCommitment: crypto.sha256.convert(randomNumber).bytes,
-        blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
-      ),
-      socketWrapper: socketWrapper,
-      connection: connection,
-    );
+        PlayerCommit(
+          initialCommitments: myCommitments,
+          excessFee: Int64.parseHex(excessFee.toHex),
+          pedersenTotalNonce: genComponentsResults.pedersenTotalNonce,
+          randomNumberCommitment: crypto.sha256.convert(randomNumber).bytes,
+          blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
+        ),
+        socketWrapper: socketWrapper,
+        connection: connection,
+        pbClass: GeneratedMessage);
 
     Utilities.debugPrint("Awaiting signature responses from the server...");
 

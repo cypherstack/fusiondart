@@ -40,14 +40,14 @@ abstract final class IO {
     return submsg;
   }
 
-  static Future<void> send(
-    GeneratedMessage submsg, {
-    Duration? timeout,
-    required Connection connection,
-    required SocketWrapper socketWrapper,
-  }) async {
+  static Future<void> send(GeneratedMessage submsg,
+      {Duration? timeout,
+      required Connection connection,
+      required SocketWrapper socketWrapper,
+      Type? pbClass}) async {
     // Send the message to the server.
-    return await sendPb2(socketWrapper, connection, ClientMessage, submsg,
+    return await sendPb2(
+        socketWrapper, connection, pbClass ?? ClientMessage, submsg,
         timeout: timeout);
   }
 
