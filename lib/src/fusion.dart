@@ -1541,7 +1541,8 @@ class Fusion {
       }
     } else {
       // Case where 'skip_signatures' is True.
-      Set<int> badComponents = <int>{};
+      // this should be empty already sooooo
+      // badComponents.clear();
     }
 
     // Begin Blame phase logic.
