@@ -577,6 +577,9 @@ abstract final class OutputHandling {
     resultList.sort((ComponentResult a, ComponentResult b) =>
         compareUint8List(a.commitment, b.commitment));
 
+    // Calculate pedersen commitment for the total nonce.
+    sumNonce = sumNonce % Utilities.secp256k1Params.n;
+
     return (
       results: resultList,
       sumAmounts: sumAmounts,
