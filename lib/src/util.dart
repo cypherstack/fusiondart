@@ -126,7 +126,7 @@ abstract class Utilities {
   static bool schnorrVerify(
       ECPoint pubKey, List<int> signature, Uint8List messageHash) {
     return bip340.verify(
-      hex.encode(pubKey.getEncoded(false)), // false indicates uncompressed.
+      hex.encode(pubKey.getEncoded(true)), // false indicates uncompressed.
       hex.encode(messageHash),
       hex.encode(signature),
     );
