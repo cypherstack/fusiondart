@@ -473,7 +473,7 @@ abstract class Utilities {
     while (true) {
       final bytes = Uint8List(byteLength);
       for (int i = 0; i < byteLength; i++) {
-        bytes[i] = random.nextInt(256);
+        bytes[i] = random.nextInt(0xFF + 1);
       }
       final result = bytes.toBigInt;
 
