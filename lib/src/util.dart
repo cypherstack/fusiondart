@@ -9,6 +9,7 @@ import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
+import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
@@ -484,5 +485,26 @@ abstract class Utilities {
             .toBigIntFromHex;
 
     return randomNumber;
+  }
+
+  /// Generates a random BigInt value, up to [maxValue].
+  static BigInt randomBigInt(BigInt maxValue) {
+    final random = Random.secure();
+
+    // Calculate the number of bytes needed.
+    final byteLength = (maxValue.bitLength + 7) ~/ 8;
+
+    // Loop until we get a value less than maxValue.
+    while (true) {
+      final bytes = Uint8List(byteLength);
+      for (int i = 0; i < byteLength; i++) {
+        bytes[i] = random.nextInt(256);
+      }
+      final result = bytes.toBigInt;
+
+      if (result < maxValue) {
+        return result;
+      }
+    }
   }
 }
