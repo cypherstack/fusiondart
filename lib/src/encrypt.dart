@@ -36,7 +36,7 @@ Future<Uint8List> encrypt(
 
   // Generate secure random nonce.
   final BigInt nonceSec = Utilities.secureRandomBigInt(
-    Utilities.secp256k1Params.n.bitLength,
+    Utilities.secp256k1Params.n,
   );
 
   // Calculate G * nonceSec

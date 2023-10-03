@@ -462,33 +462,8 @@ abstract class Utilities {
     return point.getEncoded(compress);
   }
 
-  /// Generates a secure random big integer with a specified bit length.
-  ///
-  /// Parameters:
-  /// - [bitLength] The bit length of the generated big integer.
-  ///
-  /// Returns:
-  ///   A securely generated random `BigInt`.
-  static BigInt secureRandomBigInt(int bitLength) {
-    final random = Random.secure();
-    final bytes = (bitLength + 7) ~/ 8; // Ceiling division.
-    final Uint8List randomBytes = Uint8List(bytes);
-
-    // Populate the byte array with random values.
-    for (int i = 0; i < bytes; i++) {
-      randomBytes[i] = random.nextInt(256);
-    }
-
-    // Convert byte array to BigInt.
-    BigInt randomNumber =
-        (randomBytes.map((e) => e.toRadixString(16).padLeft(2, '0')).join())
-            .toBigIntFromHex;
-
-    return randomNumber;
-  }
-
   /// Generates a random BigInt value, up to [maxValue].
-  static BigInt randomBigInt(BigInt maxValue) {
+  static BigInt secureRandomBigInt(BigInt maxValue) {
     final random = Random.secure();
 
     // Calculate the number of bytes needed.

@@ -72,8 +72,8 @@ class BlindSignatureRequest {
     }
 
     // Generate random `BigInt`s `a` and `b`.
-    _a = Utilities.randomBigInt(_order);
-    _b = Utilities.randomBigInt(_order);
+    _a = Utilities.secureRandomBigInt(_order);
+    _b = Utilities.secureRandomBigInt(_order);
 
     // Perform initial calculations.
     _calcInitial();
