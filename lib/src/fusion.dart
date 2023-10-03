@@ -1245,27 +1245,27 @@ class Fusion {
       timeout: Duration(seconds: Protocol.T_START_COMPS),
     );
 
-    // Validate type and length of the received message and perform a sanity-check on it.
-    if (msg is BlindSigResponses) {
-      BlindSigResponses typedMsg = msg;
-      assert(typedMsg.scalars.length == blindSigRequests.length);
-    } else {
-      // Handle the case where msg is not of type BlindSigResponses.
+    // Handle the cases where msg is not of type BlindSigResponses.
+    if (msg is! ServerMessage) {
       throw Exception('Unexpected message type: ${msg.runtimeType}');
     }
+    final fieldInfo = msg.info_.byName[ReceiveMessages.blindSigResponses];
+    if (fieldInfo == null) {
+      throw Exception('Unexpected message type: ${msg.whichMsg()}');
+    }
+
+    final BlindSigResponses blindSigResponses = (msg).blindsigresponses;
+
+    // Validate type and length of the received message and perform a sanity-check on it.
+    assert(blindSigResponses.scalars.length == blindSigRequests.length);
 
     final blindSigs = List.generate(
       blindSigRequests.length,
       (index) {
-        if (msg is BlindSigResponses) {
-          BlindSigResponses typedMsg = msg;
-          return blindSigRequests[index].finalize(
-              Uint8List.fromList(typedMsg.scalars[index]),
-              check: true);
-        } else {
-          // Handle the case where msg is not of type BlindSigResponses.
-          throw Exception('Unexpected message type: ${msg.runtimeType}');
-        }
+        return blindSigRequests[index].finalize(
+          Uint8List.fromList(blindSigResponses.scalars[index]),
+          check: true,
+        );
       },
     );
 
@@ -1322,7 +1322,17 @@ class Fusion {
       covert: false,
       timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()),
     );
-    AllCommitments allCommitmentsMsg = msg as AllCommitments;
+
+    // Handle the cases where msg is not of type allCommitments.
+    if (msg is! ServerMessage) {
+      throw Exception('Unexpected message type: ${msg.runtimeType}');
+    }
+    final fieldInfo2 = msg.info_.byName[ReceiveMessages.allCommitments];
+    if (fieldInfo2 == null) {
+      throw Exception('Unexpected message type: ${msg.whichMsg()}');
+    }
+
+    final allCommitmentsMsg = msg.allcommitments;
     List<InitialCommitment> allCommitments =
         allCommitmentsMsg.initialCommitments.map((commitmentBytes) {
       return InitialCommitment.fromBuffer(commitmentBytes);
@@ -1352,13 +1362,23 @@ class Fusion {
     }
 
     // Once all components are received, the server shares them with us:
-    msg = await Comms.recvPb([ReceiveMessages.shareCovertComponents],
-        connection: connection,
-        covert: false,
-        timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()));
+    msg = await Comms.recvPb(
+      [ReceiveMessages.shareCovertComponents],
+      connection: connection,
+      covert: false,
+      timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()),
+    );
 
-    ShareCovertComponents shareCovertComponentsMsg =
-        msg as ShareCovertComponents;
+    // Handle the cases where msg is not of type shareCovertComponents.
+    if (msg is! ServerMessage) {
+      throw Exception('Unexpected message type: ${msg.runtimeType}');
+    }
+    final fieldInfo3 = msg.info_.byName[ReceiveMessages.shareCovertComponents];
+    if (fieldInfo3 == null) {
+      throw Exception('Unexpected message type: ${msg.whichMsg()}');
+    }
+
+    final shareCovertComponentsMsg = msg.sharecovertcomponents;
     List<List<int>> allComponents = shareCovertComponentsMsg.components;
     bool skipSignatures = msg.getField(2) as bool;
 
@@ -1492,9 +1512,19 @@ class Fusion {
 
       // Verify if the covert operation was successful.
       covert.checkDone();
-      FusionResult fusionResultMsg = msg as FusionResult;
+
+      // Handle the cases where msg is not of type FusionResult.
+      if (msg is! ServerMessage) {
+        throw Exception('Unexpected message type: ${msg.runtimeType}');
+      }
+      final fieldInfo4 = msg.info_.byName[ReceiveMessages.fusionResult];
+      if (fieldInfo4 == null) {
+        throw Exception('Unexpected message type: ${msg.whichMsg()}');
+      }
+
+      final fusionResultMsg = msg.fusionresult;
       if (fusionResultMsg.ok) {
-        List<List<int>> allSigs = msg.txsignatures;
+        List<List<int>> allSigs = fusionResultMsg.txsignatures;
 
         // Assemble and complete the transaction.
         if (allSigs.length != tx.Inputs.length) {
@@ -1526,7 +1556,7 @@ class Fusion {
       } else {
         // If not successful, identify bad components.
         badComponents.clear();
-        badComponents.addAll(msg.badComponents);
+        badComponents.addAll(fusionResultMsg.badComponents);
         if (badComponents.intersection(myComponentIndexes.toSet()).isNotEmpty) {
           Utilities.debugPrint(
               "bad components: $badComponents mine: $myComponentIndexes");
