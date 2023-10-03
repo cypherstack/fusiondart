@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
@@ -73,8 +72,8 @@ class BlindSignatureRequest {
     }
 
     // Generate random `BigInt`s `a` and `b`.
-    _a = _randomBigInt(_order);
-    _b = _randomBigInt(_order);
+    _a = Utilities.randomBigInt(_order);
+    _b = Utilities.randomBigInt(_order);
 
     // Perform initial calculations.
     _calcInitial();
@@ -123,29 +122,6 @@ class BlindSignatureRequest {
   }
 
   // ================== Private functions ======================================
-
-  /// Generates a random BigInt value, up to [maxValue]
-  ///
-  /// TODO move this to the Utilities class?
-  BigInt _randomBigInt(BigInt maxValue) {
-    final random = Random.secure();
-
-    // Calculate the number of bytes needed.
-    final byteLength = (maxValue.bitLength + 7) ~/ 8;
-
-    // Loop until we get a value less than maxValue.
-    while (true) {
-      final bytes = Uint8List(byteLength);
-      for (int i = 0; i < byteLength; i++) {
-        bytes[i] = random.nextInt(256);
-      }
-      final result = bytes.toBigInt;
-
-      if (result < maxValue) {
-        return result;
-      }
-    }
-  }
 
   /// Performs initial calculations needed for blind signature generation.
   void _calcInitial() {

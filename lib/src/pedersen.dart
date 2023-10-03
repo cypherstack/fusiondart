@@ -99,9 +99,12 @@ class Commitment {
     // TODO: ensure this is unique?
     // Initialize nonce with a secure random value if not provided.
     this.nonce = nonce ??
-        Utilities.secureRandomBigInt(
-          Utilities.secp256k1Params.n.bitLength,
+        Utilities.randomBigInt(
+          BigInt.from(Utilities.secp256k1Params.n.bitLength),
         );
+    // Utilities.secureRandomBigInt(
+    //   Utilities.secp256k1Params.n.bitLength,
+    // );
 
     // Validate that nonce is within the allowed range (0, n).
     if (this.nonce <= BigInt.zero ||
