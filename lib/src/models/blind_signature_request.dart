@@ -130,16 +130,21 @@ class BlindSignatureRequest {
   BigInt _randomBigInt(BigInt maxValue) {
     final random = Random.secure();
 
-    // Calculate the number of bytes needed
+    // Calculate the number of bytes needed.
     final byteLength = (maxValue.bitLength + 7) ~/ 8;
 
-    BigInt result;
-    do {
-      final bytes = List<int>.generate(byteLength, (i) => random.nextInt(256));
-      result = Uint8List.fromList(bytes).toBigInt;
-    } while (result >= maxValue);
+    // Loop until we get a value less than maxValue.
+    while (true) {
+      final bytes = Uint8List(byteLength);
+      for (int i = 0; i < byteLength; i++) {
+        bytes[i] = random.nextInt(256);
+      }
+      final result = bytes.toBigInt;
 
-    return result;
+      if (result < maxValue) {
+        return result;
+      }
+    }
   }
 
   /// Performs initial calculations needed for blind signature generation.
