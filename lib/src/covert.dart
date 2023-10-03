@@ -59,7 +59,7 @@ class CovertConnection {
   void ping() {
     // If the connection exists, send a `Ping` message.
     if (connection != null) {
-      sendPb(
+      Comms.sendPb(
         connection!,
         CovertMessage()..ping = Ping(),
         timeout: Duration(seconds: 1),
@@ -120,17 +120,15 @@ class CovertSlot {
     //
     // Send a Protocol Buffers message to initiate the work,
     // and set a timeout based on the submitTimeout property.
-    await sendPb(connection, message, timeout: submitTimeout);
+    await Comms.sendPb(connection, message, timeout: submitTimeout);
 
-    // Receive a Protocol Buffers message as a response.
-    (GeneratedMessage, String) result = await recvPb(
-        connection, CovertResponse, ['ok', 'error'],
-        timeout: submitTimeout);
-
-    // TODO make sure this is a valid error check.
-    if (result.$1.toString() == 'error') {
-      throw Unrecoverable('error from server: ${result.$2}');
-    }
+    // throws on error ( aka if not 'ok' )
+    await Comms.recvPb(
+      ['ok'],
+      connection: connection,
+      covert: true,
+      timeout: submitTimeout,
+    );
 
     // Set the done flag to true to indicate that the work has been completed.
     done = true;

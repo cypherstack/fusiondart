@@ -16,7 +16,6 @@ import 'package:fusiondart/src/encrypt.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
-import 'package:fusiondart/src/io.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/blind_signature_request.dart';
 import 'package:fusiondart/src/models/input.dart';
@@ -320,7 +319,7 @@ class Fusion {
       try {
         // Version check and download server params.
         try {
-          _serverParams = await IO.greet(
+          _serverParams = await Comms.greet(
             connection: connection!,
           );
         } catch (e, s) {
@@ -581,7 +580,7 @@ class Fusion {
 
     // Placeholder for messages from the server.
     //
-    // This used to be `dynamic`, but then recv and IO.recv were changed to return
+    // This used to be `dynamic`, but then recv and Comms.recvPb were changed to return
     // a GeneratedMessage.
     GeneratedMessage msg;
 
@@ -620,7 +619,7 @@ class Fusion {
     ClientMessage clientMessage = ClientMessage()..joinpools = joinPools;
 
     // Send the message to the server.
-    await sendPb(
+    await Comms.sendPb(
       connection,
       clientMessage,
     );
@@ -637,9 +636,15 @@ class Fusion {
     // Main loop to receive updates from the server.
     while (true) {
       Utilities.debugPrint("RECEIVE LOOP 870............DEBUG");
-      msg = await IO.recv(
-          [ReceiveMessages.tierStatusUpdate, ReceiveMessages.fusionBegin],
-          connection: connection, timeout: Duration(seconds: 10));
+      msg = await Comms.recvPb(
+        [
+          ReceiveMessages.tierStatusUpdate,
+          ReceiveMessages.fusionBegin,
+        ],
+        connection: connection,
+        covert: false,
+        timeout: Duration(seconds: 10),
+      );
 
       /*if (msg == null) continue;*/
 
@@ -1048,8 +1053,12 @@ class Fusion {
         (2 * Protocol.WARMUP_SLOP + Protocol.STANDARD_TIMEOUT).toInt();
 
     // Await the start of round message from the server.
-    GeneratedMessage msg = await IO.recv([ReceiveMessages.startRound],
-        connection: connection, timeout: Duration(seconds: timeoutInSeconds));
+    GeneratedMessage msg = await Comms.recvPb(
+      [ReceiveMessages.startRound],
+      connection: connection,
+      covert: false,
+      timeout: Duration(seconds: timeoutInSeconds),
+    );
 
     // Initialize the covert timer base
     final covertT0 = DateTime.now().millisecondsSinceEpoch / 1000;
@@ -1214,7 +1223,7 @@ class Fusion {
     Utilities.debugPrint("Sending initial commitments etc.");
 
     // Send initial commitments, fees, and other data to the server.
-    await sendPb(
+    await Comms.sendPb(
       connection,
       ClientMessage()
         ..playercommit = PlayerCommit(
@@ -1229,9 +1238,12 @@ class Fusion {
     Utilities.debugPrint("Awaiting signature responses from the server...");
 
     // Await blind signature responses from the server
-    msg = await IO.recv([ReceiveMessages.blindSigResponses],
-        connection: connection,
-        timeout: Duration(seconds: Protocol.T_START_COMPS));
+    msg = await Comms.recvPb(
+      [ReceiveMessages.blindSigResponses],
+      connection: connection,
+      covert: false,
+      timeout: Duration(seconds: Protocol.T_START_COMPS),
+    );
 
     // Validate type and length of the received message and perform a sanity-check on it.
     if (msg is BlindSigResponses) {
@@ -1304,9 +1316,12 @@ class Fusion {
     covert.scheduleSubmissions(targetDateTime, messages);
 
     // While submitting, we download the (large) full commitment list.
-    msg = await IO.recv([ReceiveMessages.allCommitments],
-        connection: connection,
-        timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()));
+    msg = await Comms.recvPb(
+      [ReceiveMessages.allCommitments],
+      connection: connection,
+      covert: false,
+      timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()),
+    );
     AllCommitments allCommitmentsMsg = msg as AllCommitments;
     List<InitialCommitment> allCommitments =
         allCommitmentsMsg.initialCommitments.map((commitmentBytes) {
@@ -1337,8 +1352,9 @@ class Fusion {
     }
 
     // Once all components are received, the server shares them with us:
-    msg = await IO.recv([ReceiveMessages.shareCovertComponents],
+    msg = await Comms.recvPb([ReceiveMessages.shareCovertComponents],
         connection: connection,
+        covert: false,
         timeout: Duration(seconds: Protocol.T_START_SIGS.toInt()));
 
     ShareCovertComponents shareCovertComponentsMsg =
@@ -1462,8 +1478,12 @@ class Fusion {
               Protocol.TS_EXPECTING_COVERT_COMPONENTS)
           .toInt();
       Duration timeout = Duration(milliseconds: timeoutMillis);
-      msg = await IO.recv([ReceiveMessages.fusionResult],
-          connection: connection, timeout: timeout);
+      msg = await Comms.recvPb(
+        [ReceiveMessages.fusionResult],
+        connection: connection,
+        covert: false,
+        timeout: timeout,
+      );
 
       // Critical check on server's response timing.
       if (covertClock() > Protocol.T_EXPECTING_CONCLUSION) {
@@ -1584,7 +1604,7 @@ class Fusion {
     // Send the encrypted proofs and the random number used to the server.
     // The comment is asking if this call should be awaited or not,
     // depending on whether the program needs to pause execution until the data is sent.
-    await sendPb(
+    await Comms.sendPb(
       connection,
       ClientMessage()
         ..myproofslist = MyProofsList(
@@ -1599,9 +1619,12 @@ class Fusion {
 
     // Receive the list of proofs from the other parties
     Utilities.debugPrint("receiving proofs");
-    msg = await IO.recv([ReceiveMessages.theirProofsList],
-        connection: connection,
-        timeout: Duration(seconds: (2 * Protocol.STANDARD_TIMEOUT).round()));
+    msg = await Comms.recvPb(
+      [ReceiveMessages.theirProofsList],
+      connection: connection,
+      covert: false,
+      timeout: Duration(seconds: (2 * Protocol.STANDARD_TIMEOUT).round()),
+    );
 
     // Initialize a list to store proofs that should be blamed for failure.
     List<Blames_BlameProof> blames = [];
@@ -1724,7 +1747,7 @@ class Fusion {
         "checked ${msg.proofs.length} proofs, $countInputs of them inputs");
 
     // Send the blame list to the server
-    await sendPb(
+    await Comms.sendPb(
       connection,
       ClientMessage()..blames = Blames(blames: blames),
     );
@@ -1739,12 +1762,15 @@ class Fusion {
     // Await the final 'restartround' message. It might take some time
     // to arrive since other players might be slow, and then the server
     // itself needs to check blockchain.
-    await IO.recv([ReceiveMessages.restartRound],
-        connection: connection,
-        timeout: Duration(
-            seconds: 2 *
-                (Protocol.STANDARD_TIMEOUT.round() +
-                    Protocol.BLAME_VERIFY_TIME.round())));
+    await Comms.recvPb(
+      [ReceiveMessages.restartRound],
+      connection: connection,
+      covert: false,
+      timeout: Duration(
+          seconds: 2 *
+              (Protocol.STANDARD_TIMEOUT.round() +
+                  Protocol.BLAME_VERIFY_TIME.round())),
+    );
 
     // Return true to indicate successful execution of this part.
     return true;
