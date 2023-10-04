@@ -108,7 +108,7 @@ class BlindSignatureRequest {
     final sNew = (_c * (s + _a)) % _order;
 
     // Calculate the final signature.
-    final sig = _pointRxNew + sNew.toBytes;
+    final sig = _pointRxNew + sNew.toBytesPadded(32);
 
     // Check that pubPoint is not null.
     if (check && !Utilities.schnorrVerify(pubkey, sig, messageHash)) {
