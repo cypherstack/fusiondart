@@ -110,11 +110,8 @@ class BlindSignatureRequest {
     // Calculate the final signature.
     final sig = _pointRxNew + sNew.toBytes;
 
-    // Verify the signature if requested.
-    final pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
-
     // Check that pubPoint is not null.
-    if (check && !Utilities.schnorrVerify(pubPoint, sig, messageHash)) {
+    if (check && !Utilities.schnorrVerify(pubkey, sig, messageHash)) {
       throw Exception('Blind signature verification failed.');
     }
 

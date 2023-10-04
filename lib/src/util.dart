@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:bip340/bip340.dart' as bip340;
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
@@ -14,6 +13,7 @@ import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
+import 'package:pointycastle/ecc/ecc_fp.dart' as fp;
 
 /// A utility class that provides various helper functions.
 abstract class Utilities {
@@ -124,33 +124,52 @@ abstract class Utilities {
   /// Returns:
   ///   True if the verification succeeds, otherwise false.
   static bool schnorrVerify(
-      ECPoint pubKey, List<int> signature, Uint8List messageHash) {
-    // Check that the signature is 64 bytes.
-    if (signature.length != 64) {
-      throw Exception('fusiondart schnorrVerify: Signature is not 64 bytes.');
+    Uint8List pubKey,
+    List<int> signature,
+    Uint8List messageHash,
+  ) {
+    final pubPoint = serToPoint(pubKey, secp256k1Params);
+
+    final curveP = (secp256k1Params.curve as fp.ECCurve).q!;
+
+    final rBytes = Uint8List.fromList(signature.sublist(0, 32));
+    final sBytes = Uint8List.fromList(signature.sublist(32, 64));
+
+    if (rBytes.toBigInt >= curveP || sBytes.toBigInt >= secp256k1Params.n) {
+      return false;
     }
 
-    // Check that the public is 32 bytes, i.e. 64 characters.  If it is 33 bytes,
-    // then remove the first byte.
-    String pubKeyHex = hex.encode(pubKey.getEncoded(true)); // true: compressed.
-    if (pubKeyHex.length == 64) {
-      // Do nothing.
-    } else if (pubKeyHex.length == 66) {
-      pubKeyHex = pubKeyHex.substring(2);
-    } else {
-      throw Exception(
-          'fusiondart schnorrVerify: Public key is not 32 or 33 bytes.');
+    final pubBytes = pointToSer(pubPoint, true);
+
+    final e = sha256(
+      Uint8List.fromList(
+        rBytes + pubBytes + messageHash,
+      ),
+    ).toBigInt;
+
+    final sG = (secp256k1Params.G * sBytes.toBigInt)!;
+    final _eP = (pubPoint * e)!;
+
+    final R = (sG - _eP)!;
+
+    if (R.isInfinity) {
+      return false;
     }
 
-    // Check that the message hash is 32 bytes.
-    if (messageHash.length != 32) {
-      throw Exception(
-          'fusiondart schnorrVerify: Message hash is not 32 bytes.');
+    final rX = R.x!.toBigInteger()!;
+    final rY = R.y!.toBigInteger()!;
+
+    final j = jacobi(R.y!.toBigInteger()!, curveP);
+    print("Jacobi = $j");
+    // if (j != BigInt.one) {
+    //   return false;
+    // }
+
+    if ((rX.sign == 0 && rY.sign == 0) || rY.isOdd) {
+      return false;
     }
 
-    // Verify the signature.
-    return bip340.verify(
-        pubKeyHex, hex.encode(messageHash), hex.encode(signature));
+    return rX == rBytes.toBigInt;
   }
 
   /// Formats a given number of satoshis.

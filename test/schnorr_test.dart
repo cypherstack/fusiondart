@@ -56,10 +56,7 @@ void main() {
 
     expect(
       Utilities.schnorrVerify(
-        Utilities.serToPoint(
-          publicKey,
-          Utilities.secp256k1Params,
-        ),
+        publicKey,
         refSig.toUint8ListFromHex,
         msgHash,
       ),

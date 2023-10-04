@@ -3,16 +3,14 @@ import 'dart:typed_data';
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:collection/collection.dart';
 import 'package:fusiondart/src/encrypt.dart' as encrypt;
+import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart' as pb;
 import 'package:fusiondart/src/util.dart';
-import 'package:pointycastle/export.dart';
 import 'package:protobuf/protobuf.dart';
-
-import 'exceptions.dart';
 
 int componentContrib(pb.Component component, int feerate) {
   if (component.hasInput()) {
@@ -114,7 +112,7 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
 }
 
 (String, int) checkCovertComponent(
-    pb.CovertComponent msg, ECPoint roundPubkey, int componentFeerate) {
+    pb.CovertComponent msg, Uint8List roundPubkey, int componentFeerate) {
   Uint8List messageHash = Utilities.sha256(Uint8List.fromList(msg.component));
 
   check(msg.signature.length == 64, "bad message signature");
