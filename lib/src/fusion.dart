@@ -1380,7 +1380,20 @@ class Fusion {
 
     final shareCovertComponentsMsg = msg.sharecovertcomponents;
     List<List<int>> allComponents = shareCovertComponentsMsg.components;
-    bool skipSignatures = msg.getField(2) as bool;
+
+    bool skipSignatures;
+    // Check if msg.getField(2) is a TierStatusUpdate message.
+    if (msg.getField(2) is! TierStatusUpdate) {
+      skipSignatures = msg.getField(2) as bool;
+      // throw FusionError('Expected a TierStatusUpdate message.');
+    } else {
+      // Retrieve the TierStatusUpdate message from the ServerMessage.
+      TierStatusUpdate tierStatusUpdateMsg =
+          msg.getField(2) as TierStatusUpdate;
+
+      print("tierStatusUpdateMsg: $tierStatusUpdateMsg");
+      // What do we do with it now?
+    }
 
     // Critical check on server's response timing.
     if (covertClock() > Protocol.T_START_SIGS) {
