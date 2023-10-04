@@ -190,7 +190,7 @@ abstract class Utilities {
 
     // Calculate secexp * G and convert to ECPoint.
     ECPoint pubPoint = (G * secexp)!;
-    Uint8List pubBytes = Utilities.pointToSer(pubPoint, false);
+    Uint8List pubBytes = Utilities.pointToSer(pubPoint, true);
 
     Uint8List algo16 = Uint8List.fromList('Schnorr+SHA256  '.codeUnits);
     BigInt k = nonceFunctionRfc6979(order, privkey, messageHash,
@@ -205,7 +205,13 @@ abstract class Utilities {
         crypto.sha256.convert([...rBytes, ...pubBytes, ...messageHash]).bytes);
     BigInt e = eBytes.toBigInt;
 
-    BigInt s = (k + e * secexp) % order;
+    print("k = $k");
+    // python: k = 34207919988257218373376211209244868993613530955234588567670832567488568396098
+    BigInt s = (k + (e * secexp)) % order;
+    print("s = $s");
+    // python: 51345334206534631011717490181123043547171104899671934886156706814610857153998
+    print("s = ${s.toBytes.toHex}");
+    // python: 71846de67ad3d913a8fdf9d8f3f73161a4c48ae81cb183b214765feb86e255ce (b'q\x84m\xe6z\xd3\xd9\x13\xa8\xfd\xf9\xd8\xf3\xf71a\xa4\xc4\x8a\xe8\x1c\xb1\x83\xb2\x14v_\xeb\x86\xe2U\xce')
 
     return Uint8List.fromList([...rBytes, ...s.toBytes]);
   }
