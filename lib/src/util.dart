@@ -14,7 +14,6 @@ import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
 import 'package:pointycastle/ecc/api.dart';
-import 'package:pointycastle/pointycastle.dart';
 
 /// A utility class that provides various helper functions.
 abstract class Utilities {
@@ -126,10 +125,6 @@ abstract class Utilities {
   ///   True if the verification succeeds, otherwise false.
   static bool schnorrVerify(
       ECPoint pubKey, List<int> signature, Uint8List messageHash) {
-    // Verifies a Schnorr signature and returns true if valid.
-    /*
-    // bip340 package utilization.
-
     // Check that the signature is 64 bytes.
     if (signature.length != 64) {
       throw Exception('fusiondart schnorrVerify: Signature is not 64 bytes.');
@@ -156,102 +151,6 @@ abstract class Utilities {
     // Verify the signature.
     return bip340.verify(
         pubKeyHex, hex.encode(messageHash), hex.encode(signature));
-     */
-
-    // We want a Uint8List pubkey and a Uint8List signature.
-    //
-    // Convert ECPoint pubKey to Uint8List.
-    Uint8List pubKeyBytes = pubKey.getEncoded(true);
-
-    if (pubKeyBytes.length != 33 && pubKeyBytes.length != 65) {
-      throw ArgumentError(
-          'pubkey must be a bytes object of either length 33 or 65');
-    }
-
-    // Convert List<int> signature to Uint8List.
-    Uint8List signatureBytes = Uint8List.fromList(signature);
-
-    if (signatureBytes.length != 64) {
-      throw ArgumentError('signature must be a bytes object of length 64');
-    }
-
-    if (messageHash.length != 32) {
-      throw ArgumentError('messageHash must be a bytes object of length 32');
-    }
-
-    final G = Utilities.secp256k1Params.G;
-    final order = Utilities.secp256k1Params.n;
-    final fieldsize = Utilities.secp256k1Params.curve.fieldSize;
-
-    ECPoint pubPoint;
-    try {
-      pubPoint = Utilities.serToPoint(pubKeyBytes, Utilities.secp256k1Params);
-    } catch (e) {
-      throw ArgumentError('pubkey could not be parsed');
-    }
-
-    final rBytes = signatureBytes.sublist(0, 32);
-    final sBytes = signatureBytes.sublist(32);
-    final s = sBytes.toBigInt; // Utilities.bytesToInt(sBytes);
-
-    if (s >= order) {
-      return false;
-    }
-
-    Uint8List pubBytes = Utilities.pointToSer(
-        pubPoint, true); // true: compressed.  pubBytes is a Uint8List.
-    List<int> eBytes =
-        crypto.sha256.convert(rBytes + pubBytes + messageHash).bytes;
-    BigInt e = Uint8List.fromList(eBytes).toBigInt;
-
-    // Check if (G * s)! is null.
-    if ((G * s) == null) {
-      throw Exception('(G * s)! is null');
-    }
-
-    // Negate the y-coordinate of the ECPoint pubPoint.
-    //
-    // p = 2^256 - 2^32 - 977 for secp256k1.
-    final BigInt p =
-        BigInt.two.pow(256) - BigInt.two.pow(32) - BigInt.from(977);
-
-    // Negate the y-coordinate of the ECPoint pubPoint.
-    BigInt y = pubPoint.y!.toBigInteger()!;
-    BigInt negatedY = (p - y) % p;
-
-    // Create a new ECPoint with the negated y-coordinate.
-    ECPoint negatedPubPoint =
-        pubPoint.curve.createPoint(pubPoint.x!.toBigInteger()!, negatedY);
-
-    // Calculate R = (G * s)! + (-pubPoint * e).
-    final R = (G * s)! + negatedPubPoint * e.abs();
-
-    // Check if R is null.
-    if (R == null) {
-      throw Exception('R is null');
-    }
-
-    if (R!.isInfinity) {
-      return false;
-    }
-
-    /*
-    // Check if R.x is out of bounds.
-    if (R.x!.toBigInteger()! >= BigInt.from(fieldsize)) {
-      return false;
-    }
-
-    // Check if R.y is out of bounds.
-    if (R.y!.toBigInteger()! >= BigInt.from(fieldsize)) {
-      return false;
-    }
-    */
-
-    if (R.x == null) {
-      throw Exception('R.x is null');
-    }
-
-    return R.x!.toBigInteger()!.toBytes == rBytes;
   }
 
   /// Formats a given number of satoshis.
@@ -602,60 +501,6 @@ abstract class Utilities {
       if (result < maxValue) {
         return result;
       }
-    }
-  }
-
-  /// Calculates the Jacobi symbol of a and n.
-  ///
-  /// Ported from https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/schnorr.py#L61
-  static BigInt jacobi(BigInt a, BigInt n) {
-    // assert(n & BigInt.one == BigInt.one);
-    if (n & BigInt.one != BigInt.one) {
-      throw Exception(
-          "n & BigInt.one != BigInt.one FAlSE where n=$n and n&1=${n & BigInt.one}");
-    }
-
-    final three = BigInt.from(3);
-    assert(n >= three);
-
-    final negOne = BigInt.from(-1);
-    final seven = BigInt.from(7);
-
-    a = a % n;
-    BigInt s = BigInt.one;
-
-    while (a > BigInt.one) {
-      BigInt a1 = a;
-      BigInt e = BigInt.zero;
-
-      while (a1 & BigInt.one == BigInt.zero) {
-        a1 = a1 >> 1;
-        e = e + BigInt.one;
-      }
-
-      if (!(e & BigInt.one == BigInt.zero || n & seven == BigInt.one) ||
-          n & seven == seven) {
-        s = s * negOne;
-      }
-
-      if (a1 == BigInt.one) {
-        return s;
-      }
-
-      if (n & three == three && a1 & three == three) {
-        s = s * negOne;
-      }
-
-      a = n % a1;
-      n = a1;
-    }
-
-    if (a == BigInt.zero) {
-      return BigInt.zero;
-    } else if (a == BigInt.one) {
-      return s;
-    } else {
-      throw Exception("jacobi() Unexpected a value of $a");
     }
   }
 }
