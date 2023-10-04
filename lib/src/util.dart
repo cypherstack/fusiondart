@@ -207,7 +207,7 @@ abstract class Utilities {
 
     BigInt s = (k + e * secexp) % order;
 
-    return Uint8List.fromList([...rBytes, ...s.toBytes]);
+    return Uint8List.fromList([...rBytes, ...s.toBytesPadded(32)]);
   }
 
   /// Verifies a Schnorr signature.

@@ -30,4 +30,17 @@ extension BigIntExtensions on BigInt {
     }
     return result;
   }
+
+  /// Returns the bytes of this [BigInt] in big-endian order, padded with zeros to the specified [length].
+  Uint8List toBytesPadded(int length) {
+    var bytes = toBytes;
+    if (bytes.length > length) {
+      throw Exception('Byte array is longer than expected length');
+    }
+    if (bytes.length == length) {
+      return bytes;
+    }
+    return Uint8List.fromList(
+        List<int>.filled(length - bytes.length, 0) + bytes);
+  }
 }
