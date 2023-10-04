@@ -124,8 +124,6 @@ abstract class Utilities {
     assert(ndata == null || ndata.length == 32);
     assert(order.bitLength == 256);
 
-    ndata ??= Uint8List(0);
-
     Uint8List V = Uint8List.fromList(List.generate(32, (index) => 0x01));
     Uint8List K = Uint8List.fromList(List.generate(32, (index) => 0x00));
 
@@ -204,7 +202,7 @@ abstract class Utilities {
 
     Uint8List rBytes = R.x!.toBigInteger()!.toBytes;
     Uint8List eBytes = Uint8List.fromList(
-        crypto.sha256.convert(rBytes + pubBytes + messageHash).bytes);
+        crypto.sha256.convert([...rBytes, ...pubBytes, ...messageHash]).bytes);
     BigInt e = eBytes.toBigInt;
 
     BigInt s = (k + e * secexp) % order;
