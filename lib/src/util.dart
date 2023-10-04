@@ -125,11 +125,32 @@ abstract class Utilities {
   ///   True if the verification succeeds, otherwise false.
   static bool schnorrVerify(
       ECPoint pubKey, List<int> signature, Uint8List messageHash) {
+    // Check that the signature is 64 bytes.
+    if (signature.length != 64) {
+      throw Exception('fusiondart schnorrVerify: Signature is not 64 bytes.');
+    }
+
+    // Check that the public is 32 bytes, i.e. 64 characters.  If it is 33 bytes,
+    // then remove the first byte.
+    String pubKeyHex = hex.encode(pubKey.getEncoded(true)); // true: compressed.
+    if (pubKeyHex.length == 64) {
+      // Do nothing.
+    } else if (pubKeyHex.length == 66) {
+      pubKeyHex = pubKeyHex.substring(2);
+    } else {
+      throw Exception(
+          'fusiondart schnorrVerify: Public key is not 32 or 33 bytes.');
+    }
+
+    // Check that the message hash is 32 bytes.
+    if (messageHash.length != 32) {
+      throw Exception(
+          'fusiondart schnorrVerify: Message hash is not 32 bytes.');
+    }
+
+    // Verify the signature.
     return bip340.verify(
-      hex.encode(pubKey.getEncoded(true)), // false indicates uncompressed.
-      hex.encode(messageHash),
-      hex.encode(signature),
-    );
+        pubKeyHex, hex.encode(messageHash), hex.encode(signature));
   }
 
   /// Formats a given number of satoshis.
