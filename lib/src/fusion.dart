@@ -1605,7 +1605,7 @@ class Fusion {
     }
 
     // Generate the encrypted proofs.
-    List<String> encproofs = List<String>.filled(myCommitments.length, '');
+    List<Uint8List> encryptedProofs = [];
 
     // Loop through all the destination commitments to generate encrypted proofs.
     for (int i = 0; i < dstCommits.length; i++) {
@@ -1615,21 +1615,22 @@ class Fusion {
 
       try {
         // Encrypt the proof using the communication key.
-        Uint8List encryptedData = await encrypt(
-            proof.writeToBuffer(), Uint8List.fromList(msg.communicationKey),
-            padToLength: 80);
-        encproofs[i] = String.fromCharCodes(encryptedData);
-      } on EncryptionFailed {
+        final encryptedData = await encrypt(
+          proof.writeToBuffer(),
+          Uint8List.fromList(msg.communicationKey),
+          padToLength: 80,
+        );
+        encryptedProofs.add(encryptedData);
+      } on EncryptionFailed catch (e, s) {
+        Utilities.debugPrint("$e\n$s");
         // The communication key was bad (probably invalid x coordinate).
         // We will just send a blank.  They can't even blame us since there is no private key! :)
-        continue;
+        encryptedProofs.add(Uint8List(0));
+      } catch (e, s) {
+        Utilities.debugPrint("$e\n$s");
+        rethrow;
       }
     }
-
-    // Convert the list of encrypted proofs (strings) to a list of Uint8List
-    // so that they can be transmitted.
-    List<Uint8List> encodedEncproofs =
-        encproofs.map((e) => Uint8List.fromList(e.codeUnits)).toList();
 
     // Send the encrypted proofs and the random number used to the server.
     // The comment is asking if this call should be awaited or not,
@@ -1638,7 +1639,9 @@ class Fusion {
       connection,
       ClientMessage()
         ..myproofslist = MyProofsList(
-            encryptedProofs: encodedEncproofs, randomNumber: randomNumber),
+          encryptedProofs: encryptedProofs,
+          randomNumber: randomNumber,
+        ),
     );
 
     // Update the status to indicate that the program is in the process of checking proofs.
