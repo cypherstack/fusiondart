@@ -159,6 +159,11 @@ abstract class Utilities {
     return k;
   }
 
+  /// Signs a [messageHash] using the given [privkey] and an optional [ndata].
+  ///
+  /// [ndata] is optional but for secure use it should be a random 32-byte value.
+  ///
+  /// TODO default to generating [ndata] if not provided unless testing.
   static Uint8List schnorrSign(Uint8List privkey, Uint8List messageHash,
       {Uint8List? ndata}) {
     if (ndata != null && ndata.length != 32) {
@@ -172,8 +177,6 @@ abstract class Utilities {
     if (messageHash.length != 32) {
       throw ArgumentError('messageHash must be a bytes object of length 32');
     }
-
-    // Pure Dart implementation:
 
     final G = Utilities.secp256k1Params.G;
     final order = Utilities.secp256k1Params.n;
@@ -190,7 +193,8 @@ abstract class Utilities {
 
     // Calculate secexp * G and convert to ECPoint.
     ECPoint pubPoint = (G * secexp)!;
-    Uint8List pubBytes = Utilities.pointToSer(pubPoint, true);
+    Uint8List pubBytes =
+        Utilities.pointToSer(pubPoint, true); // true: compressed.
 
     Uint8List algo16 = Uint8List.fromList('Schnorr+SHA256  '.codeUnits);
     BigInt k = nonceFunctionRfc6979(order, privkey, messageHash,
@@ -208,6 +212,8 @@ abstract class Utilities {
     print("k = $k");
     // python: k = 34207919988257218373376211209244868993613530955234588567670832567488568396098
     BigInt s = (k + (e * secexp)) % order;
+    print("secexp = $secexp");
+    // python: secexp = 8452630865784383199121762228411556121715329117789131155976281242433411479367
     print("s = $s");
     // python: 51345334206534631011717490181123043547171104899671934886156706814610857153998
     print("s = ${s.toBytes.toHex}");
