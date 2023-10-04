@@ -350,8 +350,12 @@ class Connection {
 
             // We want to just continue and wait for the next message.
             // We should also cache the data we've received so far, stripping the header.
-            // We should also reset the bytesRead counter.
-            recvCache = recvCache + recvBuf.sublist(12);
+            // We should also reset the bytesRead counte
+            if (recvCache.isNotEmpty) {
+              recvCache = recvCache + recvBuf;
+            } else {
+              recvCache = recvCache + recvBuf.sublist(12);
+            }
             bytesRead = 0;
             recvBuf = [];
 
