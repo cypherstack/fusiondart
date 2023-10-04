@@ -378,7 +378,7 @@ class Connection {
         }
       }
 
-      throw Exception("No message found??");
+      // throw Exception("No message found??");
     } catch (e, s) {
       // Handle any SocketExceptions that may occur.
       Utilities.debugPrint('recvMessage exception: $e\n$s');
