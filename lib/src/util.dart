@@ -114,6 +114,104 @@ abstract class Utilities {
     }
   }
 
+  /// port of https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/schnorr.py#L87
+  static BigInt nonceFunctionRfc6979(
+      BigInt order, Uint8List privkeyBytes, Uint8List msg32,
+      {Uint8List? algo16, Uint8List? ndata}) {
+    assert(privkeyBytes.length == 32);
+    assert(msg32.length == 32);
+    assert(algo16 == null || algo16.length == 16);
+    assert(ndata == null || ndata.length == 32);
+    assert(order.bitLength == 256);
+
+    Uint8List V = Uint8List.fromList(List.generate(32, (index) => 0x01));
+    Uint8List K = Uint8List.fromList(List.generate(32, (index) => 0x00));
+
+    var blob =
+        Uint8List.fromList([...privkeyBytes, ...msg32, ...?ndata, ...?algo16]);
+
+    K = Uint8List.fromList(crypto.Hmac(crypto.sha256, K)
+        .convert(Uint8List.fromList([...V, 0x00, ...blob]))
+        .bytes);
+    V = Uint8List.fromList(crypto.Hmac(crypto.sha256, K).convert(V).bytes);
+    K = Uint8List.fromList(crypto.Hmac(crypto.sha256, K)
+        .convert(Uint8List.fromList([...V, 0x01, ...blob]))
+        .bytes);
+    V = Uint8List.fromList(crypto.Hmac(crypto.sha256, K).convert(V).bytes);
+
+    BigInt k;
+    while (true) {
+      V = Uint8List.fromList(crypto.Hmac(crypto.sha256, K).convert(V).bytes);
+      Uint8List T = V;
+
+      assert(T.length == 32);
+      k = T.toBigInt;
+
+      if (k > BigInt.zero && k < order) {
+        break;
+      }
+
+      K = Uint8List.fromList(crypto.Hmac(crypto.sha256, K)
+          .convert(Uint8List.fromList([...V, 0x00]))
+          .bytes);
+      V = Uint8List.fromList(crypto.Hmac(crypto.sha256, K).convert(V).bytes);
+    }
+    return k;
+  }
+
+  static Uint8List schnorrSign(Uint8List privkey, Uint8List messageHash,
+      {Uint8List? ndata}) {
+    if (ndata != null && ndata.length != 32) {
+      throw ArgumentError('ndata must be a bytes object of length 32');
+    }
+
+    if (privkey.length != 32) {
+      throw ArgumentError('privkey must be a bytes object of length 32');
+    }
+
+    if (messageHash.length != 32) {
+      throw ArgumentError('messageHash must be a bytes object of length 32');
+    }
+
+    // Pure Dart implementation:
+
+    final G = Utilities.secp256k1Params.G;
+    final order = Utilities.secp256k1Params.n;
+    final fieldsize = BigInt.two.pow(256) -
+        BigInt.two.pow(32) -
+        BigInt.from(977); // This is p for secp256k1.
+
+    ndata ??= Uint8List(0);
+
+    BigInt secexp = privkey.toBigInt;
+    if (!(secexp > BigInt.zero && secexp < order)) {
+      throw ArgumentError('Invalid private key');
+    }
+
+    // Calculate secexp * G and convert to ECPoint.
+    ECPoint pubPoint = serToPoint(
+        (secexp * pointToSer(G, false).toBigInt).toBytes, secp256k1Params);
+    Uint8List pubBytes = Utilities.pointToSer(pubPoint, false);
+
+    Uint8List algo16 = Uint8List.fromList('Schnorr+SHA256  '.codeUnits);
+    BigInt k = nonceFunctionRfc6979(order, privkey, messageHash,
+        ndata: ndata, algo16: algo16);
+    ECPoint R = serToPoint((k * pointToSer(G, false).toBigInt).toBytes,
+        secp256k1Params); // false: uncompressed.
+    if (jacobi(R.y!.toBigInteger()!, fieldsize) == -BigInt.one) {
+      k = order - k;
+    }
+
+    Uint8List rBytes = R.x!.toBigInteger()!.toBytes;
+    Uint8List eBytes = Uint8List.fromList(
+        crypto.sha256.convert(rBytes + pubBytes + messageHash).bytes);
+    BigInt e = eBytes.toBigInt;
+
+    BigInt s = (k + e * secexp) % order;
+
+    return Uint8List.fromList([...rBytes, ...s.toBytes]);
+  }
+
   /// Verifies a Schnorr signature.
   ///
   /// Parameters:

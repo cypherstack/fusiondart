@@ -1,4 +1,3 @@
-import 'package:bip340/bip340.dart' as bip340;
 import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
@@ -28,7 +27,8 @@ void main() {
       "5255683da567900bfd3e786ed8836a4e7763c221bf1ac20ece2a5171b9199e8a",
     );
 
-    final sig = bip340.sign(privateKey.toHex, msgHash.toHex, "");
+    // final sig = Utilities.schnorrSign(privateKey.toHex, msgHash.toHex, "");
+    final sig = Utilities.schnorrSign(privateKey, msgHash);
 
     expect(
       sig,
