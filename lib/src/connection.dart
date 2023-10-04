@@ -258,6 +258,9 @@ class Connection {
     // Initialize a buffer to store received data.
     List<int> recvBuf = [];
 
+    // Initialize a cache to hack a segmented buffer.
+    List<int> recvCache = [];
+
     // Variable to track the number of bytes read so far.
     int bytesRead = 0;
 
@@ -331,9 +334,38 @@ class Connection {
             Utilities.debugPrint("END OF RECV2");
             return message;
           } else {
+            /*
             // Throwing exception if the length doesn't match
             throw Exception(
                 'Message length mismatch: expected ${12 + messageLength} bytes, received ${recvBuf.length} bytes.');
+             */
+
+            // We want to just continue and wait for the next message.
+            // We should also cache the data we've received so far, stripping the header.
+            // We should also reset the bytesRead counter.
+            recvCache = recvCache + recvBuf.sublist(12);
+            bytesRead = 0;
+            recvBuf = [];
+
+            // Check if the cache is as long as the message length.
+            if (recvCache.length == messageLength) {
+              // We've received the entire message, return it.
+              final message = recvCache;
+              Utilities.debugPrint(
+                  "DEBUG recv_message2 4 - message received, length: ${message.length}");
+              Utilities.debugPrint(
+                  "DEBUG recv_message2 5 - message content: $message");
+              // Utilities.debugPrint(utf8.decode(message));
+              Utilities.debugPrint("END OF RECV2");
+              return message;
+            } else if (recvCache.length > messageLength) {
+              // We've received more than the entire message, throw an exception.
+              throw Exception(
+                  'Message length mismatch: expected $messageLength bytes, received ${recvCache.length} bytes.');
+            } else {
+              // We haven't received the entire message yet, continue.
+              continue;
+            }
           }
         }
       }
