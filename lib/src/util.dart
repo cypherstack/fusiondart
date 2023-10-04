@@ -209,11 +209,7 @@ abstract class Utilities {
         crypto.sha256.convert([...rBytes, ...pubBytes, ...messageHash]).bytes);
     BigInt e = eBytes.toBigInt;
 
-    print("k = $k");
-    // python: k = 34207919988257218373376211209244868993613530955234588567670832567488568396098
     BigInt s = (k + (e * secexp)) % order;
-    print("secexp = $secexp");
-    // python: secexp = 8452630865784383199121762228411556121715329117789131155976281242433411479367
     print("s = $s");
     // python: 51345334206534631011717490181123043547171104899671934886156706814610857153998
     print("s = ${s.toBytes.toHex}");
