@@ -162,58 +162,9 @@ class BlindSignatureRequest {
     }
 
     // Calculate Jacobi symbol c
-    _c = _jacobi(y, (Utilities.secp256k1Params.curve as fp.ECCurve).q!);
-  }
-
-  /// port of https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/schnorr.py#L61
-  BigInt _jacobi(BigInt a, BigInt n) {
-    // assert(n & BigInt.one == BigInt.one);
-    if (n & BigInt.one != BigInt.one) {
-      throw Exception(
-          "n & BigInt.one != BigInt.one FAlSE where n=$n and n&1=${n & BigInt.one}");
-    }
-
-    final three = BigInt.from(3);
-    assert(n >= three);
-
-    final negOne = BigInt.from(-1);
-    final seven = BigInt.from(7);
-
-    a = a % n;
-    BigInt s = BigInt.one;
-
-    while (a > BigInt.one) {
-      BigInt a1 = a;
-      BigInt e = BigInt.zero;
-
-      while (a1 & BigInt.one == BigInt.zero) {
-        a1 = a1 >> 1;
-        e = e + BigInt.one;
-      }
-
-      if (!(e & BigInt.one == BigInt.zero || n & seven == BigInt.one) ||
-          n & seven == seven) {
-        s = s * negOne;
-      }
-
-      if (a1 == BigInt.one) {
-        return s;
-      }
-
-      if (n & three == three && a1 & three == three) {
-        s = s * negOne;
-      }
-
-      a = n % a1;
-      n = a1;
-    }
-
-    if (a == BigInt.zero) {
-      return BigInt.zero;
-    } else if (a == BigInt.one) {
-      return s;
-    } else {
-      throw Exception("jacobi() Unexpected a value of $a");
-    }
+    _c = Utilities.jacobi(
+      y,
+      (Utilities.secp256k1Params.curve as fp.ECCurve).q!,
+    );
   }
 }
