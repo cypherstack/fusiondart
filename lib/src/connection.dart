@@ -38,6 +38,9 @@ class Connection {
   static final Uint8List magic =
       Uint8List.fromList([0x76, 0x5b, 0xe8, 0xb4, 0xe4, 0x39, 0x6d, 0xcf]);
 
+  // Message length instance variable.
+  int messageLength = 0;
+
   /// Constructor to initialize a Connection object with a socket.
   ///
   /// Parameters:
@@ -297,18 +300,24 @@ class Connection {
           final magic = recvBuf.sublist(0, 8);
 
           if (!ListEquality<dynamic>().equals(magic, Connection.magic)) {
-            throw BadFrameError('Bad magic in frame: ${hex.encode(magic)}');
-          }
+            // If the recvCache is not empty, maybe this isn't an issue.
+            if (recvCache.isNotEmpty) {
+              // Just carry on.
+            } else {
+              // We should throw an exception.
+              throw BadFrameError('Bad magic in frame: ${hex.encode(magic)}');
+            }
+          } else {
+            // Extract the message length from the received data.
+            final byteData = ByteData.view(
+                Uint8List.fromList(recvBuf.sublist(8, 12)).buffer);
+            messageLength = byteData.getUint32(0, Endian.big);
 
-          // Extract the message length from the received data.
-          final byteData =
-              ByteData.view(Uint8List.fromList(recvBuf.sublist(8, 12)).buffer);
-          final messageLength = byteData.getUint32(0, Endian.big);
-
-          // Validate the message length.
-          if (messageLength > MAX_MSG_LENGTH) {
-            throw BadFrameError(
-                'Got a frame with msg_length=$messageLength > $MAX_MSG_LENGTH (max)');
+            // Validate the message length.
+            if (messageLength > MAX_MSG_LENGTH) {
+              throw BadFrameError(
+                  'Got a frame with msg_length=$messageLength > $MAX_MSG_LENGTH (max)');
+            }
           }
 
           Utilities.debugPrint(
@@ -316,10 +325,9 @@ class Connection {
 
           Utilities.debugPrint("DEBUG recvfbuf len is ");
           Utilities.debugPrint(recvBuf.length);
-          Utilities.debugPrint("bytes read is ");
+          Utilities.debugPrint("bytes read is $bytesRead");
           Utilities.debugPrint(bytesRead);
-          Utilities.debugPrint("message length is ");
-          Utilities.debugPrint(messageLength);
+          Utilities.debugPrint("message length is $messageLength");
 
           // Check if the entire message has been received.
           if (recvBuf.length == bytesRead && bytesRead == 12 + messageLength) {
