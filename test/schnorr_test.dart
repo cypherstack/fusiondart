@@ -1,3 +1,4 @@
+import 'package:convert/convert.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
@@ -31,7 +32,7 @@ void main() {
     final sig = Utilities.schnorrSign(privateKey, msgHash);
 
     expect(
-      sig,
+      hex.encode(sig),
       "2c56731ac2f7a7e7f11518fc7722a166b02438924ca9d8"
       "b4d111347b81d0717571846de67ad3d913a8fdf9d8f3f7"
       "3161a4c48ae81cb183b214765feb86e255ce",

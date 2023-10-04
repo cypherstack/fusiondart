@@ -124,6 +124,8 @@ abstract class Utilities {
     assert(ndata == null || ndata.length == 32);
     assert(order.bitLength == 256);
 
+    ndata ??= Uint8List(0);
+
     Uint8List V = Uint8List.fromList(List.generate(32, (index) => 0x01));
     Uint8List K = Uint8List.fromList(List.generate(32, (index) => 0x00));
 
@@ -181,7 +183,7 @@ abstract class Utilities {
         BigInt.two.pow(32) -
         BigInt.from(977); // This is p for secp256k1.
 
-    ndata ??= Uint8List(0);
+    // ndata ??= Uint8List(0);
 
     BigInt secexp = privkey.toBigInt;
     if (!(secexp > BigInt.zero && secexp < order)) {
@@ -189,15 +191,13 @@ abstract class Utilities {
     }
 
     // Calculate secexp * G and convert to ECPoint.
-    ECPoint pubPoint = serToPoint(
-        (secexp * pointToSer(G, false).toBigInt).toBytes, secp256k1Params);
+    ECPoint pubPoint = (G * secexp)!;
     Uint8List pubBytes = Utilities.pointToSer(pubPoint, false);
 
     Uint8List algo16 = Uint8List.fromList('Schnorr+SHA256  '.codeUnits);
     BigInt k = nonceFunctionRfc6979(order, privkey, messageHash,
         ndata: ndata, algo16: algo16);
-    ECPoint R = serToPoint((k * pointToSer(G, false).toBigInt).toBytes,
-        secp256k1Params); // false: uncompressed.
+    ECPoint R = (G * k)!;
     if (jacobi(R.y!.toBigInteger()!, fieldsize) == -BigInt.one) {
       k = order - k;
     }
