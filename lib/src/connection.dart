@@ -385,6 +385,8 @@ class Connection {
       rethrow;
       // Disable this rethrow if it causes too many issues, previously we just printed the exception
     }
+
+    return recvMessage(timeout: timeout);
   }
 } // end of Connection class.
 
