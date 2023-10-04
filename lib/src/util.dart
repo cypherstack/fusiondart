@@ -263,13 +263,7 @@ abstract class Utilities {
     final rX = R.x!.toBigInteger()!;
     final rY = R.y!.toBigInteger()!;
 
-    final j = jacobi(R.y!.toBigInteger()!, curveP);
-    print("Jacobi = $j");
-    // if (j != BigInt.one) {
-    //   return false;
-    // }
-
-    if ((rX.sign == 0 && rY.sign == 0) || rY.isOdd) {
+    if (jacobi(rY, curveP) != BigInt.one) {
       return false;
     }
 
@@ -627,55 +621,47 @@ abstract class Utilities {
     }
   }
 
-  /// port of https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/schnorr.py#L61
+  /// port of https://github.com/tlsfuzzer/python-ecdsa/blob/master/src/ecdsa/numbertheory.py#L152
   static BigInt jacobi(BigInt a, BigInt n) {
-    // assert(n & BigInt.one == BigInt.one);
-    if (n & BigInt.one != BigInt.one) {
-      throw Exception(
-          "n & BigInt.one != BigInt.one FAlSE where n=$n and n&1=${n & BigInt.one}");
-    }
-
-    final three = BigInt.from(3);
-    assert(n >= three);
-
-    final negOne = BigInt.from(-1);
-    final seven = BigInt.from(7);
+    // TODO throw exceptions instead of assert
+    assert(n >= BigInt.from(3));
+    assert(n.isOdd);
 
     a = a % n;
-    BigInt s = BigInt.one;
-
-    while (a > BigInt.one) {
-      BigInt a1 = a;
-      BigInt e = BigInt.zero;
-
-      while (a1 & BigInt.one == BigInt.zero) {
-        a1 = a1 >> 1;
-        e = e + BigInt.one;
-      }
-
-      if (!(e & BigInt.one == BigInt.zero || n & seven == BigInt.one) ||
-          n & seven == seven) {
-        s = s * negOne;
-      }
-
-      if (a1 == BigInt.one) {
-        return s;
-      }
-
-      if (n & three == three && a1 & three == three) {
-        s = s * negOne;
-      }
-
-      a = n % a1;
-      n = a1;
-    }
 
     if (a == BigInt.zero) {
       return BigInt.zero;
-    } else if (a == BigInt.one) {
-      return s;
-    } else {
-      throw Exception("jacobi() Unexpected a value of $a");
     }
+    if (a == BigInt.one) {
+      return BigInt.one;
+    }
+
+    BigInt a1 = a;
+    BigInt e = BigInt.zero;
+
+    while (a1.isEven) {
+      a1 = a1 >> 1;
+      e = e + BigInt.one;
+    }
+
+    BigInt s;
+    if (e.isEven ||
+        n % BigInt.from(8) == BigInt.one ||
+        n % BigInt.from(8) == BigInt.from(7)) {
+      s = BigInt.one;
+    } else {
+      s = -BigInt.one;
+    }
+
+    if (a1 == BigInt.one) {
+      return s;
+    }
+
+    if (n % BigInt.from(4) == BigInt.from(3) &&
+        a1 % BigInt.from(4) == BigInt.from(3)) {
+      s = -s;
+    }
+
+    return s * jacobi(n % a1, a1);
   }
 }
