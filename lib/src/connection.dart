@@ -159,65 +159,8 @@ class Connection {
   ///
   /// Returns:
   ///   A Future<dynamic> object.
-  Future<dynamic>? close() {
-    return socket?.close();
-  }
-
-  /// Fill a buffer with data from a socket.
-  ///
-  /// [DEPRECATED]
-  ///
-  /// Parameters:
-  /// - [n]: The number of bytes to read.
-  /// - [timeout] (optional): The timeout duration.
-  Future<List<int>> fillBuf(int n, {Duration? timeout}) async {
-    List<int> recvBuf = <int>[];
-    socket?.listen((data) {
-      Utilities.debugPrint('Received from server: $data');
-    }, onDone: () {
-      Utilities.debugPrint('Server closed connection.');
-      socket?.destroy();
-    }, onError: (dynamic error) {
-      Utilities.debugPrint('Error: $error');
-      socket?.destroy();
-    });
-    return recvBuf;
-
-    StreamSubscription<List<int>>? subscription; // Declaration moved here.
-    subscription = socket!.listen(
-      (List<int> data) {
-        recvBuf.addAll(data);
-        if (recvBuf.length >= n) {
-          subscription?.cancel();
-        }
-      },
-      onError: (dynamic e) {
-        subscription?.cancel();
-        if (e is Exception) {
-          throw e;
-        } else {
-          throw Exception(e ?? 'Error in `subscription` socket!.listen');
-        }
-      },
-      onDone: () {
-        Utilities.debugPrint("DEBUG ON DONE");
-        if (recvBuf.length < n) {
-          throw SocketException(
-              'Connection closed before enough data was received');
-        }
-      },
-    );
-
-    if (timeout != null) {
-      Future.delayed(timeout, () {
-        if (recvBuf.length < n) {
-          subscription?.cancel();
-          throw SocketException('Timeout');
-        }
-      });
-    }
-
-    return recvBuf;
+  Future<void> close() {
+    return socket.close();
   }
 
   /// Receive a message with a socket wrapper.
