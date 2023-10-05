@@ -28,15 +28,11 @@ class Connection {
 
   final Stream<List<int>> receiveStream;
 
-  // Buffer to store incoming data, initialized to zero-length.
-  final Uint8List recvbuf = Uint8List(0);
-
   // Defines the maximum length allowed for a message in [bytes], set to 200 KB.
   static const int MAX_MSG_LENGTH = 200 * 1024;
 
   // Magic bytes used for protocol identification.
-  static final Uint8List magic =
-      Uint8List.fromList([0x76, 0x5b, 0xe8, 0xb4, 0xe4, 0x39, 0x6d, 0xcf]);
+  static final magic = [0x76, 0x5b, 0xe8, 0xb4, 0xe4, 0x39, 0x6d, 0xcf];
 
   // Message length instance variable.
   int messageLength = 0;
@@ -184,13 +180,7 @@ class Connection {
     // Initialize a buffer to store received data.
     List<int> recvBuf = [];
 
-    // Initialize a cache to hack a segmented buffer.
-    List<int> recvCache = [];
-
-    // Variable to track the number of bytes read so far.
-    int bytesRead = 0;
-
-    Utilities.debugPrint("DEBUG recv_message2 1 - about to read the header");
+    int? messageLength;
 
     try {
       // Loop to read incoming data from the socket.
@@ -212,25 +202,17 @@ class Connection {
         // Append received data to the receive buffer.
         recvBuf.addAll(data);
 
-        // Update the bytesRead count.
-        if (bytesRead < 12) {
-          bytesRead += data.length;
-        }
-
         // Check if we've received enough bytes to start processing the header.
         if (recvBuf.length >= 12) {
-          // Extract and validate the magic bytes from the received data.
-          final magic = recvBuf.sublist(0, 8);
+          if (messageLength == null) {
+            Utilities.debugPrint(
+                "DEBUG recv_message2 1 - about to read the header");
+            // Extract and validate the magic bytes from the received data.
+            final magic = recvBuf.sublist(0, 8);
 
-          if (!ListEquality<dynamic>().equals(magic, Connection.magic)) {
-            // If the recvCache is not empty, maybe this isn't an issue.
-            if (recvCache.isNotEmpty) {
-              // Just carry on.
-            } else {
-              // We should throw an exception.
+            if (!magic.equals(Connection.magic)) {
               throw BadFrameError('Bad magic in frame: ${hex.encode(magic)}');
             }
-          } else {
             // Extract the message length from the received data.
             final byteData = ByteData.view(
                 Uint8List.fromList(recvBuf.sublist(8, 12)).buffer);
@@ -243,17 +225,8 @@ class Connection {
             }
           }
 
-          Utilities.debugPrint(
-              "DEBUG recv_message2 3 - about to read the message body, messageLength: $messageLength");
-
-          Utilities.debugPrint("DEBUG recvfbuf len is ");
-          Utilities.debugPrint(recvBuf.length);
-          Utilities.debugPrint("bytes read is $bytesRead");
-          Utilities.debugPrint(bytesRead);
-          Utilities.debugPrint("message length is $messageLength");
-
           // Check if the entire message has been received.
-          if (recvBuf.length == bytesRead && bytesRead == 12 + messageLength) {
+          if (recvBuf.length == 12 + messageLength) {
             // Extract and return the received message.
             final message = recvBuf.sublist(12, 12 + messageLength);
 
@@ -264,43 +237,11 @@ class Connection {
             // Utilities.debugPrint(utf8.decode(message));
             Utilities.debugPrint("END OF RECV2");
             return message;
-          } else {
-            /*
-            // Throwing exception if the length doesn't match
+          } else if (recvBuf.length > 12 + messageLength) {
+            // We've received more than the entire message, throw an exception.
             throw Exception(
-                'Message length mismatch: expected ${12 + messageLength} bytes, received ${recvBuf.length} bytes.');
-             */
-
-            // We want to just continue and wait for the next message.
-            // We should also cache the data we've received so far, stripping the header.
-            // We should also reset the bytesRead counte
-            if (recvCache.isNotEmpty) {
-              recvCache = recvCache + recvBuf;
-            } else {
-              recvCache = recvCache + recvBuf.sublist(12);
-            }
-            bytesRead = 0;
-            recvBuf = [];
-
-            // Check if the cache is as long as the message length.
-            if (recvCache.length == messageLength) {
-              // We've received the entire message, return it.
-              final message = recvCache;
-              Utilities.debugPrint(
-                  "DEBUG recv_message2 4 - message received, length: ${message.length}");
-              Utilities.debugPrint(
-                  "DEBUG recv_message2 5 - message content: $message");
-              // Utilities.debugPrint(utf8.decode(message));
-              Utilities.debugPrint("END OF RECV2");
-              return message;
-            } else if (recvCache.length > messageLength) {
-              // We've received more than the entire message, throw an exception.
-              throw Exception(
-                  'Message length mismatch: expected $messageLength bytes, received ${recvCache.length} bytes.');
-            } else {
-              // We haven't received the entire message yet, continue.
-              continue;
-            }
+              'Message length mismatch: expected $messageLength bytes, received ${recvBuf.length} bytes.',
+            );
           }
         }
       }
