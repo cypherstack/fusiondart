@@ -361,8 +361,6 @@ class Connection {
           }
         }
       }
-
-      // throw Exception("No message found??");
     } catch (e, s) {
       // Handle any SocketExceptions that may occur.
       Utilities.debugPrint('recvMessage exception: $e\n$s');
@@ -370,7 +368,7 @@ class Connection {
       // Disable this rethrow if it causes too many issues, previously we just printed the exception
     }
 
-    return recvMessage(timeout: timeout);
+    throw Exception('recvMessage(): Should not reach this point');
   }
 } // end of Connection class.
 
