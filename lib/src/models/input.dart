@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:bip340/bip340.dart' as bip340;
 import 'package:convert/convert.dart';
+import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/models/transaction.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/util.dart';
@@ -45,7 +45,7 @@ class Input {
   int amount; // Using an int will impact portability to cryptocurrencies with smaller units.
 
   /// List of signatures for the input.
-  List<String> signatures = [];
+  List<Uint8List> signatures = [];
   // Signatures are added in the `sign` method and verified in the `verify` method.
 
   /// Constructor for Input class.
@@ -94,9 +94,9 @@ class Input {
   /// https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L346
   ///
   /// TODO implement.
-  String getPubKey(int pubkeyIndex) {
+  Uint8List getPubKey(int pubkeyIndex) {
     // TO BE IMPLEMENTED...
-    return "";
+    return Uint8List(0);
   }
 
   /// Placeholder for getting private key based on an index.
@@ -104,9 +104,9 @@ class Input {
   /// See https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L971C44-L971C44
   ///
   /// TODO implement
-  String getPrivKey(int pubkeyIndex) {
+  Uint8List getPrivKey(int pubkeyIndex) {
     // TO BE IMPLEMENTED...
-    return "";
+    return Uint8List(0);
   }
 
   /// Factory method to create an Input object from an InputComponent.
@@ -155,14 +155,13 @@ class Input {
   ///
   /// Returns:
   ///   `void`
-  void sign(String privateKey, Transaction tx) {
+  void sign(Uint8List privateKey, Transaction tx) {
+    // TODO reverse???
     String message = tx.txid();
 
-    // Generate 32 random bytes for auxiliary data.
-    Uint8List aux = Utilities.getRandomBytes(32);
-
     // Sign the message.
-    String signature = bip340.sign(privateKey, message, hex.encode(aux));
+    final signature =
+        Utilities.schnorrSign(privateKey, message.toUint8ListFromHex);
 
     // Add the signature to the list of signatures.
     signatures.add(signature);
@@ -176,12 +175,13 @@ class Input {
   ///
   /// Returns:
   ///   `true` if verification passes for all signatures, otherwise `false`.
-  bool verify(String publicKey, Transaction tx) {
-    String message = tx.txid();
+  bool verify(Uint8List publicKey, Transaction tx) {
+    // TODO reverse???
+    final message = tx.txid().toUint8ListFromHex;
 
     // Loop through all the signatures and verify them.
-    for (String signature in signatures) {
-      if (!bip340.verify(publicKey, message, signature)) {
+    for (final signature in signatures) {
+      if (!Utilities.schnorrVerify(publicKey, signature, message)) {
         return false;
       }
     }

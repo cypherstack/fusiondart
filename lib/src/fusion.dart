@@ -3,10 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:bip340/bip340.dart' as bip340;
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:collection/collection.dart';
-import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/src/comms.dart';
@@ -1464,20 +1462,19 @@ class Fusion {
         // Extract public and private keys.
         // TODO fix getPubKey, getPrivKey.
         // See https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L971C44-L971C44
-        String pubKey = inp.getPubKey(0); // cast/convert to PublicKey?
-        String sec = inp.getPrivKey(0); // cast/convert to SecretKey?
+        final pubKey = inp.getPubKey(0); // cast/convert to PublicKey?
+        final sec = inp.getPrivKey(0); // cast/convert to SecretKey?
 
         // Calculate sighash for signing.
         List<int> preimageBytes = tx.serializePreimage(i, 0x41, useCache: true);
         crypto.Digest sighash =
             crypto.sha256.convert(crypto.sha256.convert(preimageBytes).bytes);
 
-        // Generate 32 random bytes for a bip340 signature.
-        Uint8List aux = Utilities.getRandomBytes(32);
-
         // Generate signature.
-        List<int> sig = utf8.encode(
-            bip340.sign(sec, hex.encode(sighash.bytes), hex.encode(aux)));
+        final sig = Utilities.schnorrSign(
+          sec,
+          Uint8List.fromList(sighash.bytes),
+        );
 
         // Store the covert transaction signature
         covertTransactionSignatureMessages[myComponentSlots[myCompIdx]] =
@@ -1536,7 +1533,9 @@ class Fusion {
           if (sig.length != 64) {
             throw FusionError('server relayed bad signature');
           }
-          inp.signatures = ['${sig}41'];
+
+          // TODO: this
+          // inp.signatures = ['${sig}41'];
         }
 
         // Finalize transaction details and update wallet label.
