@@ -147,32 +147,12 @@ class Connection {
     // - The "magic" bytes for validation
     // - The 4-byte length header
     // - The message itself
-    Utilities.debugPrint(Connection.magic);
-    final frame = <int>[]
-      ..addAll(Connection.magic)
-      ..addAll(lengthBytes)
-      ..addAll(msg);
+    final frame = [...Connection.magic, ...lengthBytes, ...msg];
 
-    // Send the frame using the Dart Stream API.
-    try {
-      StreamController<List<int>> controller = StreamController();
-
-      controller.stream.listen((data) {
-        socket?.add(data);
-      });
-
-      try {
-        controller.add(frame);
-        // Remove the socket.flush() if it doesn't help.
-        /*await socket?.flush();*/
-      } catch (e) {
-        Utilities.debugPrint('Error when adding to controller: $e');
-      } finally {
-        await controller.close();
-      }
-    } on SocketException catch (e) {
-      throw TimeoutException('Socket write timed out ($e)', timeout);
-    }
+    socket.add(frame);
+    await socket.flush().timeout(timeout, onTimeout: () {
+      throw TimeoutException('sendMessage Socket write timed out', timeout);
+    });
   }
 
   /// Asynchronous close a socket.
