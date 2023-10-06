@@ -1235,6 +1235,9 @@ class Fusion {
 
     Utilities.debugPrint("Awaiting signature responses from the server...");
 
+    // We intermittently get a `bad blind sig request` error here...
+    // TODO make sure the socket's open and ready for writing before sending the message.
+
     // Await blind signature responses from the server
     msg = await Comms.recvPb(
       [ReceiveMessages.blindSigResponses],
@@ -1401,7 +1404,7 @@ class Fusion {
         .map((component) => Uint8List.fromList(component))
         .toList();
 
-    // Initialize a list to store the indexes of our components.
+    // Initialize a list to store the indices of our components.
     final List<int> myComponentIndexes = [];
 
     // Populate the list with the indexes of our components.
@@ -1414,6 +1417,11 @@ class Fusion {
           (element) => Utilities.listEquals(element, componentBytes));
 
       if (index == -1) {
+        Utilities.debugPrint('searching for ${c.toHex}');
+        Utilities.debugPrint('in allComponentsBytes:');
+        for (var c2 in allComponentsBytes) {
+          Utilities.debugPrint('  ${c2.toHex}');
+        }
         throw FusionError('One or more of my components missing.');
       }
 
@@ -1436,12 +1444,15 @@ class Fusion {
 
     // Validate session hash to prevent mismatch error.
     if (!shareCovertComponentsMsg.sessionHash.equals(sessionHash)) {
-      throw FusionError('Session hash mismatch (bug!)');
+      throw FusionError(
+          'Session hash mismatch (bug)!  Expected $sessionHash, found ${shareCovertComponentsMsg.sessionHash}');
     }
 
     final Set<int> badComponents = {};
 
     // Handle covert signature submission.
+    Utilities.debugPrint(
+        "shareCovertComponentsMsg.skipSignatures: ${shareCovertComponentsMsg.skipSignatures}");
     if (!shareCovertComponentsMsg.skipSignatures) {
       Utilities.debugPrint("starting covert signature submission");
       _updateStatus(
