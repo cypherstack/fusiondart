@@ -29,7 +29,7 @@ class CovertConnection {
     await Future.any([
       Future<void>.delayed(Duration(milliseconds: remTime)).then((_) {
         if (!wakeup.isCompleted) {
-          wakeup.complete(true);
+          wakeup.complete(false);
         }
       }),
       wakeup.future,
