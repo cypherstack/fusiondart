@@ -22,17 +22,17 @@ import 'package:fusiondart/src/util.dart';
 /// TODO: getPubKey and getPrivKey.
 class Input {
   /// The transaction id as a list of integers.
-  List<int> prevTxid;
+  final List<int> prevTxid;
 
   /// The index number of the output (vout).
-  int prevIndex;
+  final int prevIndex;
 
   /// The public key as a list of integers.
-  List<int> pubKey;
+  final List<int> pubKey;
   // What we really need is a List<List<int> pubKey> pubKeys...
 
   /// A list of public keys as lists of integers.
-  List<List<int>> pubKeys = [];
+  final List<List<int>> pubKeys = [];
   // This isn't used yet, but it's used in the python.
   // This is where it's accessed:
   // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L971
@@ -42,18 +42,20 @@ class Input {
   // Inputs, or...
 
   /// The amount of cryptocurrency in this input as an integer.
-  int amount; // Using an int will impact portability to cryptocurrencies with smaller units.
+  final BigInt
+      value; // Using an int will impact portability to cryptocurrencies with smaller units.
 
   /// List of signatures for the input.
   List<Uint8List> signatures = [];
   // Signatures are added in the `sign` method and verified in the `verify` method.
 
   /// Constructor for Input class.
-  Input(
-      {required this.prevTxid,
-      required this.prevIndex,
-      required this.pubKey,
-      required this.amount});
+  Input({
+    required this.prevTxid,
+    required this.prevIndex,
+    required this.pubKey,
+    required this.value,
+  });
 
   /// Calculates the size of the input.
   ///
@@ -72,14 +74,6 @@ class Input {
     return 108 + pubKey.length; // 108 bytes for the rest of the input.
   }
 
-  /// Returns the value amount of the Input.
-  ///
-  /// Returns:
-  ///   The value amount of the Input as an int.
-  int get value {
-    return amount;
-  }
-
   /// Placeholder for getting public key based on an index.
   ///
   /// This function is confusing because in the python code, the public key is
@@ -95,8 +89,7 @@ class Input {
   ///
   /// TODO implement.
   Uint8List getPubKey(int pubkeyIndex) {
-    // TO BE IMPLEMENTED...
-    return Uint8List(0);
+    throw UnimplementedError();
   }
 
   /// Placeholder for getting private key based on an index.
@@ -105,8 +98,7 @@ class Input {
   ///
   /// TODO implement
   Uint8List getPrivKey(int pubkeyIndex) {
-    // TO BE IMPLEMENTED...
-    return Uint8List(0);
+    throw UnimplementedError();
   }
 
   /// Factory method to create an Input object from an InputComponent.
@@ -121,7 +113,7 @@ class Input {
       prevTxid: inputComponent.prevTxid, // Make sure the types are matching
       prevIndex: inputComponent.prevIndex,
       pubKey: inputComponent.pubkey,
-      amount: inputComponent.amount.toInt(),
+      value: inputComponent.amount.toHexString().toBigIntFromHex,
     );
   }
 
@@ -135,7 +127,7 @@ class Input {
   static Input fromWallet({
     required String txId,
     required int vout,
-    required int value,
+    required BigInt value,
     required List<int> pubKey,
   }) {
     return Input(
@@ -143,7 +135,7 @@ class Input {
       prevTxid: utf8.encode(txId), // Convert txId to a List<int>.
       prevIndex: vout,
       pubKey: pubKey,
-      amount: value,
+      value: value,
     );
   }
 
@@ -200,7 +192,7 @@ class Input {
         ' prevTxid: ${hex.encode(prevTxid)},'
         ' prevIndex: $prevIndex,'
         ' pubKey: ${hex.encode(pubKey)},'
-        ' amount: $amount,'
+        ' amount: $value,'
         ' signatures: $signatures'
         ' }';
   }

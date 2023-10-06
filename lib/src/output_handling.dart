@@ -39,7 +39,7 @@ abstract final class OutputHandling {
       (
         List<(String, List<Input>)>, // Eligible.
         List<(String, List<Input>)>, // Ineligible.
-        int, // sumValue.
+        BigInt, // sumValue.
         bool, // hasUnconfirmed.
         bool // hasCoinbase.
       )> selectCoins(
@@ -54,7 +54,8 @@ abstract final class OutputHandling {
     List<(String, List<Input>)> ineligible = []; // List of ineligible inputs.
     bool hasUnconfirmed = false; // Are there unconfirmed coins?
     bool hasCoinbase = false; // Are there coinbase coins?
-    int sumValue = 0; // Sum of the values of the eligible `Input`s.
+    BigInt sumValue =
+        BigInt.zero; // Sum of the values of the eligible `Input`s.
     int mincbheight = currentChainHeight + Fusion.COINBASE_MATURITY;
 
     // Loop through the addresses in the wallet.
@@ -81,7 +82,7 @@ abstract final class OutputHandling {
         var c = acoins[i];
 
         // Add the amount to the sum.
-        sumValue += c.amount;
+        sumValue += c.value;
 
         // TODO check for tokens, maturity, etc.
         // TODO DO NOT TEST THIS WITH A WALLET WITH TOKENS OR YOU MAY LOSE THEM !!!
@@ -281,7 +282,7 @@ abstract final class OutputHandling {
     (
       List<(String, List<Input>)>, // Eligible.
       List<(String, List<Input>)>, // Ineligible.
-      int, // sumValue.
+      BigInt, // sumValue.
       bool, // hasUnconfirmed.
       bool // hasCoinbase _selections = await selectCoins(_inputs);
     ) _selections = await selectCoins(
@@ -335,7 +336,7 @@ abstract final class OutputHandling {
     }
 
     // Calculate the available amount for outputs.
-    int sumInputsValue =
+    BigInt sumInputsValue =
         inputs.map((input) => input.value).reduce((a, b) => a + b);
     int inputFees = inputs.fold(
         0,
@@ -351,15 +352,16 @@ abstract final class OutputHandling {
       Utilities.componentFee(input.sizeOfInput(), componentFeeRate.toInt());
     }
      */
-    int availForOutputs =
-        sumInputsValue - inputFees - serverParams.minExcessFee;
+    BigInt availForOutputs = sumInputsValue -
+        BigInt.from(inputFees) -
+        BigInt.from(serverParams.minExcessFee);
 
     // Calculate fees per output.
     int feePerOutput = Utilities.componentFee(
       34,
       serverParams.componentFeeRate,
     );
-    int offsetPerOutput = Protocol.MIN_OUTPUT + feePerOutput;
+    final offsetPerOutput = BigInt.from(Protocol.MIN_OUTPUT + feePerOutput);
 
     // Check if the selected inputs have sufficient value.
     if (availForOutputs < offsetPerOutput) {
@@ -390,10 +392,10 @@ abstract final class OutputHandling {
 
       // Randomly pick a fuzz fee in the range `[0, fuzzFeeMaxReduced]`.
       Random rng = Random();
-      int fuzzFee = rng.nextInt(fuzzFeeMaxReduced + 1);
+      final fuzzFee = BigInt.from(rng.nextInt(fuzzFeeMaxReduced + 1));
 
       // Reduce the available amount for outputs by the selected fuzz fee.
-      int reducedAvailForOutputs = availForOutputs - fuzzFee;
+      final reducedAvailForOutputs = availForOutputs - fuzzFee;
 
       // If the reduced available amount for outputs is less than the offset per
       // output, skip to the next iteration.
@@ -403,7 +405,12 @@ abstract final class OutputHandling {
 
       // Generate a list of random outputs for this tier.
       List<int>? _outputs = randomOutputsForTier(
-          rng, reducedAvailForOutputs, scale, offsetPerOutput, maxOutputs);
+        rng,
+        reducedAvailForOutputs.toInt(), // toInt()  ...WCGW
+        scale,
+        offsetPerOutput.toInt(), // toInt()  ...WCGW
+        maxOutputs,
+      );
 
       // Check if the list of outputs is null or has fewer items than the minimum
       // required number of outputs.
@@ -419,7 +426,9 @@ abstract final class OutputHandling {
       assert(inputs.length + (_outputs.length) <= Protocol.MAX_COMPONENTS);
 
       // Store the calculated excess fee for this tier.
-      excessFees[scale] = sumInputsValue - inputFees - reducedAvailForOutputs;
+      excessFees[scale] =
+          (sumInputsValue - BigInt.from(inputFees) - reducedAvailForOutputs)
+              .toInt();
 
       // Store the list of output values for this tier.
       tierOutputs[scale] = _outputs;
@@ -430,7 +439,7 @@ abstract final class OutputHandling {
     return (
       inputs: inputs,
       tierOutputs: tierOutputs,
-      safetySumIn: sumInputsValue,
+      safetySumIn: sumInputsValue.toInt(), // toInt()  ...WCGW
       safetyExcessFees: excessFees,
     );
   } // End of `allocateOutputs()`.
@@ -475,14 +484,14 @@ abstract final class OutputHandling {
           ), // Why is this reversed?
           prevIndex: input.prevIndex,
           pubkey: input.pubKey,
-          amount: Int64(input.amount),
+          amount: Int64.parseHex(input.value.toHex),
         );
 
       // Add component and fee to list.
       components.add(
         (
           component: comp,
-          value: BigInt.from(input.amount) - BigInt.from(fee),
+          value: input.value - BigInt.from(fee),
         ),
       );
     }
@@ -715,7 +724,7 @@ abstract final class OutputHandling {
   ///
   /// Returns:
   ///  A double representing the fraction of coins to select.
-  static double _getFraction(int sumValue) {
+  static double _getFraction(BigInt sumValue) {
     String mode = 'normal'; // TODO get from wallet configuration
     // 'normal', 'consolidate', 'fan-out', etc.
     double fraction = 0.1;

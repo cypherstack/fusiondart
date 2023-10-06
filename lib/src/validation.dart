@@ -15,7 +15,7 @@ import 'package:protobuf/protobuf.dart';
 int componentContrib(pb.Component component, int feerate) {
   if (component.hasInput()) {
     Input inp = Input.fromInputComponent(component.input);
-    return inp.amount.toInt() -
+    return inp.value.toInt() -
         Utilities.componentFee(inp.sizeOfInput(), feerate);
   } else if (component.hasOutput()) {
     Output out = Output.fromOutputComponent(component.output);

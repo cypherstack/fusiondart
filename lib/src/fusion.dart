@@ -206,7 +206,7 @@ class Fusion {
           (e) => Input.fromWallet(
             txId: e.txid,
             vout: e.vout,
-            value: e.value,
+            value: BigInt.from(e.value),
             pubKey: e.pubKey,
           ),
         )
@@ -1116,7 +1116,7 @@ class Fusion {
 
     final sumIn = _allocatedOutputs!.inputs.fold(
       BigInt.zero,
-      (sum, e) => sum + BigInt.from(e.amount),
+      (sum, e) => sum + e.value,
     );
     final sumOut = _registerAndWaitResult!.outputs
         .fold(BigInt.zero, (sum, e) => sum + BigInt.from(e.value));

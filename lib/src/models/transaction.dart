@@ -66,8 +66,7 @@ class Transaction {
   /// Returns:
   ///   A list of integers representing the serialized preimage.
   List<int> serializePreimage(int index, int hashType, {bool useCache = true}) {
-    // Returning an empty byte array placeholder for now
-    return [];
+    throw UnimplementedError();
   }
 
   /// Serializes the transaction.
@@ -77,8 +76,7 @@ class Transaction {
   /// Returns:
   ///   A string representing the serialized transaction.
   String serialize() {
-    // Placeholder for now.
-    return "";
+    throw UnimplementedError();
   }
 
   /// Checks if the transaction is complete.
@@ -88,8 +86,7 @@ class Transaction {
   /// Returns:
   ///   A boolean value indicating if the transaction is complete.
   bool isComplete() {
-    // Placeholder for now.
-    return true;
+    throw UnimplementedError();
   }
 
   /// Gets the transaction ID.
@@ -99,7 +96,6 @@ class Transaction {
   /// Returns:
   ///   A string representing the transaction ID.
   String txid() {
-    // Placeholder for now.
-    return "";
+    throw UnimplementedError();
   }
 }
