@@ -204,7 +204,9 @@ class Connection {
 
         // Check if we've received enough bytes to start processing the header.
         if (recvBuf.length >= 12) {
+          // Check if we've already read the message length.
           if (messageLength == null) {
+            // No, so read the header to get the message length.
             Utilities.debugPrint(
                 "DEBUG recv_message2 1 - about to read the header");
             // Extract and validate the magic bytes from the received data.
