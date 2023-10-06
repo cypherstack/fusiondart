@@ -1396,19 +1396,29 @@ class Fusion {
 
     covert.checkDone();
 
+    // Convert allComponents to a list of Uint8List for comparison.
+    List<Uint8List> allComponentsBytes = allComponents
+        .map((component) => Uint8List.fromList(component))
+        .toList();
+
+    // Initialize a list to store the indexes of our components.
     final List<int> myComponentIndexes = [];
 
-    try {
-      myComponentIndexes.addAll(
-        myComponents.map((c) => allComponents
-            .indexWhere((element) => ListEquality<int>().equals(element, c))),
-      );
+    // Populate the list with the indexes of our components.
+    for (var c in myComponents) {
+      // Convert the component to Uint8List for comparison.
+      Uint8List componentBytes = Uint8List.fromList(c);
 
-      if (myComponentIndexes.contains(-1)) {
-        throw FusionError('One or more of my components missing. (1)');
+      // Search for the index of the component in the list of all components.
+      final int index = allComponentsBytes.indexWhere(
+          (element) => Utilities.listEquals(element, componentBytes));
+
+      if (index == -1) {
+        throw FusionError('One or more of my components missing.');
       }
-    } on StateError {
-      throw FusionError('One or more of my components missing. (2)');
+
+      // Add the index to the list of indexes.
+      myComponentIndexes.add(index);
     }
 
     // TODO check the components list and see if there are enough inputs/outputs
