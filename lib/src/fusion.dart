@@ -1341,17 +1341,28 @@ class Fusion {
       throw FusionError('Commitments list includes duplicates.');
     }
 
-    final List<int> myCommitmentIndexes = [];
+    List<Uint8List> allCommitmentsBytes =
+        allCommitments.map((commitment) => commitment.writeToBuffer()).toList();
+    /*
+    Set<Uint8List> allCommitmentsSet = allCommitmentsBytes.toSet();
+    */
 
-    try {
-      List<Uint8List> allCommitmentsBytes = allCommitments
-          .map((commitment) => commitment.writeToBuffer())
-          .toList();
-      myCommitmentIndexes.addAll(
-        myCommitments.map((c) => allCommitmentsBytes.indexOf(c)),
-      );
-    } on Exception {
-      throw FusionError('One or more of my commitments missing.');
+    List<int> myCommitmentIndexes = [];
+
+    for (var c in myCommitments) {
+      /*
+      if (allCommitmentsSet.contains(c)) {
+        print('My commitment is included!');
+      } else {
+        print('My commitment is missing.');
+      }
+      */
+      final int index = allCommitmentsBytes
+          .indexWhere((element) => Utilities.listEquals(element, c));
+      if (index == -1) {
+        throw FusionError('One or more of my commitments missing.');
+      }
+      myCommitmentIndexes.add(index);
     }
 
     remainingTime = Protocol.T_START_SIGS - covertClock();
@@ -1404,14 +1415,14 @@ class Fusion {
     // TODO check the components list and see if there are enough inputs/outputs
     // for there to be significant privacy.
 
-    List<List<int>> allCommitmentsBytes = allCommitments
+    List<List<int>> allCommitmentsInts = allCommitments
         .map((commitment) => commitment.writeToBuffer().toList())
         .toList();
     List<int> sessionHash = Utilities.calcRoundHash(
         _registerAndWaitResult!.lastHash,
         roundPubKey,
         roundTime.toInt(),
-        allCommitmentsBytes,
+        allCommitmentsInts,
         allComponents);
 
     // Validate session hash to prevent mismatch error.
