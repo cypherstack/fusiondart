@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:coinlib/coinlib.dart' as coinlib;
-import 'package:collection/collection.dart';
 import 'package:fusiondart/src/encrypt.dart' as encrypt;
 import 'package:fusiondart/src/exceptions.dart';
+import 'package:fusiondart/src/extensions/on_list_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';

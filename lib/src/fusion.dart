@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:coinlib/coinlib.dart' as coinlib;
-import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/src/comms.dart';
@@ -13,6 +12,7 @@ import 'package:fusiondart/src/covert.dart';
 import 'package:fusiondart/src/encrypt.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
+import 'package:fusiondart/src/extensions/on_list_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/blind_signature_request.dart';
@@ -1356,8 +1356,8 @@ class Fusion {
     // Populate the list with the indexes of our commitments.
     for (var c in myCommitments) {
       // Search for the index of the commitment in the list of all commitments.
-      final int index = allCommitmentsBytes
-          .indexWhere((element) => Utilities.listEquals(element, c));
+      final int index =
+          allCommitmentsBytes.indexWhere((element) => element.equals(c));
       // TODO replace Utilities.listEquals with ListEquality.
       if (index == -1) {
         throw FusionError(
@@ -1403,8 +1403,11 @@ class Fusion {
 
     try {
       myComponentIndexes.addAll(
-        myComponents.map((c) => allComponents
-            .indexWhere((element) => ListEquality<int>().equals(element, c))),
+        myComponents.map(
+          (c) => allComponents.indexWhere(
+            (e) => Uint8List.fromList(e).equals(c),
+          ),
+        ),
       );
 
       if (myComponentIndexes.contains(-1)) {

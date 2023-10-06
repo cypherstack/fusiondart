@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
-import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:cryptography/cryptography.dart';
+import 'package:fusiondart/src/extensions/on_list_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/pointycastle.dart' hide Mac;

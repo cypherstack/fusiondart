@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:collection/collection.dart';
 import 'package:fusiondart/src/encrypt.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
+import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:test/test.dart';
 
 // based on https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/tests/test_encrypt.py
