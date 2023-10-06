@@ -19,7 +19,7 @@ int componentContrib(pb.Component component, int feerate) {
         Utilities.componentFee(inp.sizeOfInput(), feerate);
   } else if (component.hasOutput()) {
     Output out = Output.fromOutputComponent(component.output);
-    return -out.amount.toInt() -
+    return -out.value.toInt() -
         Utilities.componentFee(out.sizeOfOutput(), feerate);
   } else if (component.hasBlank()) {
     return 0;

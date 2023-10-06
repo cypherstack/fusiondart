@@ -15,9 +15,6 @@ class Output {
   /// Destination address.
   Address addr;
 
-  /// Initialized to 0, to be set later as needed.
-  int amount = 0;
-
   /// Constructor for the Output class.
   ///
   /// Parameters:

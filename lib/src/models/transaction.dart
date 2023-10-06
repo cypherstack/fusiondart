@@ -1,12 +1,14 @@
+import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
+import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 
 /// Class that represents a transaction.
 ///
 /// A transaction consists of Inputs and Outputs.
 class Transaction {
-  List<Input> Inputs = [];
-  List<Output> Outputs = [];
+  List<Input> inputs = [];
+  List<Output> outputs = [];
 
   /// Default constructor for the Transaction class.
   Transaction();
@@ -20,17 +22,34 @@ class Transaction {
   /// Returns:
   ///   A tuple containing the Transaction and a list of input indices.
   static (Transaction, List<int>) txFromComponents(
-      List<dynamic> allComponents, List<dynamic> sessionHash) {
+    List<List<int>> allComponents,
+    List<int> sessionHash,
+  ) {
     // Initialize a new Transaction.
     Transaction tx = Transaction();
 
-    // TODO implement the logic of constructing the transaction from components.
-    // For now, initializing Inputs and Outputs as empty lists.
-    tx.Inputs = [];
-    tx.Outputs = [];
+    final List<int> inputIndices = [];
+    final comps =
+        allComponents.map((e) => Component()..mergeFromBuffer(e)).toList();
 
-    // For now, just returning an empty list for inputIndices.
-    List<int> inputIndices = [];
+    for (int i = 0; i < comps.length; i++) {
+      final comp = comps[i];
+      if (comp.hasInput()) {
+        final inp = comp.input;
+        if (inp.prevTxid.length != 32) {
+          throw FusionError("bad component prevout");
+        }
+
+        final input = Input.fromInputComponent(inp);
+        tx.inputs.add(input);
+        inputIndices.add(i);
+      } else if (comp.hasOutput()) {
+        final output = Output.fromOutputComponent(comp.output);
+        tx.outputs.add(output);
+      } else if (!comp.hasBlank()) {
+        throw FusionError("bad component");
+      }
+    }
 
     return (tx, inputIndices);
   }

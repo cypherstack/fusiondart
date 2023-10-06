@@ -49,7 +49,7 @@ class Address {
   }
 
   /// Converts the Address to its script form
-  List<int> toScript() {
+  Uint8List toScript() {
     if (publicKey == null) {
       throw Exception("Address must have a public key");
     }

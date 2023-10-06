@@ -119,7 +119,7 @@ class Input {
   static Input fromInputComponent(InputComponent inputComponent) {
     return Input(
       prevTxid: inputComponent.prevTxid, // Make sure the types are matching
-      prevIndex: inputComponent.prevIndex.toInt(),
+      prevIndex: inputComponent.prevIndex,
       pubKey: inputComponent.pubkey,
       amount: inputComponent.amount.toInt(),
     );

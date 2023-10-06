@@ -1466,7 +1466,7 @@ class Fusion {
       // Combine transaction input indices and their corresponding inputs.
       List<(int, Input)> myCombined = List<(int, Input)>.generate(
         inputIndices.length,
-        (index) => (inputIndices[index], tx.Inputs[index]),
+        (index) => (inputIndices[index], tx.inputs[index]),
       );
 
       // Sign the covert transaction.
@@ -1541,25 +1541,55 @@ class Fusion {
       if (fusionResultMsg.ok) {
         List<List<int>> allSigs = fusionResultMsg.txsignatures;
 
+        final List<coinlib.Input> cInputs = [];
+        final List<coinlib.Output> cOutputs = [];
+
         // Assemble and complete the transaction.
-        if (allSigs.length != tx.Inputs.length) {
+        if (allSigs.length != tx.inputs.length) {
           throw FusionError('Server gave wrong number of signatures.');
         }
         for (int i = 0; i < allSigs.length; i++) {
           List<int> sigBytes = allSigs[i];
-          String sig = base64.encode(sigBytes);
-          Input inp = tx.Inputs[i];
+          String sig = "${base64.encode(sigBytes)}41";
+          Input inp = tx.inputs[i];
           if (sig.length != 64) {
             throw FusionError('server relayed bad signature');
           }
 
-          // TODO: this
-          // inp.signatures = ['${sig}41'];
+          final cIn = coinlib.P2PKHInput(
+            prevOut: coinlib.OutPoint(
+              Uint8List.fromList(inp.prevTxid),
+              inp.prevIndex,
+            ),
+            publicKey: coinlib.ECPublicKey.fromHex(
+              Uint8List.fromList(inp.pubKey).toHex,
+            ),
+            insig: coinlib.InputSignature.fromBytes(
+              base64Decode(sig),
+            ),
+          );
+
+          cInputs.add(cIn);
         }
 
+        for (final o in tx.outputs) {
+          final cO = coinlib.Output.fromScriptBytes(
+            BigInt.from(o.value),
+            o.addr.toScript(),
+          );
+          cOutputs.add(cO);
+        }
+
+        final txn = coinlib.Transaction(
+          inputs: cInputs,
+          outputs: cOutputs,
+          version:
+              1, // one seems to be floating around in the python code somewhere
+        );
+
         // Finalize transaction details and update wallet label.
-        assert(tx.isComplete());
-        String txHex = tx.serialize();
+        assert(txn.complete);
+        String txHex = txn.toHex();
 
         _txId = tx.txid();
         String sumInStr = Utilities.formatSatoshis(sumIn, numZeros: 8);
