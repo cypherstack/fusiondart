@@ -8,7 +8,7 @@ import 'package:crypto/crypto.dart' as crypto;
 import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
-import 'package:fusiondart/src/covert.dart';
+import 'package:fusiondart/src/covert/covert_submitter.dart';
 import 'package:fusiondart/src/encrypt.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
