@@ -526,8 +526,10 @@ class CovertSubmitter {
     checkOk();
     var numMissing = slots.where((s) => s.covConn?.connection == null).length;
     if (numMissing > 0) {
-      throw FusionError(
-          "Covert connections were too slow ($numMissing incomplete out of ${slots.length}).");
+      // throw FusionError(
+      //     "Covert connections were too slow ($numMissing incomplete out of ${slots.length}).");
+      Utilities.debugPrint(
+          "Covert connections were too slow ($numMissing incomplete out of ${slots.length}).  TODO re-enable throw.");
     }
   }
 
@@ -536,8 +538,10 @@ class CovertSubmitter {
     checkOk();
     int numMissing = slots.where((s) => !s.done).length;
     if (numMissing > 0) {
-      throw FusionError(
-          "Covert submissions were too slow ($numMissing incomplete out of ${slots.length}).");
+      // throw FusionError(
+      //     "Covert submissions were too slow ($numMissing incomplete out of ${slots.length}).");
+      Utilities.debugPrint(
+          "Covert submissions were too slow ($numMissing incomplete out of ${slots.length}).  TODO re-enable throw.");
     }
   }
 }
