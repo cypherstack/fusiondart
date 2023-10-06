@@ -47,8 +47,9 @@ class Connection {
   ///   A Connection object.
   Connection._({
     required this.socket,
+    required this.receiveStream,
     this.timeout = const Duration(seconds: 1),
-  }) : receiveStream = socket.asBroadcastStream();
+  });
 
   /// Asynchronous function to open a new connection.
   ///
@@ -91,6 +92,7 @@ class Connection {
         return Connection._(
           socket:
               socksSocket.socket, // This might not "just work", but it might.
+          receiveStream: socksSocket.responseController.stream,
           timeout: defaultTimeout,
         );
         // TODO Close the socket.
@@ -114,6 +116,7 @@ class Connection {
         // Create a Connection object and return it.
         return Connection._(
           socket: socket,
+          receiveStream: socket.asBroadcastStream(),
           timeout: defaultTimeout,
         );
       } catch (e) {
