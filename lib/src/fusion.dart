@@ -1423,6 +1423,8 @@ class Fusion {
           Utilities.debugPrint('  ${c2.toHex}');
         }
         throw FusionError('One or more of my components missing.');
+      } else {
+        Utilities.debugPrint('found ${c.toHex} at index $index');
       }
 
       // Add the index to the list of indexes.
