@@ -1341,27 +1341,26 @@ class Fusion {
       throw FusionError('Commitments list includes duplicates.');
     }
 
+    // Check that all of our commitments are in the list.
+    //
+    // Convert allCommitments to a list of Uint8List for comparison.
     List<Uint8List> allCommitmentsBytes =
         allCommitments.map((commitment) => commitment.writeToBuffer()).toList();
-    /*
-    Set<Uint8List> allCommitmentsSet = allCommitmentsBytes.toSet();
-    */
 
+    // Initialize a list to store the indexes of our commitments.
     List<int> myCommitmentIndexes = [];
 
+    // Populate the list with the indexes of our commitments.
     for (var c in myCommitments) {
-      /*
-      if (allCommitmentsSet.contains(c)) {
-        print('My commitment is included!');
-      } else {
-        print('My commitment is missing.');
-      }
-      */
+      // Search for the index of the commitment in the list of all commitments.
       final int index = allCommitmentsBytes
           .indexWhere((element) => Utilities.listEquals(element, c));
+      // TODO replace Utilities.listEquals with ListEquality.
       if (index == -1) {
-        throw FusionError('One or more of my commitments missing.');
+        throw FusionError(
+            'One or more of my commitments missing. Did not find ${c.toHex}.');
       }
+      // Add the index to the list of indexes.
       myCommitmentIndexes.add(index);
     }
 
@@ -1406,10 +1405,10 @@ class Fusion {
       );
 
       if (myComponentIndexes.contains(-1)) {
-        throw FusionError('One or more of my components missing.');
+        throw FusionError('One or more of my components missing. (1)');
       }
     } on StateError {
-      throw FusionError('One or more of my components missing.');
+      throw FusionError('One or more of my components missing. (2)');
     }
 
     // TODO check the components list and see if there are enough inputs/outputs
