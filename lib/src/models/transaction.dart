@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:convert/convert.dart';
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_list_int.dart';
@@ -309,10 +310,12 @@ class Transaction {
       }
     }
 
-    Uint8List hashPrevouts = Hash(Uint8List.fromList(inputs
-        .map((txin) => serializeOutpointBytes(txin))
-        .expand((x) => x)
-        .toList()));
+    Uint8List hashPrevouts = Uint8List.fromList(crypto.sha256
+        .convert(Uint8List.fromList(inputs
+            .map((txin) => serializeOutpointBytes(txin))
+            .expand((x) => x)
+            .toList()))
+        .bytes);
 
     Uint8List hashSequence = Hash(Uint8List.fromList(inputs
         .map((txin) => intToBytes(txin['sequence'] ?? 0xffffffff - 1, 4))
