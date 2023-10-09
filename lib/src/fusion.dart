@@ -267,21 +267,10 @@ class Fusion {
     Connection? connection;
 
     try {
-      try {
-        // Check compatibility  - This was done in python version to see if fast libsec installed.
-        // For now , in dart, just pass this test.
-      } on Exception catch (e) {
-        // handle exception, rethrow as a custom FusionError
-        throw FusionError("Incompatible: $e");
-      }
-
-      // TODO: this refactor is probably wrong... But we cannot store tor proxy info in variables as they can get updated elsewhere and then the instance of this FusionInterface will not have the updated info
       // Check if can connect to Tor proxy, if not, raise FusionError.
-      final ({InternetAddress host, int port}) proxyInfo;
       try {
-        proxyInfo = await _getSocksProxyAddress();
+        await _getSocksProxyAddress();
       } catch (e) {
-        Utilities.debugPrint("Can't connect to Tor proxy $e");
         throw FusionError("Can't connect to Tor proxy");
       }
 
@@ -421,25 +410,23 @@ class Fusion {
         }
       }
 
-      Utilities.debugPrint("RETURNING early in fuse....");
-
-      // TODO Wait for transaction to show up in wallet.
-      /*
-      for (int i = 0; i < 60; i++) {
-        if (_stopping) {
-          break; // not an error
-        }
-
-        if (Utilities.walletHasTransaction(_txId)) {
-          break;
-        }
-
-        await Future<void>.delayed(Duration(seconds: 1));
-      }
+      // Not needed unless we start continuously running fuse
+      // //  Wait for transaction to show up in wallet.
+      // for (int i = 0; i < 60; i++) {
+      //   if (_stopping) {
+      //     break; // not an error
+      //   }
+      //
+      //
+      //   if (Utilities.walletHasTransaction(_txId)) {
+      //     break;
+      //   }
+      //
+      //   await Future<void>.delayed(Duration(seconds: 1));
+      // }
 
       // Set status to 'complete' with txid.
-      _updateStatus(status: FusionStatus.complete, info: 'txid: $_txId');
-       */
+      _updateStatus(status: FusionStatus.complete, info: '');
     } on FusionError catch (err, s) {
       Utilities.debugPrint('Failed: $err\n$s');
       _updateStatus(status: FusionStatus.failed, info: err.toString());
