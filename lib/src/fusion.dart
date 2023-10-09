@@ -115,7 +115,6 @@ class Fusion {
   // TODO parameterize; should these be fed in as parameters upon construction/instantiation?
 
   int _roundCount = 0; // Tracks the number of CashFusion rounds.
-  String _txId = ""; // Holds a transaction ID. << you don't say!?
 
   // Various state variables.
   // List<Address> changeAddresses = [];
@@ -1490,15 +1489,20 @@ class Fusion {
         final pubKey = inp.getPubKey(0); // cast/convert to PublicKey?
         final sec = inp.getPrivKey(0); // cast/convert to SecretKey?
 
-        // Calculate sighash for signing.
-        List<int> preimageBytes = tx.serializePreimage(i, 0x41, useCache: true);
-        crypto.Digest sighash =
-            crypto.sha256.convert(crypto.sha256.convert(preimageBytes).bytes);
+        // Calculate sigHash for signing.
+        final preimageBytes = tx.serializePreimageBytes(
+          i,
+          nHashType: 0x41,
+          useCache: true,
+        );
+        final sigHash = crypto.sha256.convert(
+          crypto.sha256.convert(preimageBytes).bytes,
+        );
 
         // Generate signature.
         final sig = Utilities.schnorrSign(
           sec,
-          Uint8List.fromList(sighash.bytes),
+          Uint8List.fromList(sigHash.bytes),
         );
 
         // Store the covert transaction signature
@@ -1597,15 +1601,17 @@ class Fusion {
         assert(txn.complete);
         String txHex = txn.toHex();
 
-        _txId = tx.txid();
         String sumInStr = Utilities.formatSatoshis(sumIn, numZeros: 8);
         String feeStr = totalFee.toString();
         String feeLoc = 'fee';
 
+        // Label should probably not be set until tx has been broadcast?
+        // Is this tx label just for convenience?
+        // If not, is it important to know if a tx is a fusion tx when
+        // restoring from mnemonic?
         String label =
             "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_registerAndWaitResult!.outputs.length}, $sumInStr BCH (−$feeStr sats $feeLoc)";
-
-        Utilities.updateWalletLabel(_txId, label);
+        Utilities.updateWalletLabel(txn.txid, label);
       } else {
         // If not successful, identify bad components.
         badComponents.clear();
