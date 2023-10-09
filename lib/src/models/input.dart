@@ -3,9 +3,7 @@ import 'dart:typed_data';
 
 import 'package:convert/convert.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
-import 'package:fusiondart/src/models/transaction.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
-import 'package:fusiondart/src/util.dart';
 
 /// Input component class.
 ///
@@ -137,49 +135,6 @@ class Input {
       pubKey: pubKey,
       value: value,
     );
-  }
-
-  /// Signs the transaction.
-  ///
-  /// Parameters:
-  /// - [privateKey]: The private key used for signing.
-  /// - [tx]: The transaction object.
-  ///
-  /// Returns:
-  ///   `void`
-  void sign(Uint8List privateKey, Transaction tx) {
-    // TODO reverse???
-    String message = tx.txid();
-
-    // Sign the message.
-    final signature =
-        Utilities.schnorrSign(privateKey, message.toUint8ListFromHex);
-
-    // Add the signature to the list of signatures.
-    signatures.add(signature);
-  }
-
-  /// Verifies the signatures in the transaction.
-  ///
-  /// Parameters:
-  /// - [publicKey]: The public key used for verification.
-  /// - [tx]: The transaction object.
-  ///
-  /// Returns:
-  ///   `true` if verification passes for all signatures, otherwise `false`.
-  bool verify(Uint8List publicKey, Transaction tx) {
-    // TODO reverse???
-    final message = tx.txid().toUint8ListFromHex;
-
-    // Loop through all the signatures and verify them.
-    for (final signature in signatures) {
-      if (!Utilities.schnorrVerify(publicKey, signature, message)) {
-        return false;
-      }
-    }
-
-    // Return true if all signatures are verified.
-    return true;
   }
 
   /// Overrides the toString method to provide detailed information about the instance.
