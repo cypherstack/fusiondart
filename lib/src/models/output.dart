@@ -1,3 +1,4 @@
+import 'package:coinlib/coinlib.dart' as cl;
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 
@@ -26,9 +27,9 @@ class Output {
   ///
   /// Returns:
   ///   The size of the output in bytes.
-  int sizeOfOutput() {
+  int sizeOfOutput(cl.NetworkParams network) {
     // Assuming addr.toScript() returns a List<int> representing the scriptpubkey.
-    List<int> scriptpubkey = addr.toScript();
+    List<int> scriptpubkey = addr.toScript(network);
 
     // Ensure the scriptpubkey length is less than 253 bytes.  253 is the max
     // length of a push opcode (see https://en.bitcoin.it/wiki/Script).

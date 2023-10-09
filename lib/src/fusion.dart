@@ -237,7 +237,10 @@ class Fusion {
   /// Throws:
   /// - FusionError: If any step in the fusion operation fails.
   /// - Exception: For general exceptions.
-  Future<void> fuse({required List<Input> inputsFromWallet}) async {
+  Future<void> fuse({
+    required List<Input> inputsFromWallet,
+    required coinlib.NetworkParams network,
+  }) async {
     Utilities.debugPrint("DEBUG FUSION 223...fusion run....");
 
     try {
@@ -388,6 +391,7 @@ class Fusion {
             final success = await runRound(
               covert: covert,
               connection: connection,
+              network: network,
             );
             if (success) {
               break;
@@ -1038,6 +1042,7 @@ class Fusion {
   Future<bool> runRound({
     required CovertSubmitter covert,
     required Connection connection,
+    required coinlib.NetworkParams network,
   }) async {
     Utilities.debugPrint("START OF RUN ROUND");
 
@@ -1158,6 +1163,7 @@ class Fusion {
         _allocatedOutputs!.inputs.length -
         _registerAndWaitResult!.outputs.length;
     final genComponentsResults = OutputHandling.genComponents(
+      network,
       numBlanks,
       _allocatedOutputs!.inputs,
       _registerAndWaitResult!.outputs,
@@ -1575,7 +1581,7 @@ class Fusion {
         for (final o in tx.outputs) {
           final cO = coinlib.Output.fromScriptBytes(
             BigInt.from(o.value),
-            o.addr.toScript(),
+            o.addr.toScript(network),
           );
           cOutputs.add(cO);
         }
@@ -1784,6 +1790,7 @@ class Fusion {
           allComponentsUint8,
           badComponentsList,
           componentFeerateInt,
+          network,
         );
       } on Exception catch (e) {
         // If the proof is invalid, add it to the blame list.
