@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/connection.dart';
@@ -61,7 +62,7 @@ abstract final class OutputHandling {
     // Loop through the addresses in the wallet.
     for (Address address in await getAddresses()) {
       // Get the coins for the address.
-      List<Input> acoins = await getInputsByAddress(address.addr);
+      List<Input> acoins = await getInputsByAddress(address.address);
 
       // Check if the address has any coins.
       if (acoins.isEmpty) continue;
@@ -104,10 +105,10 @@ abstract final class OutputHandling {
       }
       if (good) {
         // Add the address and coins to the eligible list.
-        eligible.add((address.addr, acoins));
+        eligible.add((address.address, acoins));
       } else {
         // Add the address and coins to the ineligible list.
-        ineligible.add((address.addr, acoins));
+        ineligible.add((address.address, acoins));
       }
     }
 
@@ -458,6 +459,7 @@ abstract final class OutputHandling {
     BigInt sumAmounts,
     Uint8List pedersenTotalNonce,
   }) genComponents(
+    coinlib.NetworkParams network,
     int numBlanks,
     List<Input> inputs,
     List<Output> outputs,
@@ -499,10 +501,10 @@ abstract final class OutputHandling {
     // Generate components for outputs.
     for (Output output in outputs) {
       // Calculate fee.
-      List<int> script = output.addr.toScript();
+      List<int> script = output.addr.toScript(network);
 
       // Calculate fee.
-      int fee = Utilities.componentFee(output.sizeOfOutput(), feerate);
+      int fee = Utilities.componentFee(output.sizeOfOutput(network), feerate);
 
       // Create output component.
       final comp = Component()

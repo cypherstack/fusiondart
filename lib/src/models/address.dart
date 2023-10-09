@@ -8,7 +8,6 @@ import 'package:fusiondart/src/util.dart';
 /// A class representing a cryptocurrency address (Bitcoin Cash specifically for
 /// CashFusion).
 ///
-/// TODO implement fromScriptPubKey.
 ///
 /// Attributes:
 /// - [addr]: The address as a String.
@@ -19,23 +18,20 @@ class Address {
   ///
   /// This is the only required parameter for the constructor. Can be used with
   /// _db.getAddress to get any of the other parameters below.
-  final String addr;
+  final String address;
 
   /// The public key as a List<int>
-  late List<int>? publicKey;
+  final List<int>? publicKey;
 
   /// The derivation path as a DerivationPath
-  late DerivationPath? derivationPath;
+  DerivationPath? derivationPath;
 
   /// Constructor for Address.
   Address({
-    required this.addr, // Constructor updated to accept addr as a named parameter
+    required this.address,
     this.publicKey,
     this.derivationPath,
   });
-
-  /// Private constructor used for creating an Address from a String.
-  Address._create({required this.addr});
 
   /// Creates an Address from a script public key
   static Address fromScriptPubKey(List<int> scriptPubKey) {
@@ -44,12 +40,16 @@ class Address {
   }
 
   /// Public constructor for testing. Calls private constructor `_create`.
-  static Address fromString(String address) {
-    return Address._create(addr: address);
+  static Address fromString(String address, coinlib.NetworkParams network) {
+    final addr = coinlib.Address.fromString(address, network);
+    return Address(
+      address: addr.toString(),
+      publicKey: addr.program.script.compiled, // TODO: verify
+    );
   }
 
   /// Converts the Address to its script form
-  Uint8List toScript() {
+  Uint8List toScript(coinlib.NetworkParams network) {
     if (publicKey == null) {
       throw Exception("Address must have a public key");
     }
@@ -58,48 +58,40 @@ class Address {
         coinlib.ECPublicKey.fromHex(hex.encode(Uint8List.fromList(publicKey!)));
 
     coinlib.P2PKHAddress p2pkhAddress = coinlib.P2PKHAddress.fromPublicKey(
-        ecPublicKey,
-        version: coinlib.NetworkParams.mainnet.p2pkhPrefix);
+      ecPublicKey,
+      version: network.p2pkhPrefix,
+    );
 
-    return p2pkhAddress.program.script
-        .compiled; // The bitcoincash network is defined in util.dart.;
+    return p2pkhAddress.program.script.compiled;
   }
 
   /// Returns a JSON-String representation of the Address for easier debugging.
-  ///
-  /// TODO use Dart's JSON encoder instead of implementing our own
   @override
-  String toString() => "{ "
-      "addr: $addr, "
-      "publicKey: $publicKey, "
-      "derivationPath: $derivationPath, "
-      "}";
+  String toString() => toJsonString();
 
   /// Converts the Address to a JSON-formatted String
-  ///
-  /// TODO use Dart's JSON encoder instead of implementing our own
-  String toJsonString() {
-    final Map<String, dynamic> result = {
-      "addr": addr,
-      "publicKey": publicKey,
-      "derivationPath":
-          derivationPath?.value, // see also DerivationPath.getComponents()
-    };
-    return jsonEncode(result);
-  }
+  String toJsonString() => jsonEncode({
+        "addr": address,
+        "publicKey": publicKey,
+        "derivationPath": derivationPath?.value,
+      });
 
   /// Creates an Address from a JSON-formatted String
-  ///
-  /// TODO use Dart's JSON decoder instead of implementing our own
   static Address fromJsonString(String jsonString) {
-    final json = jsonDecode(jsonString);
-    final DerivationPath derivationPath =
-        DerivationPath(json["derivationPath"] as String);
-    return Address(
-      addr: json["addr"] as String,
-      publicKey: List<int>.from(json["publicKey"] as List),
-      derivationPath: derivationPath,
-    );
+    try {
+      final json = jsonDecode(jsonString);
+      final DerivationPath derivationPath =
+          DerivationPath(json["derivationPath"] as String);
+      return Address(
+        address: json["addr"] as String,
+        publicKey: List<int>.from(json["publicKey"] as List),
+        derivationPath: derivationPath,
+      );
+    } catch (_) {
+      throw Exception(
+        "Failed to parse and instance of Address from $jsonString",
+      );
+    }
   }
 }
 

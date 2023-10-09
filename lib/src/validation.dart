@@ -12,7 +12,11 @@ import 'package:fusiondart/src/protobuf/fusion.pb.dart' as pb;
 import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart';
 
-int componentContrib(pb.Component component, int feerate) {
+int componentContrib(
+  pb.Component component,
+  int feerate,
+  coinlib.NetworkParams network,
+) {
   if (component.hasInput()) {
     Input inp = Input.fromInputComponent(component.input);
     return inp.value.toInt() -
@@ -20,7 +24,7 @@ int componentContrib(pb.Component component, int feerate) {
   } else if (component.hasOutput()) {
     Output out = Output.fromOutputComponent(component.output);
     return -out.value.toInt() -
-        Utilities.componentFee(out.sizeOfOutput(), feerate);
+        Utilities.componentFee(out.sizeOfOutput(network), feerate);
   } else if (component.hasBlank()) {
     return 0;
   } else {
@@ -112,7 +116,11 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
 }
 
 (String, int) checkCovertComponent(
-    pb.CovertComponent msg, Uint8List roundPubkey, int componentFeerate) {
+  pb.CovertComponent msg,
+  Uint8List roundPubkey,
+  int componentFeerate,
+  coinlib.NetworkParams network,
+) {
   Uint8List messageHash = Utilities.sha256(Uint8List.fromList(msg.component));
 
   check(msg.signature.length == 64, "bad message signature");
@@ -155,7 +163,7 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
     throw ValidationError('missing component details');
   }
 
-  return (sortKey, componentContrib(cmsg, componentFeerate));
+  return (sortKey, componentContrib(cmsg, componentFeerate, network));
 }
 
 pb.InputComponent? validateProofInternal(
@@ -164,6 +172,7 @@ pb.InputComponent? validateProofInternal(
   List<Uint8List> allComponents,
   List<int> badComponents,
   int componentFeerate,
+  coinlib.NetworkParams network,
 ) {
   final msg = protoStrictParse(pb.Proof(), proofBlob);
 
@@ -194,7 +203,7 @@ pb.InputComponent? validateProofInternal(
     "salted component hash mismatch",
   );
 
-  int contrib = componentContrib(comp, componentFeerate);
+  int contrib = componentContrib(comp, componentFeerate, network);
 
   final List<int> pCommitted = commitment.amountCommitment;
 
@@ -223,6 +232,7 @@ Future<pb.InputComponent> validateBlame(
   List<Uint8List> allComponents,
   List<int> badComponents,
   int componentFeerate,
+  coinlib.NetworkParams network,
 ) async {
   final destCommit = pb.InitialCommitment();
   destCommit.mergeFromBuffer(destCommitBlob);
@@ -272,6 +282,7 @@ Future<pb.InputComponent> validateBlame(
       allComponents,
       badComponents,
       componentFeerate,
+      network,
     );
   } catch (e) {
     rethrow;

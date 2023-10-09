@@ -31,6 +31,49 @@ abstract class Utilities {
   static ECDomainParameters get secp256k1Params =>
       ECDomainParameters('secp256k1');
 
+  // ===========================================================================
+
+  // // Bitcoincash Network
+  // final bitcoincash = NetworkType(
+  //     messagePrefix: '\x18Bitcoin Signed Message:\n',
+  //     bech32: 'bc',
+  //     bip32: Bip32Type(public: 0x0488b21e, private: 0x0488ade4),
+  //     pubKeyHash: 0x00,
+  //     scriptHash: 0x05,
+  //     wif: 0x80);
+  //
+  // final bitcoincashtestnet = NetworkType(
+  //     messagePrefix: '\x18Bitcoin Signed Message:\n',
+  //     bech32: 'tb',
+  //     bip32: Bip32Type(public: 0x043587cf, private: 0x04358394),
+  //     pubKeyHash: 0x6f,
+  //     scriptHash: 0xc4,
+  //     wif: 0xef);
+
+  // TODO: verify these
+
+  static coinlib.NetworkParams get mainNet => coinlib.NetworkParams(
+        wifPrefix: 0x80,
+        p2pkhPrefix: 0x00,
+        p2shPrefix: 0x05,
+        privHDPrefix: 0x0488ade4,
+        pubHDPrefix: 0x0488b21e,
+        bech32Hrp: "bc",
+        messagePrefix: "\x18Bitcoin Signed Message:\n",
+      );
+
+  static coinlib.NetworkParams get testNet => coinlib.NetworkParams(
+        wifPrefix: 0xef,
+        p2pkhPrefix: 0x6f,
+        p2shPrefix: 0xc4,
+        privHDPrefix: 0x04358394,
+        pubHDPrefix: 0x043587cf,
+        bech32Hrp: "tb",
+        messagePrefix: "\x18Bitcoin Signed Message:\n",
+      );
+
+  // ===========================================================================
+
   /// Checks the input for ElectrumX server.
   ///
   /// Parameters:
@@ -105,9 +148,11 @@ abstract class Utilities {
 
       // Use bitcoindart to return the encoded address.
       return Address(
-          addr: coinlib.P2PKH
-              .fromPublicKey(coinlib.ECPublicKey.fromHex(hex.encode(pubKey)))
-              .toString());
+        address: coinlib.P2PKH
+            .fromPublicKey(coinlib.ECPublicKey.fromHex(hex.encode(pubKey)))
+            .toString(),
+        publicKey: pubKey,
+      );
     } else {
       throw Exception(
           'fusiondart getAddressFromOutputScript: Not a P2PKH script.');
