@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:bitbox/bitbox.dart' as bitbox;
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fixnum/fixnum.dart';
@@ -52,7 +53,8 @@ class Fusion {
 
   // Private late finals used for dependency injection.
   late final Future<List<Address>> Function() _getAddresses;
-  late final Future<List<Input>> Function(String address) _getInputsByAddress;
+  late final Future<List<bitbox.Input>> Function(String address)
+      _getInputsByAddress;
   late final Future<List<Map<String, dynamic>>> Function(String address)
       _getTransactionsByAddress;
   late final Future<List<Address>> Function(int numberOfAddresses)
@@ -69,7 +71,7 @@ class Fusion {
   /// The methods injected here are used for various operations throughout the fusion process.
   Future<void> initFusion({
     required final Future<List<Address>> Function() getAddresses,
-    required final Future<List<Input>> Function(String address)
+    required final Future<List<bitbox.Input>> Function(String address)
         getInputsByAddress,
     required final Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
@@ -145,7 +147,7 @@ class Fusion {
   // Map<int, List<int>> tierOutputs = {}; // Associates tiers with outputs.
   // Not sure if this should be using the Output model.
   ({
-    List<Input> inputs,
+    List<bitbox.Input> inputs,
     Map<int, List<int>> tierOutputs,
     int safetySumIn,
     Map<int, int> safetyExcessFees,
@@ -193,7 +195,7 @@ class Fusion {
   ///
   /// Returns:
   ///   Future<void> Returns a future that completes when the coins have been added.
-  Future<List<Input>> addCoinsFromWallet(
+  Future<List<bitbox.Input>> addCoinsFromWallet(
     List<UtxoDTO> utxoList,
   ) async {
     // TODO sanity check the state of `coins` before adding to it.
@@ -202,7 +204,7 @@ class Fusion {
 
     return utxoList
         .map(
-          (e) => Input.fromWallet(
+          (e) => bitbox.Input.fromWallet(
             txId: e.txid,
             vout: e.vout,
             value: BigInt.from(e.value),
@@ -237,7 +239,7 @@ class Fusion {
   /// - FusionError: If any step in the fusion operation fails.
   /// - Exception: For general exceptions.
   Future<void> fuse({
-    required List<Input> inputsFromWallet,
+    required List<bitbox.Input> inputsFromWallet,
     required coinlib.NetworkParams network,
   }) async {
     Utilities.debugPrint("DEBUG FUSION 223...fusion run....");
@@ -349,7 +351,6 @@ class Fusion {
         _allocatedOutputs = await OutputHandling.allocateOutputs(
           connection:
               connection!, // A non-null [connection] would've been caught by IO.greet()'s try-catch above, no need to check or handle it here.
-
           status: status.status,
           coins: inputsFromWallet,
           currentChainHeight: currentChainHeight,
@@ -410,9 +411,9 @@ class Fusion {
       }
 
       Utilities.debugPrint("RETURNING early in fuse....");
-      return;
 
-      // Wait for transaction to show up in wallet.
+      // TODO Wait for transaction to show up in wallet.
+      /*
       for (int i = 0; i < 60; i++) {
         if (_stopping) {
           break; // not an error
@@ -427,6 +428,7 @@ class Fusion {
 
       // Set status to 'complete' with txid.
       _updateStatus(status: FusionStatus.complete, info: 'txid: $_txId');
+       */
     } on FusionError catch (err, s) {
       Utilities.debugPrint('Failed: $err\n$s');
       _updateStatus(status: FusionStatus.failed, info: err.toString());

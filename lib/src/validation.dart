@@ -18,7 +18,7 @@ int componentContrib(
   coinlib.NetworkParams network,
 ) {
   if (component.hasInput()) {
-    Input inp = Input.fromInputComponent(component.input);
+    bitbox.Input inp = bitbox.Input.fromInputComponent(component.input);
     return inp.value.toInt() -
         Utilities.componentFee(inp.sizeOfInput(), feerate);
   } else if (component.hasOutput()) {

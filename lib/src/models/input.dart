@@ -18,7 +18,7 @@ import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 ///  field in the input.
 ///
 /// TODO: getPubKey and getPrivKey.
-class Input {
+class OldInput {
   /// The transaction id as a list of integers.
   final List<int> prevTxid;
 
@@ -55,8 +55,16 @@ class Input {
     throw UnimplementedError('hasToken is not implemented yet.');
   }
 
+  String get type {
+    throw UnimplementedError('type is not implemented yet.');
+  }
+
+  String get address {
+    throw UnimplementedError('address is not implemented yet.');
+  }
+
   /// Constructor for Input class.
-  Input({
+  OldInput({
     required this.prevTxid,
     required this.prevIndex,
     required this.pubKey,
@@ -114,8 +122,8 @@ class Input {
   ///
   /// Returns:
   ///   The Input object.
-  static Input fromInputComponent(InputComponent inputComponent) {
-    return Input(
+  static OldInput fromInputComponent(InputComponent inputComponent) {
+    return OldInput(
       prevTxid: inputComponent.prevTxid, // Make sure the types are matching
       prevIndex: inputComponent.prevIndex,
       pubKey: inputComponent.pubkey,
@@ -130,13 +138,13 @@ class Input {
   ///
   /// Returns:
   ///   The Input object.
-  static Input fromWallet({
+  static OldInput fromWallet({
     required String txId,
     required int vout,
     required BigInt value,
     required List<int> pubKey,
   }) {
-    return Input(
+    return OldInput(
       // TODO: Are raw bytes wanted here or hex?
       prevTxid: utf8.encode(txId), // Convert txId to a List<int>.
       prevIndex: vout,

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:bitbox/bitbox.dart' as bitbox;
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
@@ -16,7 +17,7 @@ import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 ///
 /// Translated from https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L289
 class Transaction {
-  List<Input> inputs = [];
+  List<bitbox.Input> inputs = [];
   List<Output> outputs = [];
 
   /// Instance variable for the locktime of the transaction.
@@ -57,7 +58,15 @@ class Transaction {
           throw FusionError("bad component prevout");
         }
 
-        final input = Input.fromInputComponent(inp);
+        // TODO fix input.
+        final input = bitbox.Input(
+            /*
+          prevTxid: inp.prevTxid, // Make sure the types are matching
+          prevIndex: inp.prevIndex,
+          pubKey: inp.pubkey,
+          value: inp.amount.toHexString().toBigIntFromHex.toInt(),
+         */
+            );
         tx.inputs.add(input);
         inputIndices.add(i);
       } else if (comp.hasOutput()) {
@@ -96,25 +105,35 @@ class Transaction {
     final hashTypeBytes = BigInt.from(nHashType).toBytesPadded(4);
     final nLocktime = locktime.toBytesPadded(4);
 
-    Input txin = inputs[i];
-    final outpoint = serializeOutpointBytes(txin);
-    final preimageScript = getPreimageScript(txin).toUint8ListFromHex;
+    bitbox.Input txin = inputs[i];
+    Uint8List outpoint = serializeOutpointBytes(txin);
+    Uint8List preimageScript = getPreimageScript(txin).toUint8ListFromHex;
 
     final Uint8List serInputToken;
-    if (txin.hasToken) {
+    // TODO handle tokens.
+    /*if (txin.hasToken) {
       throw Exception("Tried to use an input with token data in fusion!");
       // serInputToken = Uint8List.fromList([0xef, ...inputToken.serialize()]);
       // See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L760
       // and https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/token.py#L165
       // 0xef should be moved to a Bitcoin Cash opcode enum or similar, see  https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/bitcoin.py#L252
-    } else {
-      serInputToken = Uint8List(0);
-    }
+    } else {*/
+    serInputToken = Uint8List(0);
+    /*}*/
 
     final scriptCode = Uint8List.fromList([
       ...varIntBytes(BigInt.from(preimageScript.length)),
       ...preimageScript
     ]);
+    Uint8List amount;
+    try {
+      amount = BigInt.from(txin.value ?? 0).toBytes;
+    } catch (e) {
+      throw FusionError(
+          'InputValueMissing'); // Adjust the error type based on your Dart codebase
+    }
+    Uint8List nSequence = BigInt.from(txin.sequence ?? 0xffffffff - 1).toBytes;
+    // TODO verify default of 0xffffffff - 1 is acceptable.
 
     final amount = txin.value.toBytesPadded(8);
     final nSequence = BigInt.from(txin.sequence).toBytesPadded(4);
@@ -162,23 +181,24 @@ class Transaction {
   }
 
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L606
-  static String serializeOutpoint(Input txin) {
+  static String serializeOutpoint(bitbox.Input txin) {
     return serializeOutpointBytes(txin).toHex;
   }
 
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L610
-  static Uint8List serializeOutpointBytes(Input txin) {
+  static Uint8List serializeOutpointBytes(bitbox.Input txin) {
     return Uint8List.fromList([
-      ...hex
-          .encode(txin.prevTxid.reversed as List<int>)
-          .toUint8ListFromHex, // Is Iterable<int> as List<int> kosher?
-      ...BigInt.from(txin.prevIndex).toBytes
+      ...hex.encode(txin.prevTxid.reversed as List<int>).toUint8ListFromHex,
+      // TODO is Iterable<int> as List<int> kosher?
+      ...BigInt.from(txin.index ?? 0).toBytes
+      // TODO use better default index than 0.
     ]);
   }
 
   /// Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L589
-  static String getPreimageScript(Input txin) {
+  static String getPreimageScript(bitbox.Input txin) {
     String type = txin.type; // TODO Input.type
+
     if (type == 'p2pkh') {
       return txin.address // TODO Input.address
           .toScript() // TODO Address.toScript
@@ -204,7 +224,7 @@ class Transaction {
   ///
   /// Note: this function is CRITICAL to get the correct order of pubkeys in
   /// multisignatures; avoid changing.
-  List<List<dynamic>> getSortedPubkeys(Input txin) {
+  List<List<dynamic>> getSortedPubkeys(bitbox.Input txin) {
     List<String> xPubKeys =
         txin.xPubKeys; // TODO Input.xPubKeys and properly type XPUBs.
     List<String>? pubKeys =
@@ -227,34 +247,34 @@ class Transaction {
   }
 
   List<dynamic>? xpubkeyToAddress(String xPubkey) {
-    coinlib.HDPublicKey? hdPubkey = coinlib.HDPublicKey.decode(xPubkey);
     if (xPubkey.startsWith('fd')) {
-      String address = coinlib.bitcoin.scriptToAddress(xPubkey.substring(2));
-      // coinlib.P2PKHAddress.fromPublicKey(pubkey, version: version).toString or similar?
+      String address = bitbox.HDNode.fromXPub(xPubkey).toCashAddress();
       return [xPubkey, address];
     }
 
-    String? pubkey;
+    String? pubKey;
 
     if (['02', '03', '04'].contains(xPubkey.substring(0, 2))) {
-      pubkey = xPubkey;
+      pubKey = xPubkey;
     } else if (xPubkey.startsWith('ff')) {
-      var result = BIP32KeyStore.parseXpubkey(xPubkey);
-      String xpub = result[0];
-      var s = result[1];
-      pubkey = BIP32KeyStore.getPubkeyFromXpub(xpub, s);
+      pubKey = bitbox.HDNode.fromXPub(xPubkey).publicKey;
     } else if (xPubkey.startsWith('fe')) {
+      var result = bitbox.HDNode.fromXPub(xPubkey);
+      /*
       var result = OldKeyStore.parseXpubkey(xPubkey);
       String mpk = result[0];
       var s = result[1];
-      pubkey = OldKeyStore.getPubkeyFromMpk(mpk, s[0], s[1]);
+      pubkey = OldKeyStore.getPubkeyFromMpk(result., s[0], s[1]);
+      */
+      pubKey = result.publicKey;
     } else {
       throw Exception("Cannot parse pubkey");
     }
 
-    if (pubkey != null) {
-      Address address = Address.fromPubkey(pubkey);
-      return [pubkey, address];
+    if (pubKey != null) {
+      // bitbox.Address address = bitbox.Address.fromPubkey(pubKey);
+      bitbox.Address address = bitbox.HDNode.fromXPub(xPubkey);
+      return [pubKey, address];
     }
     return null; // Return null if no pubkey found
   }
@@ -284,7 +304,7 @@ class Transaction {
 
   ({Uint8List hashPrevouts, Uint8List hashSequence, Uint8List hashOutputs})
       calcCommonSighash({bool useCache = false}) {
-    List<Input> inputs = this.inputs;
+    List<bitbox.Input> inputs = this.inputs;
     int nOutputs =
         outputs.length; // Assuming there's a 'outputs' getter in your class
     List<int> meta = [inputs.length, nOutputs];
