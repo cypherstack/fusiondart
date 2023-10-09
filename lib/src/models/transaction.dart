@@ -82,20 +82,23 @@ class Transaction {
   ///
   /// Returns:
   ///   A Uint8List representing the serialized preimage.
-  Uint8List serializePreimageBytes(int i,
-      {int nHashType = 0x00000041, bool useCache = false}) {
+  Uint8List serializePreimageBytes(
+    int i, {
+    int nHashType = 0x00000041,
+    bool useCache = false,
+  }) {
     if ((nHashType & 0xff) != 0x41) {
       throw ArgumentError(
           "Other hash types not supported; submit a PR to fix this!");
     }
 
-    Uint8List nVersion = version.toBytes;
-    Uint8List hashTypeBytes = BigInt.from(nHashType).toBytes;
-    Uint8List nLocktime = locktime.toBytes;
+    final nVersion = version.toBytesPadded(4);
+    final hashTypeBytes = BigInt.from(nHashType).toBytesPadded(4);
+    final nLocktime = locktime.toBytesPadded(4);
 
     Input txin = inputs[i];
-    Uint8List outpoint = serializeOutpointBytes(txin);
-    Uint8List preimageScript = getPreimageScript(txin).toUint8ListFromHex;
+    final outpoint = serializeOutpointBytes(txin);
+    final preimageScript = getPreimageScript(txin).toUint8ListFromHex;
 
     final Uint8List serInputToken;
     if (txin.hasToken) {
@@ -108,20 +111,13 @@ class Transaction {
       serInputToken = Uint8List(0);
     }
 
-    Uint8List scriptCode = Uint8List.fromList([
+    final scriptCode = Uint8List.fromList([
       ...varIntBytes(BigInt.from(preimageScript.length)),
       ...preimageScript
     ]);
-    Uint8List amount;
-    try {
-      amount = txin.value.toBytes;
-    } catch (e) {
-      throw FusionError(
-          'InputValueMissing'); // Adjust the error type based on your Dart codebase
-    }
-    Uint8List nSequence =
-        BigInt.from(txin.sequence).toBytes; // TODO fix txin.sequence getter
-    // Was `txin['sequence'] ?? 0xffffffff - 1`.
+
+    final amount = txin.value.toBytesPadded(8);
+    final nSequence = BigInt.from(txin.sequence).toBytesPadded(4);
 
     // Unpack values from calcCommonSighash function
     ({
