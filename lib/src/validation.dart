@@ -5,7 +5,6 @@ import 'package:fusiondart/src/encrypt.dart' as encrypt;
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_list_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
-import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/pedersen.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart' as pb;
@@ -18,9 +17,10 @@ int componentContrib(
   coinlib.NetworkParams network,
 ) {
   if (component.hasInput()) {
-    bitbox.Input inp = bitbox.Input.fromInputComponent(component.input);
-    return inp.value.toInt() -
-        Utilities.componentFee(inp.sizeOfInput(), feerate);
+    return component.input.amount.toInt() -
+        Utilities.componentFee(
+            Utilities.sizeOfInput(Uint8List.fromList(component.input.pubkey)),
+            feerate);
   } else if (component.hasOutput()) {
     Output out = Output.fromOutputComponent(component.output);
     return -out.value.toInt() -
