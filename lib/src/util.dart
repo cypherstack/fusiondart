@@ -672,9 +672,13 @@ abstract class Utilities {
 
   /// port of https://github.com/tlsfuzzer/python-ecdsa/blob/master/src/ecdsa/numbertheory.py#L152
   static BigInt jacobi(BigInt a, BigInt n) {
-    // TODO throw exceptions instead of assert
-    assert(n >= BigInt.from(3));
-    assert(n.isOdd);
+    if (!n.isOdd) {
+      throw Exception("n must odd");
+    }
+
+    if (n < BigInt.from(3)) {
+      throw Exception("n must be >= 3");
+    }
 
     a = a % n;
 
