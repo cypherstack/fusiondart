@@ -190,7 +190,7 @@ class Transaction {
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L610
   static Uint8List serializeOutpointBytes(bitbox.Input txin) {
     return Uint8List.fromList([
-      ...hex.encode(txin.prevTxid.reversed as List<int>).toUint8ListFromHex,
+      ...hex.encode(txin.hash!.reversed as List<int>).toUint8ListFromHex,
       // TODO is Iterable<int> as List<int> kosher?
       ...BigInt.from(txin.index ?? 0).toBytes
       // TODO use better default index than 0.
@@ -248,7 +248,7 @@ class Transaction {
     return [pubKeys, xPubKeys];
   }
 
-  List<dynamic>? xpubkeyToAddress(String xPubkey) {
+  List<String, String>? xpubkeyToAddress(String xPubkey) {
     if (xPubkey.startsWith('fd')) {
       String address = bitbox.HDNode.fromXPub(xPubkey).toCashAddress();
       return [xPubkey, address];
