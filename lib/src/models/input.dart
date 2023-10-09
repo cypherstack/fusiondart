@@ -48,11 +48,15 @@ class Input {
   // Signatures are added in the `sign` method and verified in the `verify` method.
 
   int get sequence {
-    throw UnimplementedError();
+    throw UnimplementedError('sequence is not implemented yet.');
   }
 
-  int get tokenData {
-    throw UnimplementedError();
+  bool get hasToken {
+    throw UnimplementedError('hasToken is not implemented yet.');
+  }
+
+  bool get tokenData {
+    throw UnimplementedError('tokenData is not implemented yet.');
   }
 
   /// Constructor for Input class.
