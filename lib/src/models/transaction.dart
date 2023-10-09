@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:convert/convert.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
@@ -108,21 +109,24 @@ class Transaction {
     }
     */
 
-    Uint8List scriptCode = Uint8List.fromList(
-        [...varIntBytes(preimageScript.length), ...preimageScript]);
+    Uint8List scriptCode = Uint8List.fromList([
+      ...varIntBytes(BigInt.from(preimageScript.length)),
+      ...preimageScript
+    ]);
     Uint8List amount;
     try {
-      amount = intToBytes(txin['value'], 8);
+      amount = txin.value.toBytes;
     } catch (e) {
       throw FusionError(
           'InputValueMissing'); // Adjust the error type based on your Dart codebase
     }
-    Uint8List nSequence = intToBytes(txin['sequence'] ?? 0xffffffff - 1, 4);
+    Uint8List nSequence = BigInt.from(txin.sequence).toBytes;
+    // TODO txin.sequence, was `txin['sequence'] ?? 0xffffffff - 1`.
 
     var hashPrevouts, hashSequence, hashOutputs;
     // Unpack values from calcCommonSighash function
-    (hashPrevouts, hashSequence, hashOutputs) =
-        calcCommonSighash(useCache: useCache);
+    (hashPrevouts, hashSequence, hashOutputs) = calcCommonSighash(
+        useCache: useCache); // TODO fix this python-transliterationalism.
 
     Uint8List preimage = Uint8List.fromList([
       ...nVersion,
@@ -151,24 +155,180 @@ class Transaction {
         .toHex;
   }
 
-  // Serialize outpoint
+  // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L606
   static String serializeOutpoint(Input txin) {
     return serializeOutpointBytes(txin).toHex;
   }
 
+  // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L610
   static Uint8List serializeOutpointBytes(Input txin) {
     return Uint8List.fromList([
-      ...hex.decode(txin.prevTxid.reversed).toUint8ListFromHex, // TODO
+      ...hex
+          .encode(txin.prevTxid.reversed as List<int>)
+          .toUint8ListFromHex, // Is Iterable<int> as List<int> kosher?
       ...BigInt.from(txin.prevIndex).toBytes
     ]);
   }
 
+  /// Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L589
   static String getPreimageScript(Input txin) {
-    throw UnimplementedError();
+    String type = txin.type; // TODO Input.type
+    if (type == 'p2pkh') {
+      return txin.address // TODO Input.address
+          .toScript() // TODO Address.toScript
+          .toHex();
+    } else if (type == 'p2sh') {
+      List<String> pubkeys, xPubkeys = getSortedPubkeys(txin);
+      return multisigScript(
+          pubkeys,
+          txin[
+              'num_sig']); // Implement or reference the multisigScript function
+    } else if (type == 'p2pk') {
+      String pubkey = txin['pubkeys'][0];
+      return publicKeyToP2pkScript(
+          pubkey); // Implement or reference the publicKeyToP2pkScript function
+    } else if (type == 'unknown') {
+      return txin['scriptCode'];
+    } else {
+      throw Exception('Unknown txin type $type');
+    }
+  }
+
+  /// Sort pubkeys and x_pubkeys, using the order of pubkeys
+  ///
+  /// Note: this function is CRITICAL to get the correct order of pubkeys in
+  /// multisignatures; avoid changing.
+  List<List<dynamic>> getSortedPubkeys(Input txin) {
+    List<String> xPubKeys =
+        txin.xPubKeys; // TODO Input.xPubKeys and properly type XPUBs.
+    List<String>? pubKeys =
+        txin.pubKeys; // TODO Input.pubKeys and properly type public key.
+
+    if (pubKeys == null) {
+      pubKeys = xPubKeys
+          .map((x) => xpubkeyToPubkey(x)!)
+          .toList(); // TODO validate null assertion.
+
+      var zipped =
+          List.generate(pubKeys!.length, (i) => [pubKeys[i], xPubKeys[i]]);
+      zipped.sort((a, b) => a[0].compareTo(b[0]));
+
+      txin.pubKeys = pubKeys = [for (var item in zipped) item[0]];
+      txin.xPubKeys = xPubKeys = [for (var item in zipped) item[1]];
+    }
+
+    return [pubKeys, xPubKeys];
+  }
+
+  List<dynamic>? xpubkeyToAddress(String xPubkey) {
+    if (xPubkey.startsWith('fd')) {
+      String address = bitcoin.scriptToAddress(xPubkey.substring(2));
+      return [xPubkey, address];
+    }
+
+    String? pubkey;
+
+    if (['02', '03', '04'].contains(xPubkey.substring(0, 2))) {
+      pubkey = xPubkey;
+    } else if (xPubkey.startsWith('ff')) {
+      var result = BIP32KeyStore.parseXpubkey(xPubkey);
+      String xpub = result[0];
+      var s = result[1];
+      pubkey = BIP32KeyStore.getPubkeyFromXpub(xpub, s);
+    } else if (xPubkey.startsWith('fe')) {
+      var result = OldKeyStore.parseXpubkey(xPubkey);
+      String mpk = result[0];
+      var s = result[1];
+      pubkey = OldKeyStore.getPubkeyFromMpk(mpk, s[0], s[1]);
+    } else {
+      throw Exception("Cannot parse pubkey");
+    }
+
+    if (pubkey != null) {
+      Address address = Address.fromPubkey(pubkey);
+      return [pubkey, address];
+    }
+    return null; // Return null if no pubkey found
+  }
+
+  String? xpubkeyToPubkey(String xPubkey) {
+    var result = xpubkeyToAddress(xPubkey);
+    if (result != null) {
+      return result[0];
+    }
+    return null;
+  }
+
+  Uint8List varIntBytes(BigInt i) {
+    // Based on: https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer
+    if (i < BigInt.from(0xfd)) {
+      return i.toBytes;
+    } else if (i <= BigInt.from(0xffff)) {
+      return Uint8List.fromList([0xfd, ...i.toBytes]);
+      // Not sure if this is correct as the python uses `return b"\xfd" + int_to_bytes(i, 2)`, see https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/bitcoin.py#L369
+    } else if (i <= BigInt.from(0xffffffff)) {
+      return Uint8List.fromList([0xfe, ...i.toBytes]);
+    } else {
+      return Uint8List.fromList([0xff, ...i.toBytes]);
+      // Not sure if this is correct as the python uses `return b"\xff" + int_to_bytes(i, 8)`, see https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/bitcoin.py#L369
+    }
   }
 
   List<Uint8List> calcCommonSighash({bool useCache = false}) {
-    throw UnimplementedError();
+    List<Input> inputs = this.inputs;
+    int nOutputs =
+        outputs.length; // Assuming there's a 'outputs' getter in your class
+    List<int> meta = [inputs.length, nOutputs];
+
+    if (useCache) {
+      try {
+        List<int> cmeta = _cachedSighashTup[0];
+        List<Uint8List> res = _cachedSighashTup[1];
+        if (listEquals(cmeta, meta)) {
+          return res;
+        } else {
+          _cachedSighashTup = null;
+        }
+      } catch (e) {
+        // Handle the exception or simply continue
+      }
+    }
+
+    Uint8List varIntBytes(BigInt i) {
+      // Based on: https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer
+      if (i < BigInt.from(0xfd)) {
+        return i.toBytes;
+      } else if (i <= BigInt.from(0xffff)) {
+        return Uint8List.fromList([0xfd, ...i.toBytes]);
+        // Not sure if this is correct as the python uses `return b"\xfd" + int_to_bytes(i, 2)`, see https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/bitcoin.py#L369
+      } else if (i <= BigInt.from(0xffffffff)) {
+        return Uint8List.fromList([0xfe, ...i.toBytes]);
+      } else {
+        return Uint8List.fromList([0xff, ...i.toBytes]);
+        // Not sure if this is correct as the python uses `return b"\xff" + int_to_bytes(i, 8)`, see https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/bitcoin.py#L369
+      }
+    }
+
+    Uint8List hashPrevouts = Hash(Uint8List.fromList(inputs
+        .map((txin) => serializeOutpointBytes(txin))
+        .expand((x) => x)
+        .toList()));
+
+    Uint8List hashSequence = Hash(Uint8List.fromList(inputs
+        .map((txin) => intToBytes(txin['sequence'] ?? 0xffffffff - 1, 4))
+        .expand((x) => x)
+        .toList()));
+
+    Uint8List hashOutputs = Hash(Uint8List.fromList(
+        List.generate(nOutputs, (n) => serializeOutputNBytes(n))
+            .expand((x) => x)
+            .toList()));
+
+    _cachedSighashTup = [
+      meta,
+      [hashPrevouts, hashSequence, hashOutputs]
+    ];
+    return [hashPrevouts, hashSequence, hashOutputs];
   }
 
   Uint8List serializeOutputNBytes(int n) {
