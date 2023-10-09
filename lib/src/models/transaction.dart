@@ -98,6 +98,7 @@ class Transaction {
     Uint8List preimageScript = getPreimageScript(txin).toUint8ListFromHex;
 
     /*
+    // TODO Token-handling.
     var inputToken = txin['token_data'];
     Uint8List serInputToken;
     if (inputToken != null) {
@@ -121,10 +122,11 @@ class Transaction {
       throw FusionError(
           'InputValueMissing'); // Adjust the error type based on your Dart codebase
     }
-    Uint8List nSequence = BigInt.from(txin.sequence).toBytes;
-    // TODO txin.sequence, was `txin['sequence'] ?? 0xffffffff - 1`.
+    Uint8List nSequence =
+        BigInt.from(txin.sequence).toBytes; // TODO txin.sequence
+    // Was `txin['sequence'] ?? 0xffffffff - 1`.
 
-    var hashPrevouts, hashSequence, hashOutputs;
+    Uint8List hashPrevouts, hashSequence, hashOutputs;
     // Unpack values from calcCommonSighash function
     (hashPrevouts, hashSequence, hashOutputs) = calcCommonSighash(
         useCache: useCache); // TODO fix this python-transliterationalism.
@@ -222,8 +224,10 @@ class Transaction {
   }
 
   List<dynamic>? xpubkeyToAddress(String xPubkey) {
+    coinlib.HDPublicKey? hdPubkey = coinlib.HDPublicKey.decode(xPubkey);
     if (xPubkey.startsWith('fd')) {
-      String address = bitcoin.scriptToAddress(xPubkey.substring(2));
+      String address = coinlib.bitcoin.scriptToAddress(xPubkey.substring(2));
+      // coinlib.P2PKHAddress.fromPublicKey(pubkey, version: version).toString or similar?
       return [xPubkey, address];
     }
 
@@ -275,7 +279,8 @@ class Transaction {
     }
   }
 
-  List<Uint8List> calcCommonSighash({bool useCache = false}) {
+  ({Uint8List hashPrevouts, Uint8List hashSequence, Uint8List hashOutputs})
+      calcCommonSighash({bool useCache = false}) {
     List<Input> inputs = this.inputs;
     int nOutputs =
         outputs.length; // Assuming there's a 'outputs' getter in your class
@@ -283,7 +288,8 @@ class Transaction {
 
     if (useCache) {
       try {
-        List<int> cmeta = _cachedSighashTup[0];
+        List<int> cmeta =
+            _cachedSighashTup[0]; // TODO cache sighash tuple (record).
         List<Uint8List> res = _cachedSighashTup[1];
         if (listEquals(cmeta, meta)) {
           return res;
@@ -317,21 +323,31 @@ class Transaction {
             .toList()))
         .bytes);
 
-    Uint8List hashSequence = Hash(Uint8List.fromList(inputs
-        .map((txin) => intToBytes(txin['sequence'] ?? 0xffffffff - 1, 4))
-        .expand((x) => x)
-        .toList()));
-
-    Uint8List hashOutputs = Hash(Uint8List.fromList(
-        List.generate(nOutputs, (n) => serializeOutputNBytes(n))
+    Uint8List hashSequence = Uint8List.fromList(crypto.sha256
+        .convert(Uint8List.fromList(inputs
+            .map((txin) => txin
+                .sequence // TODO BigInt txin.sequence.  Was `intToBytes(txin.sequence ?? 0xffffffff - 1, 4))`.
+                .toBytes as Uint8List)
             .expand((x) => x)
-            .toList()));
+            .toList()))
+        .bytes);
+
+    Uint8List hashOutputs = Uint8List.fromList(crypto.sha256
+        .convert(Uint8List.fromList(
+            List.generate(nOutputs, (n) => serializeOutputNBytes(n))
+                .expand((x) => x)
+                .toList()))
+        .bytes);
 
     _cachedSighashTup = [
       meta,
       [hashPrevouts, hashSequence, hashOutputs]
-    ];
-    return [hashPrevouts, hashSequence, hashOutputs];
+    ]; // TODO cache sighash tuple (record).
+    return (
+      hashPrevouts: hashPrevouts,
+      hashSequence: hashSequence,
+      hashOutputs: hashOutputs
+    );
   }
 
   Uint8List serializeOutputNBytes(int n) {
