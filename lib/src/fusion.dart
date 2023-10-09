@@ -17,7 +17,6 @@ import 'package:fusiondart/src/extensions/on_list_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/blind_signature_request.dart';
-import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/models/transaction.dart';
 import 'package:fusiondart/src/models/utxo_dto.dart';
@@ -1568,19 +1567,20 @@ class Fusion {
         for (int i = 0; i < allSigs.length; i++) {
           List<int> sigBytes = allSigs[i];
           String sig = "${base64.encode(sigBytes)}41";
-          Input inp = tx.inputs[i];
+          bitbox.Input inp = tx.inputs[i];
           if (sig.length != 64) {
             throw FusionError('server relayed bad signature');
           }
 
           final cIn = coinlib.P2PKHInput(
             prevOut: coinlib.OutPoint(
-              Uint8List.fromList(inp.prevTxid),
-              inp.prevIndex,
+              inp.hash!,
+              inp.index!,
             ),
             publicKey: coinlib.ECPublicKey.fromHex(
-              Uint8List.fromList(inp.pubKey).toHex,
+              inp.pubkeys![0]!.toHex,
             ),
+            // TODO validate null assertions above (hash!, index!, pubkeys![0]!.toHex).
             insig: coinlib.InputSignature.fromBytes(
               base64Decode(sig),
             ),

@@ -135,8 +135,10 @@ class Transaction {
     Uint8List nSequence = BigInt.from(txin.sequence ?? 0xffffffff - 1).toBytes;
     // TODO verify default of 0xffffffff - 1 is acceptable.
 
+    /*
     final amount = txin.value.toBytesPadded(8);
     final nSequence = BigInt.from(txin.sequence).toBytesPadded(4);
+     */
 
     // Unpack values from calcCommonSighash function
     ({
