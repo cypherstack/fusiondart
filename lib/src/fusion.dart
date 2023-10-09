@@ -65,6 +65,7 @@ class Fusion {
       _getTransactionJson;
   late final Future<Uint8List> Function(List<int> pubKey)
       _getPrivateKeyForPubKey;
+  late final Future<String> Function(String txHex) _broadcastTransaction;
 
   /// Constructor that sets up a Fusion object.
   Fusion(this._fusionParams);
@@ -87,6 +88,7 @@ class Fusion {
         getTransactionJson,
     required final Future<Uint8List> Function(List<int> pubKey)
         getPrivateKeyForPubKey,
+    required final Future<String> Function(String txHex) broadcastTransaction,
   }) async {
     _getAddresses = getAddresses;
     _getInputsByAddress = getInputsByAddress;
@@ -97,6 +99,7 @@ class Fusion {
     _updateStatusCallback = updateStatusCallback;
     _getTransactionJson = getTransactionJson;
     _getPrivateKeyForPubKey = getPrivateKeyForPubKey;
+    _broadcastTransaction = broadcastTransaction;
 
     // Load coinlib.
     await coinlib.loadCoinlib();
@@ -1610,6 +1613,10 @@ class Fusion {
         // Finalize transaction details and update wallet label.
         assert(txn.complete);
         String txHex = txn.toHex();
+
+        final txid = await _broadcastTransaction(txHex);
+
+        assert(txid == txn.txid);
 
         String sumInStr = Utilities.formatSatoshis(sumIn, numZeros: 8);
         String feeStr = totalFee.toString();
