@@ -63,6 +63,8 @@ class Fusion {
   late final void Function(FusionStatus) _updateStatusCallback;
   late final Future<Map<String, dynamic>> Function(String txid)
       _getTransactionJson;
+  late final Future<Uint8List> Function(List<int> pubKey)
+      _getPrivateKeyForPubKey;
 
   /// Constructor that sets up a Fusion object.
   Fusion(this._fusionParams);
@@ -83,6 +85,8 @@ class Fusion {
     required final void Function(FusionStatus) updateStatusCallback,
     required final Future<Map<String, dynamic>> Function(String txid)
         getTransactionJson,
+    required final Future<Uint8List> Function(List<int> pubKey)
+        getPrivateKeyForPubKey,
   }) async {
     _getAddresses = getAddresses;
     _getInputsByAddress = getInputsByAddress;
@@ -92,6 +96,7 @@ class Fusion {
     _getChainHeight = getChainHeight;
     _updateStatusCallback = updateStatusCallback;
     _getTransactionJson = getTransactionJson;
+    _getPrivateKeyForPubKey = getPrivateKeyForPubKey;
 
     // Load coinlib.
     await coinlib.loadCoinlib();
@@ -1490,10 +1495,8 @@ class Fusion {
         if (myCompIdx == -1) continue; // not my input
 
         // Extract public and private keys.
-        // TODO fix getPubKey, getPrivKey.
-        // See https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/fusion.py#L971C44-L971C44
-        final pubKey = inp.getPubKey(0); // cast/convert to PublicKey?
-        final sec = inp.getPrivKey(0); // cast/convert to SecretKey?
+        final pubKey = inp.pubkeys!.first!; // cast/convert to PublicKey?
+        final sec = await _getPrivateKeyForPubKey(pubKey);
 
         // Calculate sigHash for signing.
         final preimageBytes = tx.serializePreimageBytes(
