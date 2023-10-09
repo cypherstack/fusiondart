@@ -1,15 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:bitbox/bitbox.dart' as bitbox;
-import 'package:coinlib/coinlib.dart' as coinlib;
-import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
-import 'package:fusiondart/src/extensions/on_list_int.dart';
-import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
-import 'package:fusiondart/src/models/input.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 
@@ -107,7 +102,7 @@ class Transaction {
 
     bitbox.Input txin = inputs[i];
     Uint8List outpoint = serializeOutpointBytes(txin);
-    Uint8List preimageScript = getPreimageScript(txin).toUint8ListFromHex;
+    Uint8List preimageScript = getPreimageScript(txin);
 
     final Uint8List serInputToken;
     // TODO handle tokens.
@@ -190,103 +185,15 @@ class Transaction {
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L610
   static Uint8List serializeOutpointBytes(bitbox.Input txin) {
     return Uint8List.fromList([
-      ...hex.encode(txin.hash!.reversed as List<int>).toUint8ListFromHex,
-      // TODO is Iterable<int> as List<int> kosher?
-      ...BigInt.from(txin.index ?? 0).toBytes
-      // TODO use better default index than 0.
+      ...txin.hash!, // TODO Does this need reversing here??
+      // ...hex.encode(txin.prevTxid.reversed as List<int>).toUint8ListFromHex,
+      ...BigInt.from(txin.index!).toBytesPadded(4),
     ]);
   }
 
   /// Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L589
-  static String getPreimageScript(bitbox.Input txin) {
-    String type = txin.type; // TODO Input.type
-
-    if (type == 'p2pkh') {
-      return txin.address // TODO Input.address
-          .toScript() // TODO Address.toScript
-          .toHex();
-    } else if (type == 'p2sh') {
-      List<String> pubkeys, xPubkeys = getSortedPubkeys(txin);
-      return multisigScript(
-          pubkeys,
-          txin[
-              'num_sig']); // Implement or reference the multisigScript function
-    } else if (type == 'p2pk') {
-      String pubkey = txin['pubkeys'][0];
-      return publicKeyToP2pkScript(
-          pubkey); // Implement or reference the publicKeyToP2pkScript function
-    } else if (type == 'unknown') {
-      return txin['scriptCode'];
-    } else {
-      throw Exception('Unknown txin type $type');
-    }
-  }
-
-  /// Sort pubkeys and x_pubkeys, using the order of pubkeys
-  ///
-  /// Note: this function is CRITICAL to get the correct order of pubkeys in
-  /// multisignatures; avoid changing.
-  List<List<dynamic>> getSortedPubkeys(bitbox.Input txin) {
-    List<String> xPubKeys =
-        txin.xPubKeys; // TODO Input.xPubKeys and properly type XPUBs.
-    List<String>? pubKeys =
-        txin.pubKeys; // TODO Input.pubKeys and properly type public key.
-
-    if (pubKeys == null) {
-      pubKeys = xPubKeys
-          .map((x) => xpubkeyToPubkey(x)!)
-          .toList(); // TODO validate null assertion.
-
-      var zipped =
-          List.generate(pubKeys!.length, (i) => [pubKeys[i], xPubKeys[i]]);
-      zipped.sort((a, b) => a[0].compareTo(b[0]));
-
-      txin.pubKeys = pubKeys = [for (var item in zipped) item[0]];
-      txin.xPubKeys = xPubKeys = [for (var item in zipped) item[1]];
-    }
-
-    return [pubKeys, xPubKeys];
-  }
-
-  List<String, String>? xpubkeyToAddress(String xPubkey) {
-    if (xPubkey.startsWith('fd')) {
-      String address = bitbox.HDNode.fromXPub(xPubkey).toCashAddress();
-      return [xPubkey, address];
-    }
-
-    String? pubKey;
-
-    if (['02', '03', '04'].contains(xPubkey.substring(0, 2))) {
-      pubKey = xPubkey;
-    } else if (xPubkey.startsWith('ff')) {
-      pubKey = bitbox.HDNode.fromXPub(xPubkey).publicKey;
-    } else if (xPubkey.startsWith('fe')) {
-      var result = bitbox.HDNode.fromXPub(xPubkey);
-      /*
-      var result = OldKeyStore.parseXpubkey(xPubkey);
-      String mpk = result[0];
-      var s = result[1];
-      pubkey = OldKeyStore.getPubkeyFromMpk(result., s[0], s[1]);
-      */
-      pubKey = result.publicKey;
-    } else {
-      throw Exception("Cannot parse pubkey");
-    }
-
-    if (pubKey != null) {
-      // bitbox.Address address = bitbox.Address.fromPubkey(pubKey);
-      bitbox.Address address = bitbox.HDNode.fromXPub(xPubkey);
-      return [pubKey, address];
-    }
-    return null; // Return null if no pubkey found
-  }
-
-  String? xpubkeyToPubkey(String xPubkey) {
-    var result = xpubkeyToAddress(xPubkey);
-    if (result != null) {
-      return result[0];
-    }
-    return null;
+  static Uint8List getPreimageScript(bitbox.Input txin) {
+    return txin.script!;
   }
 
   Uint8List varIntBytes(BigInt i) {
@@ -311,35 +218,20 @@ class Transaction {
         outputs.length; // Assuming there's a 'outputs' getter in your class
     List<int> meta = [inputs.length, nOutputs];
 
-    if (useCache) {
-      try {
-        List<int> cmeta =
-            _cachedSighashTup[0]; // TODO cache sighash tuple (record).
-        List<Uint8List> res = _cachedSighashTup[1];
-        if (listEquals(cmeta, meta)) {
-          return res;
-        } else {
-          _cachedSighashTup = null;
-        }
-      } catch (e) {
-        // Handle the exception or simply continue
-      }
-    }
-
-    Uint8List varIntBytes(BigInt i) {
-      // Based on: https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer
-      if (i < BigInt.from(0xfd)) {
-        return i.toBytes;
-      } else if (i <= BigInt.from(0xffff)) {
-        return Uint8List.fromList([0xfd, ...i.toBytes]);
-        // Not sure if this is correct as the python uses `return b"\xfd" + int_to_bytes(i, 2)`, see https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/bitcoin.py#L369
-      } else if (i <= BigInt.from(0xffffffff)) {
-        return Uint8List.fromList([0xfe, ...i.toBytes]);
-      } else {
-        return Uint8List.fromList([0xff, ...i.toBytes]);
-        // Not sure if this is correct as the python uses `return b"\xff" + int_to_bytes(i, 8)`, see https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/bitcoin.py#L369
-      }
-    }
+    // if (useCache) {
+    //   try {
+    //     List<int> cmeta =
+    //         _cachedSighashTup[0]; // TODO cache sighash tuple (record).
+    //     List<Uint8List> res = _cachedSighashTup[1];
+    //     if (listEquals(cmeta, meta)) {
+    //       return res;
+    //     } else {
+    //       _cachedSighashTup = null;
+    //     }
+    //   } catch (e) {
+    //     // Handle the exception or simply continue
+    //   }
+    // }
 
     Uint8List hashPrevouts = Uint8List.fromList(crypto.sha256
         .convert(Uint8List.fromList(inputs
@@ -350,9 +242,8 @@ class Transaction {
 
     Uint8List hashSequence = Uint8List.fromList(crypto.sha256
         .convert(Uint8List.fromList(inputs
-            .map((txin) => txin
-                .sequence // TODO BigInt txin.sequence.  Was `intToBytes(txin.sequence ?? 0xffffffff - 1, 4))`.
-                .toBytes as Uint8List)
+            .map((txin) =>
+                BigInt.from(txin.sequence ?? 0xffffffff - 1).toBytesPadded(4))
             .expand((x) => x)
             .toList()))
         .bytes);
@@ -364,10 +255,10 @@ class Transaction {
                 .toList()))
         .bytes);
 
-    _cachedSighashTup = [
-      meta,
-      [hashPrevouts, hashSequence, hashOutputs]
-    ]; // TODO cache sighash tuple (record).
+    // _cachedSighashTup = [
+    //   meta,
+    //   [hashPrevouts, hashSequence, hashOutputs]
+    // ]; // TODO cache sighash tuple (record).
     return (
       hashPrevouts: hashPrevouts,
       hashSequence: hashSequence,
