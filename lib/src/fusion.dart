@@ -53,8 +53,7 @@ class Fusion {
 
   // Private late finals used for dependency injection.
   late final Future<List<Address>> Function() _getAddresses;
-  late final Future<List<bitbox.Input>> Function(String address)
-      _getInputsByAddress;
+  late final Future<List<UtxoDTO>> Function(String address) _getInputsByAddress;
   late final Future<List<Map<String, dynamic>>> Function(String address)
       _getTransactionsByAddress;
   late final Future<List<Address>> Function(int numberOfAddresses)
@@ -73,7 +72,7 @@ class Fusion {
   /// The methods injected here are used for various operations throughout the fusion process.
   Future<void> initFusion({
     required final Future<List<Address>> Function() getAddresses,
-    required final Future<List<bitbox.Input>> Function(String address)
+    required final Future<List<UtxoDTO>> Function(String address)
         getInputsByAddress,
     required final Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
@@ -152,7 +151,7 @@ class Fusion {
   // Map<int, List<int>> tierOutputs = {}; // Associates tiers with outputs.
   // Not sure if this should be using the Output model.
   ({
-    List<bitbox.Input> inputs,
+    List<UtxoDTO> inputs,
     Map<int, List<int>> tierOutputs,
     int safetySumIn,
     Map<int, int> safetyExcessFees,
@@ -200,23 +199,23 @@ class Fusion {
   ///
   /// Returns:
   ///   Future<void> Returns a future that completes when the coins have been added.
-  Future<List<bitbox.Input>> addCoinsFromWallet(
+  Future<List<UtxoDTO>> addCoinsFromWallet(
     List<UtxoDTO> utxoList,
   ) async {
     // TODO sanity check the state of `coins` before adding to it.
 
     // Convert each UTXO info to an Input and add to 'coins'.
 
-    return utxoList
-        .map(
-          (e) => bitbox.Input.fromWallet(
-            txId: e.txid,
-            vout: e.vout,
-            value: BigInt.from(e.value),
-            pubKey: e.pubKey,
-          ),
-        )
-        .toList();
+    return utxoList;
+    // .map(
+    //   (e) => bitbox.Input.fromWallet(
+    //     txId: e.txid,
+    //     vout: e.vout,
+    //     value: BigInt.from(e.value),
+    //     pubKey: e.pubKey,
+    //   ),
+    // )
+    // .toList();
 
     // TODO add validation and throw error if invalid UTXO detected
   }
@@ -244,7 +243,7 @@ class Fusion {
   /// - FusionError: If any step in the fusion operation fails.
   /// - Exception: For general exceptions.
   Future<void> fuse({
-    required List<bitbox.Input> inputsFromWallet,
+    required List<UtxoDTO> inputsFromWallet,
     required coinlib.NetworkParams network,
   }) async {
     Utilities.debugPrint("DEBUG FUSION 223...fusion run....");
@@ -577,7 +576,7 @@ class Fusion {
       })> registerAndWait({
     required Connection connection,
     required ({
-      List<Input> inputs,
+      List<UtxoDTO> inputs,
       Map<int, List<int>> tierOutputs,
       int safetySumIn,
       Map<int, int> safetyExcessFees,
@@ -1113,7 +1112,8 @@ class Fusion {
           sum +
           BigInt.from(
             Utilities.componentFee(
-                input.sizeOfInput(), _serverParams!.componentFeeRate),
+                Utilities.sizeOfInput(Uint8List.fromList(input.pubKey)),
+                _serverParams!.componentFeeRate),
           ),
     );
 
@@ -1127,7 +1127,7 @@ class Fusion {
 
     final sumIn = _allocatedOutputs!.inputs.fold(
       BigInt.zero,
-      (sum, e) => sum + e.value,
+      (sum, e) => sum + BigInt.from(e.value),
     );
     final sumOut = _registerAndWaitResult!.outputs
         .fold(BigInt.zero, (sum, e) => sum + BigInt.from(e.value));
@@ -1476,7 +1476,7 @@ class Fusion {
           List<CovertTransactionSignature?>.filled(myComponents.length, null);
 
       // Combine transaction input indices and their corresponding inputs.
-      List<(int, Input)> myCombined = List<(int, Input)>.generate(
+      List<(int, bitbox.Input)> myCombined = List<(int, bitbox.Input)>.generate(
         inputIndices.length,
         (index) => (inputIndices[index], tx.inputs[index]),
       );
@@ -1484,7 +1484,7 @@ class Fusion {
       // Sign the covert transaction.
       for (int i = 0; i < myCombined.length; i++) {
         int cIdx = myCombined[i].$1;
-        Input inp = myCombined[i].$2;
+        final inp = myCombined[i].$2;
 
         // Skip if not my input.
         int myCompIdx = myComponentIndexes.indexOf(cIdx);

@@ -1,13 +1,13 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:bitbox/bitbox.dart' as bitbox;
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/connection.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
+import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/models/protobuf.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
@@ -38,24 +38,21 @@ abstract final class OutputHandling {
   ///   unconfirmed coins, and a boolean flag indicating if there are coinbase coins.
   static Future<
       (
-        List<(String, List<bitbox.Input>)>, // Eligible.
-        List<(String, List<bitbox.Input>)>, // Ineligible.
+        List<(String, List<UtxoDTO>)>, // Eligible.
+        List<(String, List<UtxoDTO>)>, // Ineligible.
         BigInt, // sumValue.
         bool, // hasUnconfirmed.
         bool // hasCoinbase.
       )> selectCoins(
-    List<bitbox.Input> _coins, {
+    List<UtxoDTO> _coins, {
     required int currentChainHeight,
     required Future<List<Address>> Function() getAddresses,
-    required Future<List<bitbox.Input>> Function(String address)
-        getInputsByAddress,
+    required Future<List<UtxoDTO>> Function(String address) getInputsByAddress,
     required Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
   }) async {
-    List<(String, List<bitbox.Input>)> eligible =
-        []; // List of eligible inputs.
-    List<(String, List<bitbox.Input>)> ineligible =
-        []; // List of ineligible inputs.
+    List<(String, List<UtxoDTO>)> eligible = []; // List of eligible inputs.
+    List<(String, List<UtxoDTO>)> ineligible = []; // List of ineligible inputs.
     bool hasUnconfirmed = false; // Are there unconfirmed coins?
     bool hasCoinbase = false; // Are there coinbase coins?
     BigInt sumValue =
@@ -65,7 +62,7 @@ abstract final class OutputHandling {
     // Loop through the addresses in the wallet.
     for (Address address in await getAddresses()) {
       // Get the coins for the address.
-      List<bitbox.Input> acoins = await getInputsByAddress(address.address);
+      List<UtxoDTO> acoins = await getInputsByAddress(address.address);
 
       // Check if the address has any coins.
       if (acoins.isEmpty) continue;
@@ -136,21 +133,21 @@ abstract final class OutputHandling {
   ///
   /// Returns:
   ///   A `Future<List<Input>>` that completes with a list of random coins.
-  static Future<List<bitbox.Input>> selectRandomCoins(
+  static Future<List<UtxoDTO>> selectRandomCoins(
     double fraction,
-    List<(String, List<bitbox.Input>)> eligible,
+    List<(String, List<UtxoDTO>)> eligible,
     Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
   ) async {
     // Shuffle the eligible buckets.
-    var addrCoins = List<(String, List<bitbox.Input>)>.from(eligible);
+    var addrCoins = List<(String, List<UtxoDTO>)>.from(eligible);
     addrCoins.shuffle();
 
     // Initialize the result set.
     Set<String> resultTxids = {};
 
     // Initialize the result list.
-    List<bitbox.Input> result = [];
+    List<UtxoDTO> result = [];
 
     // Counts the number of coins in the result so far.
     int numCoins = 0;
@@ -252,14 +249,14 @@ abstract final class OutputHandling {
   /// - FusionError: if any constraints or limits are violated.
   static Future<
       ({
-        List<bitbox.Input> inputs,
+        List<UtxoDTO> inputs,
         Map<int, List<int>> tierOutputs,
         int safetySumIn,
         Map<int, int> safetyExcessFees,
       })> allocateOutputs({
     required Connection connection,
     required FusionStatus status,
-    required List<bitbox.Input> coins,
+    required List<UtxoDTO> coins,
     required int currentChainHeight,
     required ({
       int numComponents,
@@ -269,8 +266,7 @@ abstract final class OutputHandling {
       List<int> availableTiers,
     }) serverParams,
     required Future<List<Address>> Function() getAddresses,
-    required Future<List<bitbox.Input>> Function(String address)
-        getInputsByAddress,
+    required Future<List<UtxoDTO>> Function(String address) getInputsByAddress,
     required Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
   }) async {
@@ -284,8 +280,8 @@ abstract final class OutputHandling {
 
     // Get the coins.
     (
-      List<(String, List<bitbox.Input>)>, // Eligible.
-      List<(String, List<bitbox.Input>)>, // Ineligible.
+      List<(String, List<UtxoDTO>)>, // Eligible.
+      List<(String, List<UtxoDTO>)>, // Ineligible.
       BigInt, // sumValue.
       bool, // hasUnconfirmed.
       bool // hasCoinbase _selections = await selectCoins(_inputs);
@@ -298,11 +294,11 @@ abstract final class OutputHandling {
     );
 
     // Initialize the eligible set.
-    List<bitbox.Input> eligible = [];
+    List<UtxoDTO> eligible = [];
 
     // Loop through each key-value pair in the Map to extract Inputs and put them in the Set.
-    for ((String, List<bitbox.Input>) inputList in _selections.$1) {
-      for (bitbox.Input input in inputList.$2) {
+    for ((String, List<UtxoDTO>) inputList in _selections.$1) {
+      for (final input in inputList.$2) {
         if (!eligible.contains(input)) {
           // Shouldn't this be accomplished by the Set?
           eligible.add(input);
@@ -350,7 +346,8 @@ abstract final class OutputHandling {
         (sum, input) =>
             sum +
             Utilities.componentFee(
-                input.sizeOfInput(), serverParams.componentFeeRate));
+                Utilities.sizeOfInput(Uint8List.fromList(input.pubKey)),
+                serverParams.componentFeeRate));
     // TODO implement sizeOfInput(), probably in Utilities.
     /*
     // Equivalent to the fold above.
@@ -468,7 +465,7 @@ abstract final class OutputHandling {
   }) genComponents(
     coinlib.NetworkParams network,
     int numBlanks,
-    List<bitbox.Input> inputs,
+    List<UtxoDTO> inputs,
     List<Output> outputs,
     int feerate,
   ) {
@@ -481,20 +478,21 @@ abstract final class OutputHandling {
     List<({Component component, BigInt value})> components = [];
 
     // Generate components.
-    for (bitbox.Input input in inputs) {
+    for (final input in inputs) {
       // Calculate fee.
-      int fee = Utilities.componentFee(input.sizeOfInput(), feerate);
+      int fee = Utilities.componentFee(
+          Utilities.sizeOfInput(Uint8List.fromList(input.pubKey)), feerate);
       // TODO implement sizeOfInput().
 
       // Create input component.
       final comp = Component()
         ..input = InputComponent(
           prevTxid: Uint8List.fromList(
-            input.prevTxid.reversed.toList(),
+            input.txid.toUint8ListFromHex.reversed.toList(),
           ), // Why is this reversed?
-          prevIndex: input.prevIndex,
+          prevIndex: input.vout,
           pubkey: input.pubKey,
-          amount: Int64.parseHex((input.value).toHex),
+          amount: Int64.parseHex(BigInt.from(input.value).toHex),
         );
 
       // Add component and fee to list.
