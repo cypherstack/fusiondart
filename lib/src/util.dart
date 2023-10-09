@@ -713,4 +713,23 @@ abstract class Utilities {
 
     return s * jacobi(n % a1, a1);
   }
+
+  // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/util.py#L51-L62
+  static int sizeOfInput(Uint8List pubKey) {
+    // # Sizes of inputs after signing:
+    // #   32+8+1+1+[length of sig]+1+[length of pubkey]
+    // #   == 141 for compressed pubkeys, 173 for uncompressed.
+    // # (we use schnorr signatures, always)
+    // assert 1 < len(pubkey) < 76  # need to assume regular push opcode
+    assert(pubKey.length > 1 && pubKey.length < 76);
+    return 108 + pubKey.length;
+  }
+
+  // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/util.py#L51-L62
+  static int sizeOfOutput(Uint8List scriptPubKey) {
+    // # == 34 for P2PKH, 32 for P2SH
+    // assert len(scriptpubkey) < 253  # need to assume 1-byte varint
+    assert(scriptPubKey.length < 253);
+    return 9 + scriptPubKey.length;
+  }
 }
