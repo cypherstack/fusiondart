@@ -71,7 +71,7 @@ class Fusion {
     required final Future<List<Address>> Function() getAddresses,
     required final Future<List<Input>> Function(String address)
         getInputsByAddress,
-    required final Future<List<Map<String, dynamic>>> Function(String address)
+    required final Future<List<Transaction>> Function(String address)
         getTransactionsByAddress,
     required final Future<List<Address>> Function(int numberOfAddresses)
         getUnusedReservedChangeAddresses,

@@ -101,9 +101,9 @@ class Transaction {
     if (txin.hasToken) {
       throw Exception("Tried to use an input with token data in fusion!");
       // serInputToken = Uint8List.fromList([0xef, ...inputToken.serialize()]);
-      // // See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L760
-      // // and https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/token.py#L165
-      // // 0xef should be moved to a Bitcoin Cash opcode enum or similar, see  https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/bitcoin.py#L252
+      // See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L760
+      // and https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/token.py#L165
+      // 0xef should be moved to a Bitcoin Cash opcode enum or similar, see  https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/bitcoin.py#L252
     } else {
       serInputToken = Uint8List(0);
     }
