@@ -47,6 +47,14 @@ class Input {
   List<Uint8List> signatures = [];
   // Signatures are added in the `sign` method and verified in the `verify` method.
 
+  int get sequence {
+    throw UnimplementedError();
+  }
+
+  int get tokenData {
+    throw UnimplementedError();
+  }
+
   /// Constructor for Input class.
   Input({
     required this.prevTxid,

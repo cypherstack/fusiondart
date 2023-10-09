@@ -81,7 +81,7 @@ class Transaction {
   /// - [useCache] (optional): Whether to use cached data.
   ///
   /// Returns:
-  ///   A list of integers representing the serialized preimage.
+  ///   A Uint8List representing the serialized preimage.
   Uint8List serializePreimageBytes(int i,
       {int nHashType = 0x00000041, bool useCache = false}) {
     if ((nHashType & 0xff) != 0x41) {
@@ -93,13 +93,12 @@ class Transaction {
     Uint8List hashTypeBytes = BigInt.from(nHashType).toBytes;
     Uint8List nLocktime = locktime.toBytes;
 
-    var txin = inputs[i];
+    Input txin = inputs[i];
     Uint8List outpoint = serializeOutpointBytes(txin);
     Uint8List preimageScript = getPreimageScript(txin).toUint8ListFromHex;
 
-    /*
-    // TODO Token-handling.
-    var inputToken = txin['token_data'];
+    // TODO fix token-handling.
+    var inputToken = txin.tokenData; // TODO implement tokenData getter.
     Uint8List serInputToken;
     if (inputToken != null) {
       serInputToken = Uint8List.fromList([
@@ -109,7 +108,6 @@ class Transaction {
     } else {
       serInputToken = Uint8List(0);
     }
-    */
 
     Uint8List scriptCode = Uint8List.fromList([
       ...varIntBytes(BigInt.from(preimageScript.length)),
@@ -123,13 +121,23 @@ class Transaction {
           'InputValueMissing'); // Adjust the error type based on your Dart codebase
     }
     Uint8List nSequence =
-        BigInt.from(txin.sequence).toBytes; // TODO txin.sequence
+        BigInt.from(txin.sequence).toBytes; // TODO fix txin.sequence getter
     // Was `txin['sequence'] ?? 0xffffffff - 1`.
 
-    Uint8List hashPrevouts, hashSequence, hashOutputs;
     // Unpack values from calcCommonSighash function
-    (hashPrevouts, hashSequence, hashOutputs) = calcCommonSighash(
+    ({
+      Uint8List hashOutputs,
+      Uint8List hashPrevouts,
+      Uint8List hashSequence
+    }) commonSighash = calcCommonSighash(
         useCache: useCache); // TODO fix this python-transliterationalism.
+
+    Uint8List hashPrevouts, hashSequence, hashOutputs;
+    (hashPrevouts, hashSequence, hashOutputs) = (
+      commonSighash.hashPrevouts,
+      commonSighash.hashSequence,
+      commonSighash.hashOutputs,
+    );
 
     Uint8List preimage = Uint8List.fromList([
       ...nVersion,
