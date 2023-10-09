@@ -55,10 +55,6 @@ class Input {
     throw UnimplementedError('hasToken is not implemented yet.');
   }
 
-  bool get tokenData {
-    throw UnimplementedError('tokenData is not implemented yet.');
-  }
-
   /// Constructor for Input class.
   Input({
     required this.prevTxid,
