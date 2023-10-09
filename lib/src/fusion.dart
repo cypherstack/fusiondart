@@ -63,6 +63,8 @@ class Fusion {
       _getSocksProxyAddress;
   late final Future<int> Function() _getChainHeight;
   late final void Function(FusionStatus) _updateStatusCallback;
+  late final Future<Map<String, dynamic>> Function(String txid)
+      _getTransactionJson;
 
   /// Constructor that sets up a Fusion object.
   Fusion(this._fusionParams);
@@ -81,6 +83,8 @@ class Fusion {
         getSocksProxyAddress,
     required final Future<int> Function() getChainHeight,
     required final void Function(FusionStatus) updateStatusCallback,
+    required final Future<Map<String, dynamic>> Function(String txid)
+        getTransactionJson,
   }) async {
     _getAddresses = getAddresses;
     _getInputsByAddress = getInputsByAddress;
@@ -89,6 +93,7 @@ class Fusion {
     _getSocksProxyAddress = getSocksProxyAddress;
     _getChainHeight = getChainHeight;
     _updateStatusCallback = updateStatusCallback;
+    _getTransactionJson = getTransactionJson;
 
     // Load coinlib.
     await coinlib.loadCoinlib();
