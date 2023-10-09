@@ -132,7 +132,10 @@ abstract class Utilities {
   ///
   /// Returns:
   ///   The extracted Address.
-  static Address getAddressFromOutputScript(Uint8List scriptPubKey) {
+  static Address getAddressFromOutputScript(
+    Uint8List scriptPubKey, [
+    bool fusionReserved = false,
+  ]) {
     // Throw exception if this is not a standard P2PKH address.
     if (scriptPubKey.length == 25 &&
             scriptPubKey[0] == 0x76 && // OP_DUP
@@ -152,6 +155,7 @@ abstract class Utilities {
             .fromPublicKey(coinlib.ECPublicKey.fromHex(hex.encode(pubKey)))
             .toString(),
         publicKey: pubKey,
+        fusionReserved: fusionReserved,
       );
     } else {
       throw Exception(

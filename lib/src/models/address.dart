@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:coinlib/coinlib.dart' as coinlib;
-import 'package:convert/convert.dart';
 import 'package:fusiondart/src/util.dart';
 
 /// A class representing a cryptocurrency address (Bitcoin Cash specifically for
@@ -16,46 +15,58 @@ import 'package:fusiondart/src/util.dart';
 class Address {
   /// The address as a String.
   ///
-  /// This is the only required parameter for the constructor. Can be used with
+  /// Can be used with
   /// _db.getAddress to get any of the other parameters below.
   final String address;
 
   /// The public key as a List<int>
-  final List<int>? publicKey;
+  final List<int> publicKey;
 
   /// The derivation path as a DerivationPath
-  DerivationPath? derivationPath;
+  final DerivationPath? derivationPath;
+
+  /// Should be set to true if the corresponding address in the wallet is
+  /// marked as reserved for fusion purposes
+  final bool fusionReserved;
 
   /// Constructor for Address.
   Address({
     required this.address,
-    this.publicKey,
+    required this.publicKey,
+    required this.fusionReserved,
     this.derivationPath,
   });
 
   /// Creates an Address from a script public key
-  static Address fromScriptPubKey(List<int> scriptPubKey) {
+  static Address fromScriptPubKey(
+    List<int> scriptPubKey, [
+    bool fusionReserved = false,
+  ]) {
     return Utilities.getAddressFromOutputScript(
-        Uint8List.fromList(scriptPubKey));
+      Uint8List.fromList(scriptPubKey),
+      fusionReserved,
+    );
   }
 
   /// Public constructor for testing. Calls private constructor `_create`.
-  static Address fromString(String address, coinlib.NetworkParams network) {
+  static Address fromString(
+    String address,
+    coinlib.NetworkParams network,
+    bool fusionReserved,
+  ) {
     final addr = coinlib.Address.fromString(address, network);
     return Address(
       address: addr.toString(),
       publicKey: addr.program.script.compiled, // TODO: verify
+      fusionReserved: fusionReserved,
     );
   }
 
   /// Converts the Address to its script form
   Uint8List toScript(coinlib.NetworkParams network) {
-    if (publicKey == null) {
-      throw Exception("Address must have a public key");
-    }
-
-    coinlib.ECPublicKey ecPublicKey =
-        coinlib.ECPublicKey.fromHex(hex.encode(Uint8List.fromList(publicKey!)));
+    coinlib.ECPublicKey ecPublicKey = coinlib.ECPublicKey(
+      Uint8List.fromList(publicKey),
+    );
 
     coinlib.P2PKHAddress p2pkhAddress = coinlib.P2PKHAddress.fromPublicKey(
       ecPublicKey,
@@ -75,24 +86,6 @@ class Address {
         "publicKey": publicKey,
         "derivationPath": derivationPath?.value,
       });
-
-  /// Creates an Address from a JSON-formatted String
-  static Address fromJsonString(String jsonString) {
-    try {
-      final json = jsonDecode(jsonString);
-      final DerivationPath derivationPath =
-          DerivationPath(json["derivationPath"] as String);
-      return Address(
-        address: json["addr"] as String,
-        publicKey: List<int>.from(json["publicKey"] as List),
-        derivationPath: derivationPath,
-      );
-    } catch (_) {
-      throw Exception(
-        "Failed to parse and instance of Address from $jsonString",
-      );
-    }
-  }
 }
 
 /// A class representing a derivation path.
