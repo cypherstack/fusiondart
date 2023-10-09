@@ -353,24 +353,4 @@ class Transaction {
   Uint8List serializeOutputNBytes(int n) {
     throw UnimplementedError();
   }
-
-  /// Checks if the transaction is complete.
-  ///
-  /// TODO implement.
-  ///
-  /// Returns:
-  ///   A boolean value indicating if the transaction is complete.
-  bool isComplete() {
-    throw UnimplementedError();
-  }
-
-  /// Gets the transaction ID.
-  ///
-  /// TODO implement.
-  ///
-  /// Returns:
-  ///   A string representing the transaction ID.
-  String txid() {
-    throw UnimplementedError();
-  }
 }
