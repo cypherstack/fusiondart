@@ -152,7 +152,7 @@ class Transaction {
   }
 
   // Serialize outpoint
-  static String serializeOutpoint(Map<String, dynamic> txin) {
+  static String serializeOutpoint(Input txin) {
     return serializeOutpointBytes(txin).toHex;
   }
 
@@ -164,100 +164,15 @@ class Transaction {
   }
 
   static String getPreimageScript(Input txin) {
-    String type = txin['type'];
-    if (type == 'p2pkh') {
-      return txin['address']
-          .toScript()
-          .toHex(); // Make sure there's a `toScript()` method in the Address class
-    } else if (type == 'p2sh') {
-      List<String> pubkeys, xPubkeys = getSortedPubkeys(txin);
-      return multisigScript(
-          pubkeys,
-          txin[
-              'num_sig']); // Implement or reference the multisigScript function
-    } else if (type == 'p2pk') {
-      String pubkey = txin['pubkeys'][0];
-      return publicKeyToP2pkScript(
-          pubkey); // Implement or reference the publicKeyToP2pkScript function
-    } else if (type == 'unknown') {
-      return txin['scriptCode'];
-    } else {
-      throw Exception('Unknown txin type $type');
-    }
+    throw UnimplementedError();
   }
 
   List<Uint8List> calcCommonSighash({bool useCache = false}) {
-    List<Input> inputs = this.inputs;
-    int nOutputs =
-        outputs.length; // Assuming there's a 'outputs' getter in your class
-    List<int> meta = [inputs.length, nOutputs];
-
-    if (useCache) {
-      try {
-        List<int> cmeta = _cachedSighashTup[0];
-        List<Uint8List> res = _cachedSighashTup[1];
-        if (listEquals(cmeta, meta)) {
-          return res;
-        } else {
-          _cachedSighashTup = null;
-        }
-      } catch (e) {
-        // Handle the exception or simply continue
-      }
-    }
-
-    Uint8List varIntBytes(BigInt i) {
-      // Based on: https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer
-      if (i < BigInt.from(0xfd)) {
-        return i.toBytes;
-      } else if (i <= BigInt.from(0xffff)) {
-        return Uint8List.fromList([0xfd, ...i.toBytes]);
-        // Not sure if this is correct as the python uses `return b"\xfd" + int_to_bytes(i, 2)`, see https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/bitcoin.py#L369
-      } else if (i <= BigInt.from(0xffffffff)) {
-        return Uint8List.fromList([0xfe, ...i.toBytes]);
-      } else {
-        return Uint8List.fromList([0xff, ...i.toBytes]);
-        // Not sure if this is correct as the python uses `return b"\xff" + int_to_bytes(i, 8)`, see https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/bitcoin.py#L369
-      }
-    }
-
-    Uint8List hashPrevouts = Hash(Uint8List.fromList(inputs
-        .map((txin) => serializeOutpointBytes(txin))
-        .expand((x) => x)
-        .toList()));
-
-    Uint8List hashSequence = Hash(Uint8List.fromList(inputs
-        .map((txin) => intToBytes(txin['sequence'] ?? 0xffffffff - 1, 4))
-        .expand((x) => x)
-        .toList()));
-
-    Uint8List hashOutputs = Hash(Uint8List.fromList(
-        List.generate(nOutputs, (n) => serializeOutputNBytes(n))
-            .expand((x) => x)
-            .toList()));
-
-    _cachedSighashTup = [
-      meta,
-      [hashPrevouts, hashSequence, hashOutputs]
-    ];
-    return [hashPrevouts, hashSequence, hashOutputs];
+    throw UnimplementedError();
   }
 
   Uint8List serializeOutputNBytes(int n) {
-    assert(n >= 0 && n < _outputs.length);
-    assert(_tokenDatas.length == _outputs.length);
-    var output = _outputs[n];
-    var tokenData = _tokenDatas[n];
-    var outputType = output[0];
-    var addrLikeObj = output[1];
-    var amount = output[2];
-    List<int> buf = intToBytes(amount, 8);
-    Uint8List spk = payScriptBytes(addrLikeObj);
-    Uint8List wspk = token.wrapSpk(
-        tokenData, spk); // Adjust according to Dart's token implementation
-    buf.addAll(varIntBytes(wspk.length));
-    buf.addAll(wspk);
-    return Uint8List.fromList(buf);
+    throw UnimplementedError();
   }
 
   /// Checks if the transaction is complete.
