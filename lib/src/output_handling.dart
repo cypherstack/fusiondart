@@ -10,7 +10,6 @@ import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/models/protobuf.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protocol.dart';
-import 'package:fusiondart/src/util.dart';
 
 abstract final class OutputHandling {
   /// Selects coins for fusion.
@@ -48,7 +47,7 @@ abstract final class OutputHandling {
     required int currentChainHeight,
     required Future<List<Address>> Function() getAddresses,
     required Future<List<Input>> Function(String address) getInputsByAddress,
-    required Future<List<Transaction>> Function(String address)
+    required Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
   }) async {
     List<(String, List<Input>)> eligible = []; // List of eligible inputs.
@@ -136,7 +135,8 @@ abstract final class OutputHandling {
   static Future<List<Input>> selectRandomCoins(
     double fraction,
     List<(String, List<Input>)> eligible,
-    Future<List<Transaction>> Function(String address) getTransactionsByAddress,
+    Future<List<Map<String, dynamic>>> Function(String address)
+        getTransactionsByAddress,
   ) async {
     // Shuffle the eligible buckets.
     var addrCoins = List<(String, List<Input>)>.from(eligible);
@@ -189,12 +189,10 @@ abstract final class OutputHandling {
         // We consider all txids involving the address, historical and current.
 
         // Get the transactions for the address.
-        List<Transaction> ctxs = await getTransactionsByAddress(addr);
+        List<Map<String, dynamic>> ctxs = await getTransactionsByAddress(addr);
 
         // Extract the txids from the transactions.
-        Set<String> ctxids = ctxs.map((tx) {
-          return tx.txid();
-        }).toSet();
+        Set<String> ctxids = ctxs.map((tx) => tx["txid"] as String).toSet();
 
         // Check if there are any collisions.
         var collisions = ctxids.intersection(resultTxids);
@@ -268,7 +266,7 @@ abstract final class OutputHandling {
     }) serverParams,
     required Future<List<Address>> Function() getAddresses,
     required Future<List<Input>> Function(String address) getInputsByAddress,
-    required Future<List<Transaction>> Function(String address)
+    required Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
   }) async {
     Utilities.debugPrint("DBUG allocateoutputs 746");

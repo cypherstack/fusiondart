@@ -53,7 +53,7 @@ class Fusion {
   // Private late finals used for dependency injection.
   late final Future<List<Address>> Function() _getAddresses;
   late final Future<List<Input>> Function(String address) _getInputsByAddress;
-  late final Future<List<Transaction>> Function(String address)
+  late final Future<List<Map<String, dynamic>>> Function(String address)
       _getTransactionsByAddress;
   late final Future<List<Address>> Function(int numberOfAddresses)
       _getUnusedReservedChangeAddresses;
@@ -71,7 +71,7 @@ class Fusion {
     required final Future<List<Address>> Function() getAddresses,
     required final Future<List<Input>> Function(String address)
         getInputsByAddress,
-    required final Future<List<Transaction>> Function(String address)
+    required final Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
     required final Future<List<Address>> Function(int numberOfAddresses)
         getUnusedReservedChangeAddresses,
