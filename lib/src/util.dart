@@ -155,13 +155,6 @@ abstract class Utilities {
         version: network.p2pkhPrefix,
       );
 
-      final s = coinlib.Script.decompile(scriptPubKey);
-
-      final a = coinlib.P2PKH.fromScript(s);
-
-      final addr = coinlib.P2PKHAddress.fromHash(a.pkHash, version: 1);
-
-      // Use bitcoindart to return the encoded address.
       return Address(
         address: addr.toString(),
         publicKey: [],
