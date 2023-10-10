@@ -103,7 +103,7 @@ class Transaction {
 
     bitbox.Input txin = inputs[i];
     Uint8List outpoint = _serializeOutpointBytes(txin);
-    Uint8List preimageScript = _getPreimageScript(txin);
+    Uint8List preimageScript = _getPreimageScript(txin, network);
 
     final serInputToken = Uint8List(0);
 
@@ -153,8 +153,16 @@ class Transaction {
   }
 
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L589
-  Uint8List _getPreimageScript(bitbox.Input txin) {
-    return txin.script!;
+  Uint8List _getPreimageScript(
+      bitbox.Input txin, coinlib.NetworkParams network) {
+    final adr = coinlib.P2PKHAddress.fromPublicKey(
+      coinlib.ECPublicKey.fromHex(
+        Uint8List.fromList(txin.pubkeys!.first!).toHex,
+      ),
+      version: network.p2pkhPrefix,
+    );
+
+    return adr.program.script.compiled;
   }
 
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/bitcoin.py#L369
