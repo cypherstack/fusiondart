@@ -511,7 +511,8 @@ abstract final class OutputHandling {
       List<int> script = output.addr.toScript(network);
 
       // Calculate fee.
-      int fee = Utilities.componentFee(output.sizeOfOutput(network), feerate);
+      final fee = Utilities.componentFee(
+          Utilities.sizeOfOutput(Uint8List.fromList(script)), feerate);
 
       // Create output component.
       final comp = Component()

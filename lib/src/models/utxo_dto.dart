@@ -9,5 +9,5 @@ class UtxoDTO {
     required this.vout,
     required this.value,
     required this.pubKey,
-  });
+  }) : assert(pubKey.isNotEmpty);
 }
