@@ -53,15 +53,14 @@ class Transaction {
           throw FusionError("bad component prevout");
         }
 
-        // TODO fix input.
         final input = bitbox.Input(
-            /*
-          prevTxid: inp.prevTxid, // Make sure the types are matching
-          prevIndex: inp.prevIndex,
-          pubKey: inp.pubkey,
-          value: inp.amount.toHexString().toBigIntFromHex.toInt(),
-         */
-            );
+          hash: Uint8List.fromList(inp.prevTxid),
+          index: inp.prevIndex,
+          sequence: 0xffffffff,
+          pubkeys: [Uint8List.fromList(inp.pubkey)],
+          value: inp.amount.toInt(),
+        );
+
         tx.inputs.add(input);
         inputIndices.add(i);
       } else if (comp.hasOutput()) {
