@@ -104,7 +104,7 @@ class Transaction {
 
     bitbox.Input txin = inputs[i];
     Uint8List outpoint = serializeOutpointBytes(txin);
-    Uint8List preimageScript = getPreimageScript(txin);
+    Uint8List preimageScript = txin.script!; // TODO validate null assertion.
 
     final Uint8List serInputToken;
     // TODO handle tokens.
@@ -182,11 +182,6 @@ class Transaction {
       // ...hex.encode(txin.prevTxid.reversed as List<int>).toUint8ListFromHex,
       ...BigInt.from(txin.index!).toBytesPadded(4),
     ]);
-  }
-
-  // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L589
-  static Uint8List getPreimageScript(bitbox.Input txin) {
-    return txin.script!;
   }
 
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/bitcoin.py#L369
