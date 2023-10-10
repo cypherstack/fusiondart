@@ -366,9 +366,9 @@ class CovertSubmitter {
         }
 
         Utilities.debugPrint("[${covConn.connNumber}] closing from stop");
-      } catch (e) {
+      } catch (e, s) {
         Utilities.debugPrint(
-            "_runConnection EXCEPTION for connNumber=[${covConn.connNumber}]: $e");
+            "_runConnection EXCEPTION for connNumber=[${covConn.connNumber}]: $e\n$s");
 
         // In case of any problem, if we have a slot, reassign it.
         final slotNum = covConn.slotNum;
