@@ -1,4 +1,4 @@
-import 'package:coinlib/coinlib.dart' as cl;
+import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 
@@ -14,31 +14,14 @@ class Output {
   int value;
 
   /// Destination address.
-  Address addr;
+  String address;
 
   /// Constructor for the Output class.
   ///
   /// Parameters:
   /// - [value] (required): The value of the output in satoshis as an int.
-  /// - [addr] (required): The destination address.
-  Output({required this.value, required this.addr});
-
-  /// Calculates the size of the output in bytes.
-  ///
-  /// Returns:
-  ///   The size of the output in bytes.
-  int sizeOfOutput(cl.NetworkParams network) {
-    // Assuming addr.toScript() returns a List<int> representing the scriptpubkey.
-    List<int> scriptpubkey = addr.toScript(network);
-
-    // Ensure the scriptpubkey length is less than 253 bytes.  253 is the max
-    // length of a push opcode (see https://en.bitcoin.it/wiki/Script).
-    assert(scriptpubkey.length < 253);
-
-    // Return the size of the output.  9 bytes for the value and scriptpubkey
-    // length, plus the length of the scriptpubkey.
-    return 9 + scriptpubkey.length;
-  }
+  /// - [address] (required): The destination address.
+  Output({required this.value, required this.address});
 
   /// Factory method to create an Output object from an `OutputComponent`.
   ///
@@ -47,13 +30,17 @@ class Output {
   ///
   /// Returns:
   ///   An `Output` object.
-  static Output fromOutputComponent(OutputComponent outputComponent) {
+  static Output fromOutputComponent(
+    OutputComponent outputComponent,
+    coinlib.NetworkParams network,
+  ) {
     // Convert the scriptpubkey to an Address object.
-    Address address = Address.fromScriptPubKey(outputComponent.scriptpubkey);
+    Address address =
+        Address.fromScriptPubKey(outputComponent.scriptpubkey, network);
 
     return Output(
       value: outputComponent.amount.toInt(),
-      addr: address,
+      address: address.address,
     );
   }
 }

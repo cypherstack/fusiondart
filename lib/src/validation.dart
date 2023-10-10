@@ -22,9 +22,12 @@ int componentContrib(
             Utilities.sizeOfInput(Uint8List.fromList(component.input.pubkey)),
             feerate);
   } else if (component.hasOutput()) {
-    Output out = Output.fromOutputComponent(component.output);
+    Output out = Output.fromOutputComponent(component.output, network);
     return -out.value.toInt() -
-        Utilities.componentFee(out.sizeOfOutput(network), feerate);
+        Utilities.componentFee(
+            Utilities.sizeOfOutput(
+                Uint8List.fromList(component.output.scriptpubkey)),
+            feerate);
   } else if (component.hasBlank()) {
     return 0;
   } else {
@@ -148,7 +151,10 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
     final out = cmsg.output;
     // Basically just checks if its ok address. should throw error if not.
     try {
-      Utilities.getAddressFromOutputScript(out.scriptpubkey as Uint8List);
+      Utilities.getAddressFromOutputScript(
+        Uint8List.fromList(out.scriptpubkey),
+        network,
+      );
     } catch (_) {
       rethrow;
     }

@@ -506,11 +506,14 @@ abstract final class OutputHandling {
     // Generate components for outputs.
     for (Output output in outputs) {
       // Calculate fee.
-      List<int> script = output.addr.toScript(network);
+      final script = coinlib.Address.fromString(output.address, network)
+          .program
+          .script
+          .compiled;
 
       // Calculate fee.
-      final fee = Utilities.componentFee(
-          Utilities.sizeOfOutput(Uint8List.fromList(script)), feerate);
+      final fee =
+          Utilities.componentFee(Utilities.sizeOfOutput(script), feerate);
 
       // Create output component.
       final comp = Component()

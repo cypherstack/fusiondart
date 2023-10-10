@@ -3,7 +3,6 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:coinlib/coinlib.dart' as coinlib;
-import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
@@ -133,7 +132,8 @@ abstract class Utilities {
   /// Returns:
   ///   The extracted Address.
   static Address getAddressFromOutputScript(
-    Uint8List scriptPubKey, [
+    Uint8List scriptPubKey,
+    coinlib.NetworkParams network, [
     bool fusionReserved = false,
   ]) {
     // Throw exception if this is not a standard P2PKH address.
@@ -147,14 +147,17 @@ abstract class Utilities {
       // This is a P2PKH script.
 
       // Extract the public key.
-      Uint8List pubKey = scriptPubKey.sublist(3, 23);
+      final pubKeyHash = scriptPubKey.sublist(3, 23);
+
+      final addr = coinlib.P2PKHAddress.fromHash(
+        pubKeyHash,
+        version: network.p2pkhPrefix,
+      );
 
       // Use bitcoindart to return the encoded address.
       return Address(
-        address: coinlib.P2PKH
-            .fromPublicKey(coinlib.ECPublicKey.fromHex(hex.encode(pubKey)))
-            .toString(),
-        publicKey: pubKey,
+        address: addr.toString(),
+        publicKey: [],
         fusionReserved: fusionReserved,
       );
     } else {

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bitbox/bitbox.dart' as bitbox;
+import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
@@ -37,6 +38,7 @@ class Transaction {
   static (Transaction, List<int>) txFromComponents(
     List<List<int>> allComponents,
     List<int> sessionHash,
+    coinlib.NetworkParams network,
   ) {
     // Initialize a new Transaction.
     Transaction tx = Transaction();
@@ -64,7 +66,7 @@ class Transaction {
         tx.inputs.add(input);
         inputIndices.add(i);
       } else if (comp.hasOutput()) {
-        final output = Output.fromOutputComponent(comp.output);
+        final output = Output.fromOutputComponent(comp.output, network);
         tx.outputs.add(output);
       } else if (!comp.hasBlank()) {
         throw FusionError("bad component");

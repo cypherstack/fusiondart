@@ -39,41 +39,22 @@ class Address {
 
   /// Creates an Address from a script public key
   static Address fromScriptPubKey(
-    List<int> scriptPubKey, [
+    List<int> scriptPubKey,
+    coinlib.NetworkParams network, [
     bool fusionReserved = false,
   ]) {
     return Utilities.getAddressFromOutputScript(
       Uint8List.fromList(scriptPubKey),
+      network,
       fusionReserved,
-    );
-  }
-
-  /// Public constructor for testing. Calls private constructor `_create`.
-  static Address fromString(
-    String address,
-    coinlib.NetworkParams network,
-    bool fusionReserved,
-  ) {
-    final addr = coinlib.Address.fromString(address, network);
-    return Address(
-      address: addr.toString(),
-      publicKey: addr.program.script.compiled, // TODO: verify
-      fusionReserved: fusionReserved,
     );
   }
 
   /// Converts the Address to its script form
   Uint8List toScript(coinlib.NetworkParams network) {
-    coinlib.ECPublicKey ecPublicKey = coinlib.ECPublicKey(
-      Uint8List.fromList(publicKey),
-    );
+    final addr = coinlib.Address.fromString(address, network);
 
-    coinlib.P2PKHAddress p2pkhAddress = coinlib.P2PKHAddress.fromPublicKey(
-      ecPublicKey,
-      version: network.p2pkhPrefix,
-    );
-
-    return p2pkhAddress.program.script.compiled;
+    return addr.program.script.compiled;
   }
 
   /// Returns a JSON-String representation of the Address for easier debugging.

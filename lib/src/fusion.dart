@@ -897,7 +897,8 @@ class Fusion {
     _reservedAddresses = outAddrs;
 
     final outputs = Utilities.zip(outAmounts ?? [], outAddrs)
-        .map((pair) => Output(value: pair[0] as int, addr: pair[1] as Address))
+        .map((pair) => Output(
+            value: pair[0] as int, address: (pair[1] as Address).address))
         .toList();
 
     Utilities.debugPrint(
@@ -1460,8 +1461,11 @@ class Fusion {
       }
 
       // Build transaction from components and session hash.
-      (Transaction, List<int>) txData =
-          Transaction.txFromComponents(allComponents, sessionHash);
+      (Transaction, List<int>) txData = Transaction.txFromComponents(
+        allComponents,
+        sessionHash,
+        network,
+      );
       Transaction tx = txData.$1;
       List<int> inputIndices = txData.$2;
 
@@ -1585,7 +1589,10 @@ class Fusion {
         for (final o in tx.outputs) {
           final cO = coinlib.Output.fromScriptBytes(
             BigInt.from(o.value),
-            o.addr.toScript(network),
+            coinlib.Address.fromString(o.address, network)
+                .program
+                .script
+                .compiled,
           );
           cOutputs.add(cO);
         }
