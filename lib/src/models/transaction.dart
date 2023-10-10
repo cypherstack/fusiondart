@@ -291,7 +291,7 @@ class Transaction {
     ).program.script.compiled;
     // final wspk = token.wrapSpk(tokenData, spk);
 
-    // final wspkLen = varIntBytes(wspk.length);
+    final wspkLen = varIntBytes(BigInt.zero);
 
     // Create a Uint8List to store the combined data
     final combinedData =
@@ -302,9 +302,9 @@ class Transaction {
     buf.buffer.asUint8List().forEach((byte) {
       combinedData[offset++] = byte;
     });
-    // wspkLen.forEach((byte) {
-    //   combinedData[offset++] = byte;
-    // });
+    wspkLen.forEach((byte) {
+      combinedData[offset++] = byte;
+    });
     // wspk.forEach((byte) {
     //   combinedData[offset++] = byte;
     // });
