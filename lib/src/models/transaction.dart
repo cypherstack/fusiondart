@@ -285,20 +285,20 @@ class Transaction {
     final spk = payScriptBytes(addr);
     // final wspk = token.wrapSpk(tokenData, spk);
 
-    final wspkLen = varIntBytes(wspk.length);
+    // final wspkLen = varIntBytes(wspk.length);
 
     // Create a Uint8List to store the combined data
     final combinedData =
-        Uint8List(buf.lengthInBytes + wspkLen.length /*+wspk.length*/);
+        Uint8List(buf.lengthInBytes /* + wspkLen.length + wspk.length*/);
 
     // Copy data from buf, wspkLen, and wspk to the combinedData
     int offset = 0;
     buf.buffer.asUint8List().forEach((byte) {
       combinedData[offset++] = byte;
     });
-    wspkLen.forEach((byte) {
-      combinedData[offset++] = byte;
-    });
+    // wspkLen.forEach((byte) {
+    //   combinedData[offset++] = byte;
+    // });
     // wspk.forEach((byte) {
     //   combinedData[offset++] = byte;
     // });
