@@ -399,19 +399,16 @@ abstract class Utilities {
     const cashFusionSession = "Cash Fusion Session";
 
     // Creating the list of bytes.
-    List<int> elements = [];
-    elements.addAll(utf8.encode(cashFusionSession));
-    elements.addAll(utf8.encode(version));
-    elements.addAll(tierBytes.buffer.asInt8List());
-    elements.addAll(covertDomainB);
-    elements.addAll(covertPortBytes.buffer.asInt8List());
-    elements.add(covertSsl ? 1 : 0);
-    elements.addAll(beginTimeBytes.buffer.asInt8List());
+    List<List<int>> elements = [];
+    elements.add(utf8.encode(cashFusionSession));
+    elements.add(utf8.encode(version));
+    elements.add(tierBytes.buffer.asUint8List());
+    elements.add(covertDomainB);
+    elements.add(covertPortBytes.buffer.asUint8List());
+    elements.add(covertSsl ? [1] : [0]);
+    elements.add(beginTimeBytes.buffer.asUint8List());
 
-    // Hashing the concatenated elements.
-    crypto.Digest digest = crypto.sha256.convert(elements);
-
-    return digest.bytes;
+    return _listHash(elements);
   }
 
   /// Calculates the round hash for the Fusion protocol.
@@ -435,7 +432,7 @@ abstract class Utilities {
       utf8.encode('Cash Fusion Round'),
       lastHash,
       roundPubkey,
-      BigInt.from(roundTime).toBytes,
+      BigInt.from(roundTime).toBytesPadded(8),
       _listHash(allCommitments),
       _listHash(allComponents),
     ]);
