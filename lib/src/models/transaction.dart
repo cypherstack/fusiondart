@@ -269,17 +269,22 @@ class Transaction {
     coinlib.NetworkParams network,
   ) {
     assert(n >= 0 && n < outputs.length);
-    // TODO handle tokens!
-    // assert(tokenData.length == outputs.length);
 
-    Output output = outputs[n];
-    // final tokenData = tokenData[n];
+    final output = outputs[n];
 
-    final addr = output.address;
     final amount = output.value;
 
-    final buf = ByteData(8)
-      ..setInt64(0, amount, Endian.big); // Convert amount to bytes
+    List<int> buf = [];
+
+    final amountBytes1 = (ByteData(8)..setInt64(0, amount, Endian.big))
+        .buffer
+        .asUint8List(); // Convert amount to bytes
+
+    final amountBytes2 = BigInt.from(amount).toBytesPadded(8);
+
+    assert(amountBytes1.equals(amountBytes2));
+
+    buf.addAll(amountBytes2);
 
     final spk = coinlib.Address.fromString(
       bitbox.Address.toLegacyAddress(
@@ -287,26 +292,10 @@ class Transaction {
       ),
       network,
     ).program.script.compiled;
-    // final wspk = token.wrapSpk(tokenData, spk);
 
-    final wspkLen = varIntBytes(BigInt.zero);
+    buf.addAll(varIntBytes(BigInt.from(spk.length)));
+    buf.addAll(spk);
 
-    // Create a Uint8List to store the combined data
-    final combinedData =
-        Uint8List(buf.lengthInBytes /* + wspkLen.length + wspk.length*/);
-
-    // Copy data from buf, wspkLen, and wspk to the combinedData
-    int offset = 0;
-    buf.buffer.asUint8List().forEach((byte) {
-      combinedData[offset++] = byte;
-    });
-    wspkLen.forEach((byte) {
-      combinedData[offset++] = byte;
-    });
-    // wspk.forEach((byte) {
-    //   combinedData[offset++] = byte;
-    // });
-
-    return combinedData;
+    return Uint8List.fromList(buf);
   }
 }
