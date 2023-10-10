@@ -1492,6 +1492,13 @@ class Fusion {
         final pubKey = inp.pubkeys!.first!; // cast/convert to PublicKey?
         final sec = await _getPrivateKeyForPubKey(pubKey);
 
+        coinlib.Input ip = coinlib.P2PKHInput(
+          prevOut: coinlib.OutPoint.fromHex(inp.hash!.toHex, inp.index!),
+          publicKey: coinlib.ECPublicKey.fromHex(pubKey.toHex),
+        );
+
+        inp.script = ip.script!.compiled;
+
         // Calculate sigHash for signing.
         final preimageBytes = tx.serializePreimageBytes(
           i,
