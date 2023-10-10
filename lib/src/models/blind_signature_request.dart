@@ -1,8 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/extensions/on_big_int.dart';
-import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/ecc_fp.dart' as fp;
@@ -79,9 +77,9 @@ class BlindSignatureRequest {
     _calcInitial();
 
     // Calculate `e` and `eNew`.
-    final digest =
-        crypto.sha256.convert(_pointRxNew + _pubKeyCompressed + messageHash);
-    final eHash = digest.toString().toBigIntFromHex;
+    final bytes =
+        Utilities.sha256(_pointRxNew + _pubKeyCompressed + messageHash);
+    final eHash = bytes.toBigInt;
     _e = (_c * eHash + _b) % _order;
     _eNew = eHash % _order;
   }

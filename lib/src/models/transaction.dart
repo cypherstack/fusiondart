@@ -204,11 +204,6 @@ class Transaction {
     required coinlib.NetworkParams network,
     bool useCache = false,
   }) {
-    List<bitbox.Input> inputs = this.inputs;
-    int nOutputs =
-        outputs.length; // Assuming there's a 'outputs' getter in your class
-    List<int> meta = [inputs.length, nOutputs];
-
     // if (useCache) {
     //   try {
     //     List<int> cmeta =
@@ -224,31 +219,30 @@ class Transaction {
     //   }
     // }
 
+    final List<int> prePrevouts = [];
+    final List<int> preSeq = [];
+    for (final input in inputs) {
+      prePrevouts.addAll(_serializeOutpointBytes(input));
+      preSeq.addAll(
+        BigInt.from(input.sequence ?? (0xffffffff - 1)).toBytesPadded(4),
+      );
+    }
+
+    final List<int> preOuts = [];
+    for (int i = 0; i < outputs.length; i++) {
+      preOuts.addAll(_serializeOutputNBytes(i, network));
+    }
+
     final hashPrevouts = Utilities.doubleSha256(
-      Uint8List.fromList(
-        inputs
-            .map((txin) => _serializeOutpointBytes(txin))
-            .expand((x) => x)
-            .toList(),
-      ),
+      Uint8List.fromList(prePrevouts),
     );
 
     final hashSequence = Utilities.doubleSha256(
-      Uint8List.fromList(
-        inputs
-            .map((txin) =>
-                BigInt.from(txin.sequence ?? 0xffffffff - 1).toBytesPadded(4))
-            .expand((x) => x)
-            .toList(),
-      ),
+      Uint8List.fromList(preSeq),
     );
 
     final hashOutputs = Utilities.doubleSha256(
-      Uint8List.fromList(
-        List.generate(nOutputs, (n) => _serializeOutputNBytes(n, network))
-            .expand((x) => x)
-            .toList(),
-      ),
+      Uint8List.fromList(preOuts),
     );
 
     // _cachedSighashTup = [

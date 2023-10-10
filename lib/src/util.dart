@@ -99,10 +99,10 @@ abstract class Utilities {
     counterByteData.setInt32(0, counter, Endian.big);
 
     // Hash the seed and counter.
-    crypto.Digest digest = crypto.sha256.convert([...seed, ...counterBytes]);
+    final bytes = Utilities.sha256([...seed, ...counterBytes]);
 
     // Take the first 8 bytes.
-    List<int> first8Bytes = digest.bytes.take(8).toList();
+    final first8Bytes = bytes.take(8).toList();
     int int64 = ByteData.sublistView(Uint8List.fromList(first8Bytes))
         .getUint64(0, Endian.big);
 
@@ -258,8 +258,8 @@ abstract class Utilities {
     }
 
     Uint8List rBytes = R.x!.toBigInteger()!.toBytes;
-    Uint8List eBytes = Uint8List.fromList(
-        crypto.sha256.convert([...rBytes, ...pubBytes, ...messageHash]).bytes);
+    Uint8List eBytes =
+        Utilities.sha256([...rBytes, ...pubBytes, ...messageHash]);
     BigInt e = eBytes.toBigInt;
 
     BigInt s = (k + (e * secexp)) % order;
@@ -450,7 +450,7 @@ abstract class Utilities {
       bytes.addAll(length.buffer.asUint8List());
       bytes.addAll(x);
     }
-    return crypto.sha256.convert(bytes).bytes;
+    return Utilities.sha256(bytes);
   }
 
   static Uint8List getCurrentGenesisHash() {
@@ -542,12 +542,12 @@ abstract class Utilities {
   ///
   /// Returns:
   ///   A Uint8List containing the sha256 hash of the input [bytes].
-  static Uint8List sha256(Uint8List bytes) {
+  static Uint8List sha256(List<int> bytes) {
     crypto.Digest digest = crypto.sha256.convert(bytes);
     return Uint8List.fromList(digest.bytes);
   }
 
-  static Uint8List doubleSha256(Uint8List data) {
+  static Uint8List doubleSha256(List<int> data) {
     return sha256(sha256(data));
   }
 

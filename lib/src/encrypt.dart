@@ -1,13 +1,11 @@
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart' as crypto;
 import 'package:cryptography/cryptography.dart';
+import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_list_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/pointycastle.dart' hide Mac;
-
-import 'exceptions.dart';
 
 /// Encrypts a message using a provided EC public key.
 ///
@@ -56,9 +54,8 @@ Future<Uint8List> encrypt(
   }
 
   // Create a SHA-256 hash as the symmetric key.
-  final List<int> key = crypto.sha256
-      .convert(Utilities.pointToSer(pubPointTimesNonceSec, true))
-      .bytes;
+  final List<int> key =
+      Utilities.sha256(Utilities.pointToSer(pubPointTimesNonceSec, true));
 
   // Prepare plaintext with message length prepended.
   Uint8List plaintext = Uint8List(4 + message.length)
@@ -221,9 +218,9 @@ Future<({Uint8List decrypted, Uint8List symmetricKey})> decrypt(
   final ECPoint? point = noncePoint * privateKey.toBigInt;
 
   // Generate the symmetric key using the SHA-256 hash of the computed point.
-  final key = crypto.sha256.convert(Utilities.pointToSer(point!, true)).bytes;
+  final key = Utilities.sha256(Utilities.pointToSer(point!, true));
   // Use the symmetric key to decrypt the data.
-  final decryptedData = await decryptWithSymmkey(data, Uint8List.fromList(key));
+  final decryptedData = await decryptWithSymmkey(data, key);
 
   // Return the decrypted data and the symmetric key used for decryption.
   return (decrypted: decryptedData, symmetricKey: Uint8List.fromList(key));

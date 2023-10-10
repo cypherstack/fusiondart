@@ -5,7 +5,6 @@ import 'dart:typed_data';
 
 import 'package:bitbox/bitbox.dart' as bitbox;
 import 'package:coinlib/coinlib.dart' as coinlib;
-import 'package:crypto/crypto.dart' as crypto;
 import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/connection.dart';
@@ -1200,12 +1199,13 @@ class Fusion {
         List.generate(blindNoncePoints.length, (index) {
       final R = blindNoncePoints[index];
       final m = myComponents[index];
-      final messageHash = crypto.sha256.convert(m).bytes;
+      final messageHash = Utilities.sha256(m);
 
       return BlindSignatureRequest(
-          pubkey: Uint8List.fromList(roundPubKey),
-          R: Uint8List.fromList(R),
-          messageHash: Uint8List.fromList(messageHash));
+        pubkey: Uint8List.fromList(roundPubKey),
+        R: Uint8List.fromList(R),
+        messageHash: messageHash,
+      );
     });
     Utilities.debugPrint("Generated blind signature requests.");
 
@@ -1230,7 +1230,7 @@ class Fusion {
           initialCommitments: myCommitments,
           excessFee: Int64.parseHex(excessFee.toHex),
           pedersenTotalNonce: genComponentsResults.pedersenTotalNonce,
-          randomNumberCommitment: crypto.sha256.convert(randomNumber).bytes,
+          randomNumberCommitment: Utilities.sha256(randomNumber),
           blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
         ),
     );
@@ -1501,14 +1501,12 @@ class Fusion {
           nHashType: 0x41,
           useCache: true,
         );
-        final sigHash = crypto.sha256.convert(
-          crypto.sha256.convert(preimageBytes).bytes,
-        );
+        final sigHash = Utilities.doubleSha256(preimageBytes);
 
         // Generate signature.
         final sig = Utilities.schnorrSign(
           sec,
-          Uint8List.fromList(sigHash.bytes),
+          sigHash,
         );
 
         // Store the covert transaction signature
