@@ -78,7 +78,8 @@ abstract class Utilities {
   /// Parameters:
   /// - [inputComponent] The input component to be checked.
   static void checkInputElectrumX(InputComponent inputComponent) {
-    //  Implementation needed here
+    // TODO Implement.
+    debugPrint("checkInputElectrumX: TODO implement");
   }
 
   /// Calculates a random position based on a seed, number of positions, and a counter.
@@ -153,6 +154,12 @@ abstract class Utilities {
         pubKeyHash,
         version: network.p2pkhPrefix,
       );
+
+      final s = coinlib.Script.decompile(scriptPubKey);
+
+      final a = coinlib.P2PKH.fromScript(s);
+
+      final addr = coinlib.P2PKHAddress.fromHash(a.pkHash, version: 1);
 
       // Use bitcoindart to return the encoded address.
       return Address(

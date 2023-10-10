@@ -5,6 +5,7 @@ import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
+import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
@@ -268,6 +269,48 @@ class Transaction {
   }
 
   Uint8List serializeOutputNBytes(int n) {
-    throw UnimplementedError();
+    assert(n >= 0 && n < outputs.length);
+    // TODO handle tokens!
+    // assert(tokenData.length == outputs.length);
+
+    Output output = outputs[n];
+    // final tokenData = tokenData[n];
+
+    final addr = output.address;
+    final amount = output.value;
+
+    final buf = ByteData(8)
+      ..setInt64(0, amount, Endian.big); // Convert amount to bytes
+
+    final spk = payScriptBytes(addr);
+    // final wspk = token.wrapSpk(tokenData, spk);
+
+    final wspkLen = varIntBytes(wspk.length);
+
+    // Create a Uint8List to store the combined data
+    final combinedData =
+        Uint8List(buf.lengthInBytes + wspkLen.length /*+wspk.length*/);
+
+    // Copy data from buf, wspkLen, and wspk to the combinedData
+    int offset = 0;
+    buf.buffer.asUint8List().forEach((byte) {
+      combinedData[offset++] = byte;
+    });
+    wspkLen.forEach((byte) {
+      combinedData[offset++] = byte;
+    });
+    // wspk.forEach((byte) {
+    //   combinedData[offset++] = byte;
+    // });
+
+    return combinedData;
+  }
+
+  static Uint8List payScriptBytes(Output output) {
+    return payScript(output).toUint8ListFromHex;
+  }
+
+  static String payScript(Output output) {
+    return output.toScript().toHex(); // Assuming toScript() returns a Uint8List
   }
 }
