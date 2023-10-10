@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:bitbox/bitbox.dart' as bitbox;
 import 'package:coinlib/coinlib.dart' as coinlib;
-import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
@@ -225,27 +224,32 @@ class Transaction {
     //   }
     // }
 
-    Uint8List hashPrevouts = Uint8List.fromList(crypto.sha256
-        .convert(Uint8List.fromList(inputs
+    final hashPrevouts = Utilities.doubleSha256(
+      Uint8List.fromList(
+        inputs
             .map((txin) => _serializeOutpointBytes(txin))
             .expand((x) => x)
-            .toList()))
-        .bytes);
+            .toList(),
+      ),
+    );
 
-    Uint8List hashSequence = Uint8List.fromList(crypto.sha256
-        .convert(Uint8List.fromList(inputs
+    final hashSequence = Utilities.doubleSha256(
+      Uint8List.fromList(
+        inputs
             .map((txin) =>
                 BigInt.from(txin.sequence ?? 0xffffffff - 1).toBytesPadded(4))
             .expand((x) => x)
-            .toList()))
-        .bytes);
+            .toList(),
+      ),
+    );
 
-    Uint8List hashOutputs = Uint8List.fromList(crypto.sha256
-        .convert(Uint8List.fromList(
-            List.generate(nOutputs, (n) => _serializeOutputNBytes(n, network))
-                .expand((x) => x)
-                .toList()))
-        .bytes);
+    final hashOutputs = Utilities.doubleSha256(
+      Uint8List.fromList(
+        List.generate(nOutputs, (n) => _serializeOutputNBytes(n, network))
+            .expand((x) => x)
+            .toList(),
+      ),
+    );
 
     // _cachedSighashTup = [
     //   meta,

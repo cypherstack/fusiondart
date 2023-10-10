@@ -547,6 +547,10 @@ abstract class Utilities {
     return Uint8List.fromList(digest.bytes);
   }
 
+  static Uint8List doubleSha256(Uint8List data) {
+    return sha256(sha256(data));
+  }
+
   /// Returns a random Uint8List of length [nbytes].
   ///
   /// Generates a cryptographically secure random sequence of bytes.
