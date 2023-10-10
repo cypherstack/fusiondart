@@ -184,11 +184,12 @@ class Transaction {
     ]);
   }
 
-  /// Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L589
+  // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L589
   static Uint8List getPreimageScript(bitbox.Input txin) {
     return txin.script!;
   }
 
+  // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/bitcoin.py#L369
   Uint8List varIntBytes(BigInt i) {
     // Based on: https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer
     if (i < BigInt.from(0xfd)) {
