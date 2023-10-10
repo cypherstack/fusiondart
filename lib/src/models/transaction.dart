@@ -123,13 +123,12 @@ class Transaction {
     ]);
     Uint8List amount;
     try {
-      amount = BigInt.from(txin.value ?? 0).toBytes;
+      amount = BigInt.from(txin.value!).toBytesPadded(8);
     } catch (e) {
-      throw FusionError(
-          'InputValueMissing'); // Adjust the error type based on your Dart codebase
+      throw FusionError('InputValueMissing');
     }
-    Uint8List nSequence = BigInt.from(txin.sequence ?? 0xffffffff - 1).toBytes;
-    // TODO verify default of 0xffffffff - 1 is acceptable.
+    Uint8List nSequence =
+        BigInt.from(txin.sequence ?? (0xffffffff - 1)).toBytesPadded(4);
 
     /*
     final amount = txin.value.toBytesPadded(8);
@@ -141,9 +140,7 @@ class Transaction {
       Uint8List hashOutputs,
       Uint8List hashPrevouts,
       Uint8List hashSequence
-    }) commonSighash = _calcCommonSighash(
-        network: network,
-        useCache: useCache); // TODO fix this python-transliterationalism.
+    }) commonSighash = _calcCommonSighash(network: network, useCache: useCache);
 
     Uint8List hashPrevouts, hashSequence, hashOutputs;
     (hashPrevouts, hashSequence, hashOutputs) = (
