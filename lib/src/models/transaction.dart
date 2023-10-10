@@ -178,8 +178,7 @@ class Transaction {
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L610
   static Uint8List serializeOutpointBytes(bitbox.Input txin) {
     return Uint8List.fromList([
-      ...txin.hash!, // TODO Does this need reversing here??
-      // ...hex.encode(txin.prevTxid.reversed as List<int>).toUint8ListFromHex,
+      ...txin.hash!.reversed,
       ...BigInt.from(txin.index!).toBytesPadded(4),
     ]);
   }
