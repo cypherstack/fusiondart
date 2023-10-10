@@ -177,11 +177,6 @@ class Fusion {
   List<Address> _reservedAddresses = <Address>[]; // List of reserved addresses.
   DateTime _tFusionBegin = DateTime.now(); // The timestamp when Fusion began.
 
-  // not used ???
-  List<int>? _txInputIndices; // Indices for transaction inputs.
-
-  Transaction _currentTransaction = Transaction();
-
   static const INACTIVE_TIME_LIMIT = Duration(minutes: 10);
   static const int COINBASE_MATURITY = 100; // Maturity for coinbase UTXOs.
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash/bitcoin.py#L65

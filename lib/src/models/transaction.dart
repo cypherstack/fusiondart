@@ -13,8 +13,8 @@ import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 ///
 /// Translated from https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L289
 class Transaction {
-  List<bitbox.Input> inputs = [];
-  List<Output> outputs = [];
+  final List<bitbox.Input> inputs;
+  final List<Output> outputs;
 
   /// Instance variable for the locktime of the transaction.
   BigInt locktime = BigInt
@@ -25,7 +25,7 @@ class Transaction {
       .one; // https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L312
 
   /// Default constructor for the Transaction class.
-  Transaction();
+  Transaction(this.inputs, this.outputs);
 
   /// Factory method to create a Transaction from components and a session hash.
   ///
@@ -41,7 +41,7 @@ class Transaction {
     coinlib.NetworkParams network,
   ) {
     // Initialize a new Transaction.
-    Transaction tx = Transaction();
+    Transaction tx = Transaction([], []);
 
     final List<int> inputIndices = [];
     final comps =
@@ -103,8 +103,8 @@ class Transaction {
     final nLocktime = locktime.toBytesPadded(4);
 
     bitbox.Input txin = inputs[i];
-    Uint8List outpoint = serializeOutpointBytes(txin);
-    Uint8List preimageScript = getPreimageScript(txin);
+    Uint8List outpoint = _serializeOutpointBytes(txin);
+    Uint8List preimageScript = _getPreimageScript(txin);
 
     final Uint8List serInputToken;
     // TODO handle tokens.
@@ -119,7 +119,7 @@ class Transaction {
     /*}*/
 
     final scriptCode = Uint8List.fromList([
-      ...varIntBytes(BigInt.from(preimageScript.length)),
+      ..._varIntBytes(BigInt.from(preimageScript.length)),
       ...preimageScript
     ]);
     Uint8List amount;
@@ -142,7 +142,7 @@ class Transaction {
       Uint8List hashOutputs,
       Uint8List hashPrevouts,
       Uint8List hashSequence
-    }) commonSighash = calcCommonSighash(
+    }) commonSighash = _calcCommonSighash(
         network: network,
         useCache: useCache); // TODO fix this python-transliterationalism.
 
@@ -170,13 +170,8 @@ class Transaction {
     return preimage;
   }
 
-  // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L606
-  static String serializeOutpoint(bitbox.Input txin) {
-    return serializeOutpointBytes(txin).toHex;
-  }
-
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L610
-  static Uint8List serializeOutpointBytes(bitbox.Input txin) {
+  Uint8List _serializeOutpointBytes(bitbox.Input txin) {
     return Uint8List.fromList([
       ...txin.hash!.reversed,
       ...BigInt.from(txin.index!).toBytesPadded(4),
@@ -184,12 +179,12 @@ class Transaction {
   }
 
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L589
-  static Uint8List getPreimageScript(bitbox.Input txin) {
+  Uint8List _getPreimageScript(bitbox.Input txin) {
     return txin.script!;
   }
 
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/bitcoin.py#L369
-  Uint8List varIntBytes(BigInt i) {
+  Uint8List _varIntBytes(BigInt i) {
     // Based on: https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer
     if (i < BigInt.from(0xfd)) {
       return i.toBytes;
@@ -206,7 +201,7 @@ class Transaction {
     Uint8List hashPrevouts,
     Uint8List hashSequence,
     Uint8List hashOutputs,
-  }) calcCommonSighash({
+  }) _calcCommonSighash({
     required coinlib.NetworkParams network,
     bool useCache = false,
   }) {
@@ -232,7 +227,7 @@ class Transaction {
 
     Uint8List hashPrevouts = Uint8List.fromList(crypto.sha256
         .convert(Uint8List.fromList(inputs
-            .map((txin) => serializeOutpointBytes(txin))
+            .map((txin) => _serializeOutpointBytes(txin))
             .expand((x) => x)
             .toList()))
         .bytes);
@@ -247,7 +242,7 @@ class Transaction {
 
     Uint8List hashOutputs = Uint8List.fromList(crypto.sha256
         .convert(Uint8List.fromList(
-            List.generate(nOutputs, (n) => serializeOutputNBytes(n, network))
+            List.generate(nOutputs, (n) => _serializeOutputNBytes(n, network))
                 .expand((x) => x)
                 .toList()))
         .bytes);
@@ -263,7 +258,7 @@ class Transaction {
     );
   }
 
-  Uint8List serializeOutputNBytes(
+  Uint8List _serializeOutputNBytes(
     int n,
     coinlib.NetworkParams network,
   ) {
@@ -287,7 +282,7 @@ class Transaction {
 
     final spk = Utilities.scriptOf(address: output.address, network: network);
 
-    buf.addAll(varIntBytes(BigInt.from(spk.length)));
+    buf.addAll(_varIntBytes(BigInt.from(spk.length)));
     buf.addAll(spk);
 
     return Uint8List.fromList(buf);
