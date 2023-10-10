@@ -166,7 +166,7 @@ abstract class Utilities {
     }
   }
 
-  /// port of https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/schnorr.py#L87
+  // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/schnorr.py#L87
   static BigInt nonceFunctionRfc6979(
       BigInt order, Uint8List privkeyBytes, Uint8List msg32,
       {Uint8List? algo16, Uint8List? ndata}) {
@@ -271,14 +271,6 @@ abstract class Utilities {
   }
 
   /// Verifies a Schnorr signature.
-  ///
-  /// Parameters:
-  /// - [pubkey] The public key as an ECPoint.
-  /// - [signature] The signature as a List<int>.
-  /// - [messageHash] The hash of the message as a Uint8List.
-  ///
-  /// Returns:
-  ///   True if the verification succeeds, otherwise false.
   static bool schnorrVerify(
     Uint8List pubKey,
     List<int> signature,
@@ -323,15 +315,6 @@ abstract class Utilities {
   }
 
   /// Formats a given number of satoshis.
-  ///
-  /// TODO implement.
-  ///
-  /// Parameters:
-  /// - [sats] The number of satoshis to format.
-  /// - [numZeros] The number of zeros for formatting (optional).
-  ///
-  /// Returns:
-  ///   The formatted satoshis as a string.
   static String formatSatoshis(sats, {int numZeros = 8}) {
     // To implement
     throw UnimplementedError(" // TODO implement formatSatoshis.");
@@ -340,22 +323,12 @@ abstract class Utilities {
   /// Updates the wallet label for a given transaction ID.
   ///
   /// TODO implement.
-  ///
-  /// Parameters:
-  /// - [txid] The transaction ID.
-  /// - [label] The new label for the transaction.
   static void updateWalletLabel(String txid, String label) {
     // TODO implement; call the wallet layer.
     throw UnimplementedError(" // TODO implement updateWalletLabel");
   }
 
   /// Generates a random sequence of bytes of a given [length].
-  ///
-  /// Parameters:
-  /// - [length] The length of the byte sequence.
-  ///
-  /// Returns:
-  ///   A Uint8List containing the random bytes.
   static Uint8List getRandomBytes(int length) {
     final rand = Random.secure();
     final bytes = Uint8List(length);
@@ -366,29 +339,12 @@ abstract class Utilities {
   }
 
   /// Zips two lists [list1] and [list2] together.
-  ///
-  /// Parameters:
-  /// - [list1] The first `List`.
-  /// - [list2] The second `List`.
-  ///
-  /// Returns:
-  ///   A list of lists, each containing one element from each input list.
   static List<List<T>> zip<T>(List<T> list1, List<T> list2) {
     int length = min(list1.length, list2.length);
     return List<List<T>>.generate(length, (i) => [list1[i], list2[i]]);
   }
 
   /// Calculates the initial hash for the Fusion protocol.
-  ///
-  /// Parameters:
-  /// - [tier] The tier level.
-  /// - [covertDomainB] The covert domain in Uint8List format.
-  /// - [covertPort] The covert port number.
-  /// - [covertSsl] A boolean indicating whether SSL is used.
-  /// - [beginTime] The starting time.
-  ///
-  /// Returns:
-  ///   The calculated hash as a List<int>.
   static List<int> calcInitialHash(int tier, Uint8List covertDomainB,
       int covertPort, bool covertSsl, double beginTime) {
     // Converting int to bytes in BigEndian order.
@@ -415,16 +371,6 @@ abstract class Utilities {
   }
 
   /// Calculates the round hash for the Fusion protocol.
-  ///
-  /// Parameters:
-  /// - [lastHash] The last hash value.
-  /// - [roundPubkey] The round public key.
-  /// - [roundTime] The round time.
-  /// - [allCommitments] All commitments in the round.
-  /// - [allComponents] All components in the round.
-  ///
-  /// Returns:
-  ///   The calculated hash as a List<int>.
   static List<int> calcRoundHash(
       List<int> lastHash,
       List<int> roundPubkey,
@@ -469,9 +415,6 @@ abstract class Utilities {
   ///
   /// This function uses the Elliptic Curve Domain Parameters for secp256k1 to
   /// generate a private and a public key. The keys are returned as Uint8List.
-  ///
-  /// Returns:
-  ///   A tuple containing the private key and the public key as Uint8List.
   static (Uint8List, Uint8List) genKeypair() {
     // Generate a private key using secure random values and curve's bit length
     final BigInt privKeyBigInt =
@@ -498,12 +441,6 @@ abstract class Utilities {
   /// length of the generated key is specified by the [bitLength] parameter.
   ///
   /// Note: The cryptographic safety of this function still needs to be verified.
-  ///
-  /// Parameters:
-  ///   - [bitLength]: The bit length of the private key to be generated.
-  ///
-  /// Returns:
-  ///   A BigInt representing the generated private key.
   static BigInt _generatePrivateKey(int bitLength) {
     // TODO verify cryptographic safety
 
@@ -535,12 +472,6 @@ abstract class Utilities {
   ///
   /// Uses the `crypto` library to perform the sha256 hash operation
   /// on the input [bytes].
-  ///
-  /// Parameters:
-  ///   - [bytes]: The Uint8List to hash.
-  ///
-  /// Returns:
-  ///   A Uint8List containing the sha256 hash of the input [bytes].
   static Uint8List sha256(Uint8List bytes) {
     crypto.Digest digest = crypto.sha256.convert(bytes);
     return Uint8List.fromList(digest.bytes);
@@ -553,12 +484,6 @@ abstract class Utilities {
   ///
   /// Optional parameter [nbytes] sets the length of the output list.
   /// Defaults to 32 bytes if not specified.
-  ///
-  /// Parameters:
-  ///  - [nbytes]: The length of the output list.  Defaults to 32 bytes if not specified.
-  ///
-  /// Returns:
-  ///   A Uint8List containing [nbytes] random bytes.
   static Uint8List tokenBytes([int nbytes = 32]) {
     final Random _random = Random.secure();
 
@@ -571,9 +496,6 @@ abstract class Utilities {
   /// The function calculates the fee required for a component of a given size
   /// when the feerate is known. The feerate should be specified in sat/kB.
   /// Fee is always rounded up due to the addition of 999 sats.
-  ///
-  /// Returns:
-  ///   The calculated fee for the component in satoshis.
   static int componentFee(int size, int feerate) {
     // feerate is provided in sat/kB (satoshi per kilobyte)
     // size is the size of the component in bytes
@@ -583,12 +505,6 @@ abstract class Utilities {
   }
 
   /// Method to add points together.
-  ///
-  /// Parameters:
-  /// - [pointsIterable]: An iterable of Uint8List objects representing points.
-  ///
-  /// Returns:
-  ///   A Uint8List representing the sum of the points.
   static Uint8List addPoints(
       Iterable<Uint8List> pointsIterable, ECDomainParameters params) {
     // Convert serialized points to ECPoint objects.
@@ -620,13 +536,6 @@ abstract class Utilities {
   }
 
   /// Converts a serialized elliptic curve point to its `ECPoint` representation.
-  ///
-  /// Parameters:
-  /// - [serializedPoint] The Uint8List that represents the serialized point.
-  /// - [params] The domain parameters for the elliptic curve.
-  ///
-  /// Returns:
-  ///   The `ECPoint` object decoded from the serialized point.
   static ECPoint serToPoint(
       Uint8List serializedPoint, ECDomainParameters params) {
     // Decode the point using the curve from parameters
@@ -638,13 +547,6 @@ abstract class Utilities {
   }
 
   /// Converts an `ECPoint` to its serialized representation.
-  ///
-  /// Parameters:
-  /// - [point] The ECPoint to be serialized.
-  /// - [compress] Whether the point should be compressed.
-  ///
-  /// Returns:
-  ///   The serialized point as a `Uint8List`.
   static Uint8List pointToSer(ECPoint point, bool compress) {
     return point.getEncoded(compress);
   }
@@ -670,7 +572,8 @@ abstract class Utilities {
     }
   }
 
-  /// port of https://github.com/tlsfuzzer/python-ecdsa/blob/master/src/ecdsa/numbertheory.py#L152
+  // Translated from https://github.com/tlsfuzzer/python-ecdsa/blob/master/src/ecdsa/numbertheory.py#L152
+  /// Calculates the Jacobi symbol of [a] and [n].
   static BigInt jacobi(BigInt a, BigInt n) {
     if (!n.isOdd) {
       throw Exception("n must odd");
@@ -718,7 +621,11 @@ abstract class Utilities {
     return s * jacobi(n % a1, a1);
   }
 
-  // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/util.py#L51-L62
+  // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/util.py#L51-L62
+  /// Calculates the size of an input.
+  ///
+  /// The size of an input is the size of the signature, the public key, and the
+  /// other input components.
   static int sizeOfInput(Uint8List pubKey) {
     // # Sizes of inputs after signing:
     // #   32+8+1+1+[length of sig]+1+[length of pubkey]
@@ -729,7 +636,10 @@ abstract class Utilities {
     return 108 + pubKey.length;
   }
 
-  // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/util.py#L51-L62
+  // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/util.py#L51-L62
+  /// Calculates the size of an output.
+  ///
+  /// The size of an output is the size of the output script.
   static int sizeOfOutput(Uint8List scriptPubKey) {
     // # == 34 for P2PKH, 32 for P2SH
     // assert len(scriptpubkey) < 253  # need to assume 1-byte varint

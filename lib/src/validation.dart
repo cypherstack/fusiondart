@@ -118,6 +118,7 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   return commitMessages;
 }
 
+/// Validates a component message.
 (String, int) checkCovertComponent(
   pb.CovertComponent msg,
   Uint8List roundPubkey,

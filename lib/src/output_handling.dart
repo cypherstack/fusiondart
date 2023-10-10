@@ -23,20 +23,6 @@ abstract final class OutputHandling {
   /// coins.
   ///
   /// TODO utilize a response class.
-  ///
-  /// Parameters:
-  /// - [_coins]: The set of coins from which to select.
-  ///
-  /// Returns:
-  ///   A `Future<(
-  ///   List<(String, List<Input>)>, // Eligible
-  ///   List<(String, List<Input>)>, // Ineligible
-  ///   int, // sumValue
-  ///   bool, // hasUnconfirmed
-  ///   bool // hasCoinbase
-  ///   )>` that completes with a Record containing the eligible inputs, ineligible inputs,
-  ///   sum of the values of the eligible buckets, a boolean flag indicating if there are
-  ///   unconfirmed coins, and a boolean flag indicating if there are coinbase coins.
   static Future<
       (
         List<(String, List<UtxoDTO>)>, // Eligible.
@@ -127,13 +113,6 @@ abstract final class OutputHandling {
   ///
   /// Takes a double [fraction] and a list of eligible buckets [eligible] and returns a list of
   /// random coins.
-  ///
-  /// Parameters:
-  /// - [fraction]: The fraction of eligible `Input`s to select.
-  /// - [eligible]: The list of eligible `Input`s.
-  ///
-  /// Returns:
-  ///   A `Future<List<Input>>` that completes with a list of random coins.
   static Future<List<UtxoDTO>> selectRandomCoins(
     double fraction,
     List<(String, List<UtxoDTO>)> eligible,
@@ -242,12 +221,6 @@ abstract final class OutputHandling {
   ///
   /// Uses server parameters and local constraints to determine the number and
   /// sizes of the outputs in a transaction through a [_socketWrapper].
-  ///
-  /// Returns:
-  ///   A `Future<void>` that completes once the outputs are successfully allocated.
-  ///
-  /// Throws:
-  /// - FusionError: if any constraints or limits are violated.
   static Future<
       ({
         List<UtxoDTO> inputs,
@@ -456,9 +429,6 @@ abstract final class OutputHandling {
   /// output components [outputs], and fee rate [feerate], this method generates and
   /// returns a list of `ComponentResult` objects that include all necessary
   /// details for a fusion transaction.
-  ///
-  /// Returns:
-  ///   A list of `ComponentResult` objects containing all the components needed for the transaction.
   static ({
     List<ComponentResult> results,
     BigInt sumAmounts,
@@ -626,9 +596,6 @@ abstract final class OutputHandling {
   ///
   /// Generates a list of random integer values for output tiers, adhering to the given parameters
   /// [rng], [inputAmount], [scale], [offset], and [maxCount].
-  ///
-  /// Returns:
-  ///   A list of integer values representing the random outputs for the tier.
   static List<int>? randomOutputsForTier(
     Random rng,
     int inputAmount,
@@ -711,9 +678,6 @@ abstract final class OutputHandling {
   ///
   /// Produces a random double value that is guaranteed not to be zero using a
   /// `Random` object parameter [rng] used for generating random numbers.
-  ///
-  /// Returns:
-  ///   A non-zero random double value.
   static double nextNonZeroDouble(Random rng) {
 // Start with 0.0.
     double value = 0.0;
