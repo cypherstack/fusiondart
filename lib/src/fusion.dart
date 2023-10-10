@@ -1502,6 +1502,7 @@ class Fusion {
         // Calculate sigHash for signing.
         final preimageBytes = tx.serializePreimageBytes(
           i,
+          network: network,
           nHashType: 0x41,
           useCache: true,
         );

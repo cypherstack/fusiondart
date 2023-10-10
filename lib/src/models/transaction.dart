@@ -5,7 +5,6 @@ import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
-import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
@@ -90,6 +89,7 @@ class Transaction {
   ///   A Uint8List representing the serialized preimage.
   Uint8List serializePreimageBytes(
     int i, {
+    required coinlib.NetworkParams network,
     int nHashType = 0x00000041,
     bool useCache = false,
   }) {
@@ -143,6 +143,7 @@ class Transaction {
       Uint8List hashPrevouts,
       Uint8List hashSequence
     }) commonSighash = calcCommonSighash(
+        network: network,
         useCache: useCache); // TODO fix this python-transliterationalism.
 
     Uint8List hashPrevouts, hashSequence, hashOutputs;
@@ -167,16 +168,6 @@ class Transaction {
     ]);
 
     return preimage;
-  }
-
-  /// Serializes the transaction.
-  ///
-  /// Returns:
-  ///   A string representing the serialized transaction.
-  String serializePreimage(int i,
-      {int nHashType = 0x00000041, bool useCache = false}) {
-    return serializePreimageBytes(i, nHashType: nHashType, useCache: useCache)
-        .toHex;
   }
 
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L606
@@ -213,8 +204,14 @@ class Transaction {
     }
   }
 
-  ({Uint8List hashPrevouts, Uint8List hashSequence, Uint8List hashOutputs})
-      calcCommonSighash({bool useCache = false}) {
+  ({
+    Uint8List hashPrevouts,
+    Uint8List hashSequence,
+    Uint8List hashOutputs,
+  }) calcCommonSighash({
+    required coinlib.NetworkParams network,
+    bool useCache = false,
+  }) {
     List<bitbox.Input> inputs = this.inputs;
     int nOutputs =
         outputs.length; // Assuming there's a 'outputs' getter in your class
@@ -252,7 +249,7 @@ class Transaction {
 
     Uint8List hashOutputs = Uint8List.fromList(crypto.sha256
         .convert(Uint8List.fromList(
-            List.generate(nOutputs, (n) => serializeOutputNBytes(n))
+            List.generate(nOutputs, (n) => serializeOutputNBytes(n, network))
                 .expand((x) => x)
                 .toList()))
         .bytes);
@@ -268,7 +265,10 @@ class Transaction {
     );
   }
 
-  Uint8List serializeOutputNBytes(int n) {
+  Uint8List serializeOutputNBytes(
+    int n,
+    coinlib.NetworkParams network,
+  ) {
     assert(n >= 0 && n < outputs.length);
     // TODO handle tokens!
     // assert(tokenData.length == outputs.length);
@@ -282,7 +282,12 @@ class Transaction {
     final buf = ByteData(8)
       ..setInt64(0, amount, Endian.big); // Convert amount to bytes
 
-    final spk = payScriptBytes(addr);
+    final spk = coinlib.Address.fromString(
+      bitbox.Address.toLegacyAddress(
+        output.address,
+      ),
+      network,
+    ).program.script.compiled;
     // final wspk = token.wrapSpk(tokenData, spk);
 
     // final wspkLen = varIntBytes(wspk.length);
@@ -304,13 +309,5 @@ class Transaction {
     // });
 
     return combinedData;
-  }
-
-  static Uint8List payScriptBytes(Output output) {
-    return payScript(output).toUint8ListFromHex;
-  }
-
-  static String payScript(Output output) {
-    return output.toScript().toHex(); // Assuming toScript() returns a Uint8List
   }
 }
