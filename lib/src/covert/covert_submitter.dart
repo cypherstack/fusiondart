@@ -188,7 +188,10 @@ class CovertSubmitter {
   }
 
   /// Schedules tasks for all available slots.
-  void scheduleSubmissions(DateTime tStart, List<dynamic> slotMessages) {
+  void scheduleSubmissions(
+    DateTime tStart,
+    List<GeneratedMessage?> slotMessages,
+  ) {
     // Convert to list (Dart does not have tuples)
     slotMessages = List.from(slotMessages);
 
@@ -207,19 +210,19 @@ class CovertSubmitter {
     // Then, notify the slots that there is a message to submit.
     for (int i = 0; i < slots.length; i++) {
       CovertSlot slot = slots[i];
-      GeneratedMessage? subMsg = slotMessages[i] as GeneratedMessage;
-      CovertConnection covConn = slot.covConn as CovertConnection;
+      GeneratedMessage? subMsg = slotMessages[i];
+      CovertConnection? covConn = slot.covConn;
 
-      /*if (covConn != null) {
+      if (covConn != null) {
         if (subMsg == null) {
           covConn.tPing = tStart;
-        } else {*/
-      slot.subMsg = subMsg;
-      slot.tSubmit = tStart;
-      /*}*/
-      covConn.wakeupSet();
-      // covConn.wakeup.complete(true); // TODO make sure passing `true` is correct
-      /*}*/
+        } else {
+          slot.subMsg = subMsg;
+          slot.tSubmit = tStart;
+        }
+        covConn.wakeupSet();
+        // covConn.wakeup.complete(true); // TODO make sure passing `true` is correct
+      }
     }
   }
 
