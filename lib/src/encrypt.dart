@@ -9,18 +9,9 @@ import 'package:pointycastle/pointycastle.dart' hide Mac;
 
 import 'exceptions.dart';
 
-/// Encrypts a message using a provided EC public key.
+/// Encrypts a [message] using a provided EC [pubKey].
 ///
-/// Parameters:
-/// - [message]: The message to encrypt as a Uint8List.
-/// - [pubkey]: The EC public key to encrypt with.
-/// - [padToLength] (optional): Optional padding for encrypted message.
-///
-/// Returns:
-///   A Future that resolves to the encrypted message as a Uint8List.
-///
-/// Throws:
-/// - EncryptionFailed: if the encryption fails for any reason.
+/// Optionally pads to a specified length [padToLength].
 Future<Uint8List> encrypt(
   Uint8List message,
   Uint8List pubKey, {
@@ -112,16 +103,6 @@ Future<Uint8List> encrypt(
 }
 
 /// Decrypts data using a symmetric key.
-///
-/// Parameters:
-/// - [data]: The encrypted data as a Uint8List.
-/// - [key]: The symmetric key as a Uint8List.
-///
-/// Returns:
-///   A Future that resolves to the decrypted message as a Uint8List.
-///
-/// Throws:
-/// - DecryptionFailed: if the decryption fails for any reason.
 Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
   // Check if the incoming data has a minimum length to contain all the elements.
   if (data.length < 33 + 16 + 16) {
@@ -188,17 +169,6 @@ Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
 }
 
 /// Decrypts an encrypted message using a provided EC private key.
-///
-/// Parameters:
-/// - [data]: The encrypted data as a Uint8List.
-/// - [privkey]: The EC private key to decrypt with.
-///
-/// Returns:
-///   A Future that resolves to a tuple containing the decrypted message and the symmetric key used for decryption, both as Uint8Lists.
-///
-/// Throws:
-/// - DecryptionFailed: if the decryption fails for any reason.
-/// - Exception: if the private key or nonce point is null.
 Future<({Uint8List decrypted, Uint8List symmetricKey})> decrypt(
   Uint8List data,
   Uint8List privateKey,

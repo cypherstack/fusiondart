@@ -72,6 +72,7 @@ abstract final class Comms {
     }
   }
 
+  /// Receive a Protobuf message from the server.
   static Future<GeneratedMessage> recvPb(
     List<String> expectedFieldNames, {
     required bool covert,
@@ -131,6 +132,10 @@ abstract final class Comms {
     }
   }
 
+  /// Greet the server.
+  ///
+  /// Sends a ClientHello message to the server and waits for a ServerHello
+  /// message in reply.
   static Future<
       ({
         int numComponents,

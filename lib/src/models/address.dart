@@ -6,17 +6,10 @@ import 'package:fusiondart/src/util.dart';
 
 /// A class representing a cryptocurrency address (Bitcoin Cash specifically for
 /// CashFusion).
-///
-///
-/// Attributes:
-/// - [addr]: The address as a String.
-/// - [publicKey] (optional): The public key as a List<int>.
-/// - [derivationPath] (optional): The derivation path as a DerivationPath.
 class Address {
   /// The address as a String.
   ///
-  /// Can be used with
-  /// _db.getAddress to get any of the other parameters below.
+  /// Can be used with _db.getAddress to get any of the other parameters below.
   final String address;
 
   /// The public key as a List<int>

@@ -9,35 +9,7 @@ import 'package:pointycastle/ecc/ecc_fp.dart' as fp;
 
 /// Schnorr blind signature creator for the requester side.
 ///
-/// This is set up with two elliptic curve points
-/// (serialized as bytes) - the Blind signer's public key, and
-/// a nonce point whose secret is known by the signer. Also, the
-/// 32-byte message_hash should be provided.
-///
-/// Upon construction, this creates and remembers the blinding factors,
-/// and also performs the expensive math needed to create the blind
-/// signature request. Once initialized, use `get_request` method to obtain
-/// the 32-byte request that should be sent to the signer. After receiving
-/// the 32-byte response from the signer, call `finalize`.
-///
-/// The resultant Schnorr signatures follow the standard BCH Schnorr
-/// convention (using Jacobi symbol, pubkey prefixing, and SHA256).
-///
-/// Internally, two random blinding factors a, b are used. Due to the jacobi
-/// property, a signflip factor c = +/- 1 is also included.
-///
-/// [signer provides: R = k*G]
-/// R' = c*(R + a*G + b*P)
-/// Choose c = +1 or -1 such that jacobi(R'.y(), fieldsize) = +1
-/// e' = Hash(R'.x | ser_compressed(P) | message32)
-/// e = c*e' + b mod n
-/// [send to signer: e]
-/// [signer provides: s = k + e*x]
-/// s' = c*(s + a) mod n
-///
-/// The resulting unblinded signature is: (R'.x, s')
-///
-/// Reference: [https://blog.cryptographyengineering.com/a-note-on-blind-signature-schemes/]
+/// See https://blog.cryptographyengineering.com/a-note-on-blind-signature-schemes/
 class BlindSignatureRequest {
   // Curve properties.
   final BigInt _order; // ECDSA curve order.
@@ -53,14 +25,12 @@ class BlindSignatureRequest {
   late BigInt _c;
   late BigInt _e;
 
-  // written to but never read?
-  late BigInt _eNew;
+  late BigInt _eNew; // Written to but never read?
 
   // Storage for intermediary and final results.
   late Uint8List _pointRxNew;
   late Uint8List _pubKeyCompressed;
 
-  /// Constructor: Initializes various fields and performs initial calculations.
   BlindSignatureRequest({
     required this.pubkey,
     required this.R,
@@ -86,8 +56,8 @@ class BlindSignatureRequest {
     _eNew = eHash % _order;
   }
 
+  /// Returns the request as a Uint8List.
   Uint8List get request {
-    // Return the request as a Uint8List
     return _e.toBytes;
   }
 
@@ -98,7 +68,7 @@ class BlindSignatureRequest {
   /// Upon failure it raises RuntimeError. The cause for this error is that
   /// the blind signer has provided an incorrect blinded s value.
   Uint8List finalize(Uint8List sBytes, {bool check = true}) {
-    // Check argument validity
+    // Check argument validity.
     if (sBytes.length != 32) {
       throw ArgumentError('Invalid length for sBytes');
     }
@@ -127,43 +97,43 @@ class BlindSignatureRequest {
 
   /// Performs initial calculations needed for blind signature generation.
   void _calcInitial() {
-    // Convert byte representations to ECPoints
+    // Convert byte representations to ECPoints.
     final pointR = Utilities.serToPoint(R, Utilities.secp256k1Params);
     final pubPoint = Utilities.serToPoint(pubkey, Utilities.secp256k1Params);
 
-    // Compress public key
+    // Compress public key.
     _pubKeyCompressed = Utilities.pointToSer(pubPoint, true);
 
-    // Calculate intermediateR
+    // Calculate intermediateR.
     final intermediateR = pointR + (Utilities.secp256k1Params.G * _a);
 
-    // Check that intermediateR is not null
+    // Check that intermediateR is not null.
     if (intermediateR == null) {
       throw ArgumentError(
           'Failed to perform elliptic curve operation pointR + (params.G * a).');
     }
 
-    // Calculate pointRNew
+    // Calculate pointRNew.
     final pointRNew = intermediateR + (pubPoint * _b);
 
-    // Check that pointRNew is not null
+    // Check that pointRNew is not null.
     if (pointRNew == null || pointRNew.x?.toBigInteger() == null) {
       throw ArgumentError(
           'Failed to perform elliptic curve operation intermediateR + (pubPoint * b).');
     }
 
-    // Convert pointRNew.x to bytes
+    // Convert pointRNew.x to bytes.
     _pointRxNew = pointRNew.x!.toBigInteger()!.toBytes;
 
-    // Calculate y for the Jacobi symbol c
+    // Calculate y for the Jacobi symbol c.
     final y = pointRNew.y?.toBigInteger();
 
-    // Check that y is not null
+    // Check that y is not null.
     if (y == null) {
       throw ArgumentError('Y-coordinate of the new R point is null.');
     }
 
-    // Calculate Jacobi symbol c
+    // Calculate Jacobi symbol c.
     _c = Utilities.jacobi(
       y,
       (Utilities.secp256k1Params.curve as fp.ECCurve).q!,

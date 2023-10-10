@@ -15,36 +15,22 @@ import 'package:socks_socket/socks_socket.dart';
 /// Class to handle a connection.
 ///
 /// This class is used to send and receive messages over a socket.
-///
-/// Attributes:
-/// - [timeout]: The timeout duration.
-/// - [socket]: The socket object.
 class Connection {
-  // Default timeout of 1 second.
   Duration timeout = Duration(seconds: 1);
 
-  // The actual socket object.
   final Socket socket;
 
   final Stream<List<int>> receiveStream;
 
-  // Defines the maximum length allowed for a message in [bytes], set to 200 KB.
+  /// Defines the maximum length allowed for a message in [bytes], set to 200 KB.
   static const int MAX_MSG_LENGTH = 200 * 1024;
 
-  // Magic bytes used for protocol identification.
+  /// Magic bytes used for protocol identification.
   static final magic = [0x76, 0x5b, 0xe8, 0xb4, 0xe4, 0x39, 0x6d, 0xcf];
 
-  // Message length instance variable.
   int messageLength = 0;
 
   /// Constructor to initialize a Connection object with a socket.
-  ///
-  /// Parameters:
-  /// - [socket]: The socket to use.
-  /// - [timeout] (optional): The timeout duration.
-  ///
-  /// Returns:
-  ///   A Connection object.
   Connection._({
     required this.socket,
     required this.receiveStream,
@@ -52,17 +38,6 @@ class Connection {
   });
 
   /// Asynchronous function to open a new connection.
-  ///
-  /// Parameters:
-  /// - [host]: The host to connect to.
-  /// - [port]: The port to connect to.
-  /// - [connTimeout] (optional): The connection timeout duration.
-  /// - [defaultTimeout] (optional): The default timeout duration.
-  /// - [ssl] (optional): Whether to use SSL.
-  /// - [proxyInfo] (optional): Socks options.
-  ///
-  /// Returns:
-  ///  A Future<Connection> object.
   static Future<Connection> openConnection({
     required String host,
     required int port,
@@ -126,13 +101,6 @@ class Connection {
   }
 
   /// Asynchronous method to send a message.
-  ///
-  /// Parameters:
-  ///  - [msg]: The message to send.
-  ///  - [timeout]: The timeout duration.
-  ///
-  /// Returns:
-  ///   A Future<void> object.
   Future<void> sendMessage(List<int> msg, {Duration? timeout}) async {
     // Use class-level timeout if no argument-level timeout is provided.
     timeout ??= this.timeout;
@@ -155,21 +123,11 @@ class Connection {
   }
 
   /// Asynchronous close a socket.
-  ///
-  /// Returns:
-  ///   A Future<dynamic> object.
   Future<void> close() {
     return socket.close();
   }
 
   /// Receive a message with a socket wrapper.
-  ///
-  /// Parameters:
-  /// - [socketwrapper]: The socket wrapper to use.
-  /// - [timeout] (optional): The timeout duration.
-  ///
-  /// Returns:
-  ///   A Future<List<int>> object.
   Future<List<int>> recvMessage({
     Duration? timeout,
   }) async {
@@ -262,9 +220,6 @@ class Connection {
 } // end of Connection class.
 
 /// Class to handle a bad frame error.
-///
-/// Attributes:
-/// - [message]: The error message String.
 class BadFrameError extends Error {
   /// The error message String.
   final String message;

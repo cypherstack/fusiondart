@@ -9,32 +9,24 @@ import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 
+// Translated from https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L289
 /// Class that represents a transaction.
-///
-/// Translated from https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L289
 class Transaction {
   List<bitbox.Input> inputs = [];
   List<Output> outputs = [];
 
   /// Instance variable for the locktime of the transaction.
-  BigInt locktime = BigInt
-      .zero; // https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L311
+  BigInt locktime = BigInt.zero;
+  // https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L311
 
   /// Instance variable for the version of the transaction.
-  BigInt version = BigInt
-      .one; // https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L312
+  BigInt version = BigInt.one;
+  // https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L312
 
   /// Default constructor for the Transaction class.
   Transaction();
 
   /// Factory method to create a Transaction from components and a session hash.
-  ///
-  /// Parameters:
-  /// - [allComponents]: The components for the transaction.
-  /// - [sessionHash]: The session hash for the transaction.
-  ///
-  /// Returns:
-  ///   A tuple containing the Transaction and a list of input indices.
   static (Transaction, List<int>) txFromComponents(
     List<List<int>> allComponents,
     List<int> sessionHash,
@@ -76,17 +68,8 @@ class Transaction {
     return (tx, inputIndices);
   }
 
+  // Translated from Translated from https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L746
   /// Serializes the preimage of the transaction.
-  ///
-  /// Translated from https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L746
-  ///
-  /// Parameters:
-  /// - [index]: The index of the input.
-  /// - [hashType]: The type of hash.
-  /// - [useCache] (optional): Whether to use cached data.
-  ///
-  /// Returns:
-  ///   A Uint8List representing the serialized preimage.
   Uint8List serializePreimageBytes(
     int i, {
     required coinlib.NetworkParams network,
@@ -185,8 +168,10 @@ class Transaction {
   }
 
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/bitcoin.py#L369
+  /// Returns the variable length bytes for a given integer [i].
+  ///
+  /// Based on Based on: https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer
   Uint8List varIntBytes(BigInt i) {
-    // Based on: https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer
     if (i < BigInt.from(0xfd)) {
       return i.toBytes;
     } else if (i <= BigInt.from(0xffff)) {
@@ -198,6 +183,9 @@ class Transaction {
     }
   }
 
+  /// Calculates the common sighash for the transaction.
+  ///
+  /// TODO remove sighash tuple caching comments when they're confirmed unneeded.
   ({
     Uint8List hashPrevouts,
     Uint8List hashSequence,
@@ -207,8 +195,7 @@ class Transaction {
     bool useCache = false,
   }) {
     List<bitbox.Input> inputs = this.inputs;
-    int nOutputs =
-        outputs.length; // Assuming there's a 'outputs' getter in your class
+    int nOutputs = outputs.length;
     List<int> meta = [inputs.length, nOutputs];
 
     // if (useCache) {
@@ -259,6 +246,10 @@ class Transaction {
     );
   }
 
+  // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/transaction.py#L675
+  /// Serializes the output at index n.
+  ///
+  /// TODO handle tokens.
   Uint8List serializeOutputNBytes(
     int n,
     coinlib.NetworkParams network,
