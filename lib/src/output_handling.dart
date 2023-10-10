@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:bitbox/bitbox.dart' as bitbox;
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:fixnum/fixnum.dart';
 import 'package:fusiondart/fusiondart.dart';
@@ -508,12 +507,10 @@ abstract final class OutputHandling {
     for (Output output in outputs) {
       // Calculate fee.
 
-      final script = coinlib.Address.fromString(
-        bitbox.Address.toLegacyAddress(
-          output.address,
-        ),
-        network,
-      ).program.script.compiled;
+      final script = Utilities.scriptOf(
+        address: output.address,
+        network: network,
+      );
 
       // Calculate fee.
       final fee =

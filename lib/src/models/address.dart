@@ -50,13 +50,6 @@ class Address {
     );
   }
 
-  /// Converts the Address to its script form
-  Uint8List toScript(coinlib.NetworkParams network) {
-    final addr = coinlib.Address.fromString(address, network);
-
-    return addr.program.script.compiled;
-  }
-
   /// Returns a JSON-String representation of the Address for easier debugging.
   @override
   String toString() => toJsonString();

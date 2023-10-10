@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:bitbox/bitbox.dart' as bitbox;
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:fusiondart/fusiondart.dart';
@@ -735,5 +736,19 @@ abstract class Utilities {
     // assert len(scriptpubkey) < 253  # need to assume 1-byte varint
     assert(scriptPubKey.length < 253);
     return 9 + scriptPubKey.length;
+  }
+
+  static Uint8List scriptOf({
+    required String address,
+    required coinlib.NetworkParams network,
+  }) {
+    if (bitbox.Address.detectFormat(address) == bitbox.Address.formatCashAddr) {
+      address = bitbox.Address.toLegacyAddress(address);
+    }
+
+    return coinlib.Address.fromString(
+      address,
+      network,
+    ).program.script.compiled;
   }
 }

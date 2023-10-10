@@ -3,10 +3,10 @@ import 'dart:typed_data';
 import 'package:bitbox/bitbox.dart' as bitbox;
 import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
-import 'package:fusiondart/src/models/output.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 
 /// Class that represents a transaction.
@@ -286,12 +286,7 @@ class Transaction {
 
     buf.addAll(amountBytes2);
 
-    final spk = coinlib.Address.fromString(
-      bitbox.Address.toLegacyAddress(
-        output.address,
-      ),
-      network,
-    ).program.script.compiled;
+    final spk = Utilities.scriptOf(address: output.address, network: network);
 
     buf.addAll(varIntBytes(BigInt.from(spk.length)));
     buf.addAll(spk);
