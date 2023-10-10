@@ -251,7 +251,7 @@ abstract final class OutputHandling {
       ({
         List<UtxoDTO> inputs,
         Map<int, List<int>> tierOutputs,
-        int safetySumIn,
+        BigInt safetySumIn,
         Map<int, int> safetyExcessFees,
       })> allocateOutputs({
     required Connection connection,
@@ -444,7 +444,7 @@ abstract final class OutputHandling {
     return (
       inputs: inputs,
       tierOutputs: tierOutputs,
-      safetySumIn: sumInputsValue.toInt(), // toInt()  ...WCGW
+      safetySumIn: sumInputsValue,
       safetyExcessFees: excessFees,
     );
   } // End of `allocateOutputs()`.

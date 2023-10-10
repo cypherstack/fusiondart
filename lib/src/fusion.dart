@@ -160,7 +160,7 @@ class Fusion {
   ({
     List<UtxoDTO> inputs,
     Map<int, List<int>> tierOutputs,
-    int safetySumIn,
+    BigInt safetySumIn,
     Map<int, int> safetyExcessFees,
   })? _allocatedOutputs;
 
@@ -572,7 +572,7 @@ class Fusion {
     required ({
       List<UtxoDTO> inputs,
       Map<int, List<int>> tierOutputs,
-      int safetySumIn,
+      BigInt safetySumIn,
       Map<int, int> safetyExcessFees,
     }) allocatedOutputs,
   }) async {
@@ -1139,7 +1139,7 @@ class Fusion {
 
     // Perform the safety checks!
     final safeties = [
-      sumIn == BigInt.from(_allocatedOutputs!.safetySumIn),
+      sumIn == _allocatedOutputs!.safetySumIn,
       excessFee == BigInt.from(safetyExcessFee),
       excessFee <= BigInt.from(Protocol.MAX_EXCESS_FEE),
       totalFee <= BigInt.from(Protocol.MAX_FEE),
