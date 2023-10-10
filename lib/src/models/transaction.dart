@@ -105,60 +105,38 @@ class Transaction {
     Uint8List outpoint = _serializeOutpointBytes(txin);
     Uint8List preimageScript = _getPreimageScript(txin);
 
-    final Uint8List serInputToken;
-    // TODO handle tokens.
-    /*if (txin.hasToken) {
-      throw Exception("Tried to use an input with token data in fusion!");
-      // serInputToken = Uint8List.fromList([0xef, ...inputToken.serialize()]);
-      // See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L760
-      // and https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/token.py#L165
-      // 0xef should be moved to a Bitcoin Cash opcode enum or similar, see  https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash/bitcoin.py#L252
-    } else {*/
-    serInputToken = Uint8List(0);
-    /*}*/
+    final serInputToken = Uint8List(0);
 
     final scriptCode = Uint8List.fromList([
       ..._varIntBytes(BigInt.from(preimageScript.length)),
       ...preimageScript
     ]);
-    Uint8List amount;
+
+    final Uint8List amount;
     try {
       amount = BigInt.from(txin.value!).toBytesPadded(8);
     } catch (e) {
       throw FusionError('InputValueMissing');
     }
-    Uint8List nSequence =
+
+    final nSequence =
         BigInt.from(txin.sequence ?? (0xffffffff - 1)).toBytesPadded(4);
 
-    /*
-    final amount = txin.value.toBytesPadded(8);
-    final nSequence = BigInt.from(txin.sequence).toBytesPadded(4);
-     */
-
-    // Unpack values from calcCommonSighash function
-    ({
-      Uint8List hashOutputs,
-      Uint8List hashPrevouts,
-      Uint8List hashSequence
-    }) commonSighash = _calcCommonSighash(network: network, useCache: useCache);
-
-    Uint8List hashPrevouts, hashSequence, hashOutputs;
-    (hashPrevouts, hashSequence, hashOutputs) = (
-      commonSighash.hashPrevouts,
-      commonSighash.hashSequence,
-      commonSighash.hashOutputs,
+    final commonSighash = _calcCommonSighash(
+      network: network,
+      useCache: useCache,
     );
 
     Uint8List preimage = Uint8List.fromList([
       ...nVersion,
-      ...hashPrevouts,
-      ...hashSequence,
+      ...commonSighash.hashPrevouts,
+      ...commonSighash.hashSequence,
       ...outpoint,
       ...serInputToken,
       ...scriptCode,
       ...amount,
       ...nSequence,
-      ...hashOutputs,
+      ...commonSighash.hashOutputs,
       ...nLocktime,
       ...hashTypeBytes
     ]);
