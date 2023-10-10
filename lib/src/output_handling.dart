@@ -482,7 +482,6 @@ abstract final class OutputHandling {
       // Calculate fee.
       int fee = Utilities.componentFee(
           Utilities.sizeOfInput(Uint8List.fromList(input.pubKey)), feerate);
-      // TODO implement sizeOfInput().
 
       // Create input component.
       final comp = Component()
@@ -499,8 +498,7 @@ abstract final class OutputHandling {
       components.add(
         (
           component: comp,
-          value: BigInt.from(input.value ?? 0 - fee),
-          // TODO verify 0 as default works above.
+          value: BigInt.from(input.value - fee),
         ),
       );
     }
