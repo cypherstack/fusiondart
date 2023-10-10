@@ -56,14 +56,16 @@ class CovertSubmitter {
     for (CovertSlot s in slots) {
       if (s.covConn != null) {
         // Wake up the connection associated with the slot.
-        s.covConn!.wakeup
-            .complete(true); // TODO make sure passing `true` is correct
+        s.covConn!.wakeupSet();
+        // s.covConn!.wakeup
+        //     .complete(true); // TODO make sure passing `true` is correct
       }
     }
 
     // Wake up all the spare connections, too.
     for (CovertConnection c in spareConnections) {
-      c.wakeup.complete(true); // TODO make sure passing `true` is correct
+      c.wakeupSet();
+      // c.wakeup.complete(true); // TODO make sure passing `true` is correct
     }
   }
 
@@ -180,7 +182,8 @@ class CovertSubmitter {
     CovertConnection? covConn = slot.covConn;
     if (covConn != null) {
       // Wake up the connection associated with the slot.
-      covConn.wakeup.complete(true); // TODO make sure passing `true` is correct
+      covConn.wakeupSet();
+      // covConn.wakeup.complete(true); // TODO make sure passing `true` is correct
     }
   }
 
@@ -197,7 +200,8 @@ class CovertSubmitter {
     // since Dart does not support mutation during iteration.
     for (CovertConnection c in spareConnections) {
       c.tPing = tStart;
-      c.wakeup.complete(true); // TODO make sure passing `true` is correct
+      c.wakeupSet();
+      // c.wakeup.complete(true); // TODO make sure passing `true` is correct
     }
 
     // Then, notify the slots that there is a message to submit.
@@ -213,7 +217,8 @@ class CovertSubmitter {
       slot.subMsg = subMsg;
       slot.tSubmit = tStart;
       /*}*/
-      covConn.wakeup.complete(true); // TODO make sure passing `true` is correct
+      covConn.wakeupSet();
+      // covConn.wakeup.complete(true); // TODO make sure passing `true` is correct
       /*}*/
     }
   }
@@ -370,8 +375,9 @@ class CovertSubmitter {
             // Found a spare.
             slots[slotNum].covConn = spare;
             spare.slotNum = slotNum;
-            spare.wakeup
-                .complete(true); // TODO make sure passing `true` is correct.
+            spare.wakeupSet();
+            // spare.wakeup
+            //     .complete(true); // TODO make sure passing `true` is correct.
             // TODO Python code is using set, possibly dealing with multi thread... Double check this is ok.
 
             // Clear the slot number for the connection.

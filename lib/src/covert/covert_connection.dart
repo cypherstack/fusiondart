@@ -11,8 +11,15 @@ class CovertConnection {
   int? slotNum;
   DateTime? tPing;
   int? connNumber;
-  Completer<bool> wakeup = Completer();
+  Completer<bool> _wakeup = Completer();
   double? delay;
+
+  void wakeupSet() {
+    if (_wakeup.isCompleted) {
+      _wakeup = Completer();
+    }
+    _wakeup.complete(true);
+  }
 
   /// Waits for the connection to wake up or for a timeout.
   Future<bool> waitWakeupOrTime(DateTime? t) async {
@@ -28,16 +35,16 @@ class CovertConnection {
     // wait for the first one of the following futures to complete
     await Future.any([
       Future<void>.delayed(Duration(milliseconds: remTime)).then((_) {
-        if (!wakeup.isCompleted) {
-          wakeup.complete(false);
+        if (!_wakeup.isCompleted) {
+          _wakeup.complete(false);
         }
       }),
-      wakeup.future,
+      _wakeup.future,
     ]);
 
     // Return whether the connection was woken up.
-    final wasSet = await wakeup.future;
-    wakeup = Completer();
+    final wasSet = await _wakeup.future;
+    _wakeup = Completer();
     return wasSet;
   }
 
