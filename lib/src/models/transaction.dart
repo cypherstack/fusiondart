@@ -195,13 +195,11 @@ class Transaction {
     if (i < BigInt.from(0xfd)) {
       return i.toBytes;
     } else if (i <= BigInt.from(0xffff)) {
-      return Uint8List.fromList([0xfd, ...i.toBytes]);
-      // Not sure if this is correct as the python uses `return b"\xfd" + int_to_bytes(i, 2)`, see https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/bitcoin.py#L369
+      return Uint8List.fromList([0xfd, ...i.toBytesPadded(2)]);
     } else if (i <= BigInt.from(0xffffffff)) {
-      return Uint8List.fromList([0xfe, ...i.toBytes]);
+      return Uint8List.fromList([0xfe, ...i.toBytesPadded(4)]);
     } else {
-      return Uint8List.fromList([0xff, ...i.toBytes]);
-      // Not sure if this is correct as the python uses `return b"\xff" + int_to_bytes(i, 8)`, see https://github.com/Electron-Cash/Electron-Cash/blob/00f7b49076c291c0162b3f591cc30fc6b8da5a23/electroncash/bitcoin.py#L369
+      return Uint8List.fromList([0xff, ...i.toBytesPadded(8)]);
     }
   }
 
