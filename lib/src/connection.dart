@@ -98,8 +98,9 @@ class Connection {
         // TODO Close the socket.
         // await socksSocket.close();
       } catch (e, s) {
-        Utilities.debugPrint(s);
-        throw 'openConnection(): Failed to open proxied connection: $e';
+        Utilities.debugPrint(
+            'openConnection(): Failed to open proxied connection: $e\n$s');
+        rethrow;
       }
     } else {
       try {
@@ -108,9 +109,9 @@ class Connection {
         // Dart's Socket class handles connection timeout internally.
         final Socket socket;
         if (ssl) {
-          socket = await SecureSocket.connect(host, port);
+          socket = await SecureSocket.connect(host, port, timeout: connTimeout);
         } else {
-          socket = await Socket.connect(host, port);
+          socket = await Socket.connect(host, port, timeout: connTimeout);
         }
 
         // Create a Connection object and return it.
@@ -119,8 +120,10 @@ class Connection {
           receiveStream: socket.asBroadcastStream(),
           timeout: defaultTimeout,
         );
-      } catch (e) {
-        throw 'openConnection(): Failed to open direct connection: $e';
+      } catch (e, s) {
+        Utilities.debugPrint(
+            'openConnection(): Failed to open direct connection: $e\n$s');
+        rethrow;
       }
     }
   }
