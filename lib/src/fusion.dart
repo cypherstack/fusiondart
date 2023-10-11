@@ -30,14 +30,17 @@ import 'package:protobuf/protobuf.dart';
 
 final bool kDebugPrintEnabled = true;
 
+// final class FusionParams {
+//   final String serverHost = "fusion.servo.cash";
+//   final int serverPort = 8789;
+//   final bool serverSsl = true;
+// }
+
 final class FusionParams {
   // CashFusion server host.
-  // Alternative host: `"fusion.servo.cash"`.
-
   final String serverHost = "cashfusion.stackwallet.com";
 
   // Server port.
-  // For use with the alternative host above, use `8789`.
   final int serverPort = 8787;
 
   final bool serverSsl = false;
