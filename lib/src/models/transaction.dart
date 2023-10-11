@@ -75,6 +75,124 @@ class Transaction {
     return (tx, inputIndices);
   }
 
+  Uint8List serializePreimageBytesAlt(
+    int i, {
+    required coinlib.NetworkParams network,
+    int nHashType = 0x00000041,
+    bool useCache = false,
+  }) {
+    final tx = bitbox.Transaction();
+
+    tx.inputs.addAll(inputs);
+    tx.outputs.addAll(outputs.map((e) => bitbox.Output(
+          script: Utilities.scriptOf(
+            address: e.address,
+            network: network,
+          ),
+          value: e.value,
+        )));
+
+    final input = inputs[i];
+
+    final address = coinlib.P2PKHAddress.fromPublicKey(
+      coinlib.ECPublicKey.fromHex(input.pubkeys!.first!.toHex),
+      version: network.p2pkhPrefix,
+    );
+
+    final pubKeyScript = address.program.script.compiled;
+
+    // final pre = tx.hashForCashSignature(
+    //   i,
+    //   pubKeyScript,
+    //   input.value!,
+    //   0x41,
+    // ) as Uint8List;
+
+    final tx2 = coinlib.Transaction(
+      inputs: inputs.map(
+        (e) => coinlib.P2PKHInput(
+          prevOut: coinlib.OutPoint(
+            e.hash!,
+            e.index!,
+          ),
+          publicKey: coinlib.ECPublicKey.fromHex(
+            e.pubkeys![0]!.toHex,
+          ),
+        ),
+      ),
+      outputs: outputs.map(
+        (e) => coinlib.Output.fromScriptBytes(
+          BigInt.from(e.value),
+          Utilities.scriptOf(address: e.address, network: network),
+        ),
+      ),
+      version: version.toInt(),
+    );
+    //
+    // final pre2 = tx2.signatureHashForWitness(
+    //   i,
+    //   coinlib.Script.decompile(pubKeyScript),
+    //   BigInt.from(input.value!),
+    //   coinlib.SigHashType.fromValue(nHashType),
+    // );
+
+    Uint8List _hashConcatWritable(Iterable<coinlib.Writable> list) {
+      return Utilities.doubleSha256(
+        Uint8List.fromList(
+          list.map((e) => e.toBytes().toList()).reduce((a, b) => a + b),
+        ),
+      );
+    }
+
+    final hashPrevouts = _hashConcatWritable(tx2.inputs.map((i) => i.prevOut));
+
+    final sequenceBytes = Uint8List(4 * tx2.inputs.length);
+    final sequenceWriter = coinlib.BytesWriter(sequenceBytes);
+    for (final input in tx2.inputs) {
+      sequenceWriter.writeUInt32(input.sequence);
+    }
+    final hashSequence = Utilities.doubleSha256(sequenceBytes);
+
+    final hashOutputs = _hashConcatWritable(tx2.outputs);
+
+    final thisIn = tx2.inputs[i];
+
+    // Get data for input
+    late coinlib.Script scriptCode2;
+
+    if (thisIn is coinlib.PKHInput) {
+      // Require explicit cast for a mixin
+      final pk = (thisIn as coinlib.PKHInput).publicKey;
+      scriptCode2 = coinlib.P2PKH.fromPublicKey(pk).script;
+    } else if (thisIn is coinlib.P2SHMultisigInput) {
+      // For P2SH the script code is the redeem script
+      scriptCode2 = thisIn.program.script;
+    } else {
+      throw Exception("${thisIn.runtimeType} not a signable input");
+    }
+
+    final compiledScript = scriptCode2.compiled;
+
+    assert(compiledScript.equals(pubKeyScript));
+
+    final size =
+        156 + (coinlib.MeasureWriter()..writeVarSlice(compiledScript)).size;
+    final bytes = Uint8List(size);
+    final writer = coinlib.BytesWriter(bytes);
+    writer.writeUInt32(version.toInt());
+    writer.writeSlice(hashPrevouts);
+    writer.writeSlice(hashSequence);
+    thisIn.prevOut.write(writer);
+    writer.writeVarSlice(compiledScript);
+    writer.writeUInt64(BigInt.from(input.value!));
+    writer.writeUInt32(thisIn.sequence);
+    writer.writeSlice(hashOutputs);
+    writer.writeUInt32(locktime.toInt());
+    writer.writeUInt32(nHashType);
+
+    return bytes;
+  }
+
   /// Serializes the preimage of the transaction.
   ///
   /// Translated from https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L746
