@@ -549,7 +549,7 @@ abstract final class OutputHandling {
     // Generate commitments.
     components.asMap().forEach((cnum, componentRecord) {
       // Generate salt.
-      final salt = Utilities.tokenBytes(32);
+      final salt = Utilities.getRandomBytes(32);
       componentRecord.component.saltCommitment = Utilities.sha256(salt);
       final compser = componentRecord.component.writeToBuffer();
 

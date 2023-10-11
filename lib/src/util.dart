@@ -357,11 +357,11 @@ abstract class Utilities {
   ///
   /// Returns:
   ///   A Uint8List containing the random bytes.
-  static Uint8List getRandomBytes(int length) {
-    final rand = Random.secure();
+  static Uint8List getRandomBytes(int length, {Random? random}) {
+    final rand = random ?? Random.secure();
     final bytes = Uint8List(length);
     for (int i = 0; i < length; i++) {
-      bytes[i] = rand.nextInt(256);
+      bytes[i] = rand.nextInt(0xFF + 1);
     }
     return bytes;
   }
@@ -516,7 +516,7 @@ abstract class Utilities {
     int remBit = bitLength % 8;
 
     // Generate a list of random bytes
-    List<int> rnd = List<int>.generate(bytes, (_) => random.nextInt(256));
+    List<int> rnd = getRandomBytes(bytes, random: random);
 
     // Generate the remaining random bits
     int rndBit = random.nextInt(1 << remBit);
@@ -549,26 +549,6 @@ abstract class Utilities {
 
   static Uint8List doubleSha256(List<int> data) {
     return sha256(sha256(data));
-  }
-
-  /// Returns a random Uint8List of length [nbytes].
-  ///
-  /// Generates a cryptographically secure random sequence of bytes.
-  /// Uses `Random.secure()` to generate each byte.
-  ///
-  /// Optional parameter [nbytes] sets the length of the output list.
-  /// Defaults to 32 bytes if not specified.
-  ///
-  /// Parameters:
-  ///  - [nbytes]: The length of the output list.  Defaults to 32 bytes if not specified.
-  ///
-  /// Returns:
-  ///   A Uint8List containing [nbytes] random bytes.
-  static Uint8List tokenBytes([int nbytes = 32]) {
-    final Random _random = Random.secure();
-
-    return Uint8List.fromList(
-        List<int>.generate(nbytes, (i) => _random.nextInt(256)));
   }
 
   /// Calculates the component fee based on [size] and [feerate].
@@ -663,10 +643,7 @@ abstract class Utilities {
 
     // Loop until we get a value less than maxValue.
     while (true) {
-      final bytes = Uint8List(byteLength);
-      for (int i = 0; i < byteLength; i++) {
-        bytes[i] = random.nextInt(0xFF + 1);
-      }
+      final bytes = getRandomBytes(byteLength, random: random);
       final result = bytes.toBigInt;
 
       if (result < maxValue) {
