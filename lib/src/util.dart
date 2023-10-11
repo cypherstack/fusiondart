@@ -474,62 +474,13 @@ abstract class Utilities {
   /// Returns:
   ///   A tuple containing the private key and the public key as Uint8List.
   static (Uint8List, Uint8List) genKeypair() {
-    // Generate a private key using secure random values and curve's bit length
-    final BigInt privKeyBigInt =
-        _generatePrivateKey(secp256k1Params.n.bitLength);
-
-    // Calculate the public key point using elliptic curve multiplication
-    final ECPoint? pubKeyPoint = secp256k1Params.G * privKeyBigInt;
-
-    // Check for any errors in public key generation
-    if (pubKeyPoint == null) {
-      throw Exception("Error generating public key.");
-    }
+    final private = coinlib.ECPrivateKey.generate();
 
     // Convert the private and public keys to Uint8List format
-    final privKey = privKeyBigInt.toBytes;
-    final pubKey = pubKeyPoint.getEncoded(true);
+    final privKey = private.data;
+    final pubKey = private.pubkey.data;
 
     return (privKey, pubKey);
-  }
-
-  /// Generates a cryptographically secure private key of a given bit length.
-  ///
-  /// Uses a secure random number generator to create a private key. The bit
-  /// length of the generated key is specified by the [bitLength] parameter.
-  ///
-  /// Note: The cryptographic safety of this function still needs to be verified.
-  ///
-  /// Parameters:
-  ///   - [bitLength]: The bit length of the private key to be generated.
-  ///
-  /// Returns:
-  ///   A BigInt representing the generated private key.
-  static BigInt _generatePrivateKey(int bitLength) {
-    // TODO verify cryptographic safety
-
-    // Use secure random generator
-    final random = Random.secure();
-
-    // Calculate the number of bytes and the remaining bits
-    int bytes = bitLength ~/ 8; // floor division
-    int remBit = bitLength % 8;
-
-    // Generate a list of random bytes
-    List<int> rnd = getRandomBytes(bytes, random: random);
-
-    // Generate the remaining random bits
-    int rndBit = random.nextInt(1 << remBit);
-
-    // Add the remaining bits to the random list
-    rnd.add(rndBit);
-
-    // Convert the list of random numbers to a hex string and then to a BigInt
-    BigInt privateKey = BigInt.parse(
-        rnd.map((x) => x.toRadixString(16).padLeft(2, '0')).join(),
-        radix: 16);
-
-    return privateKey;
   }
 
   /// Returns the sha256 hash of a Uint8List.
