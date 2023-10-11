@@ -1588,10 +1588,7 @@ class Fusion {
         for (final o in tx.outputs) {
           final cO = coinlib.Output.fromScriptBytes(
             BigInt.from(o.value),
-            coinlib.Address.fromString(o.address, network)
-                .program
-                .script
-                .compiled,
+            Utilities.scriptOf(address: o.address, network: network),
           );
           cOutputs.add(cO);
         }
