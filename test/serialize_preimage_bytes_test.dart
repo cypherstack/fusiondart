@@ -10,28 +10,27 @@ void main() {
     await coinlib.loadCoinlib();
 
     final input = bitbox.Input(
-      hash: 'c0305ddaa027ebabf217df7adfd79c79a8920dad9b0fd534446f545594c40c37'
+      hash: '4d9d20abe5faeccd4a027284333df4ccd35f86f2f07ed14b626a8bc8a505ed1a'
           .toUint8ListFromHex,
-      index: 32,
+      index: 0,
       sequence: 0xffffffff,
       pubkeys: [
-        '025ba567cfbe18be15445520696ba05320feb5607e00089e75511c323fa4e9dff6'
+        '02c649d809b4186de74342504705e1936e24cf7605d06ab43bc9fd3638be720d3a'
             .toUint8ListFromHex
       ],
-      value: 1740046,
+      value: 40000,
     );
 
     final Output output = Output(
         value: 0, // ???
-        address:
-            'qqpt9pqwvzqhlal4s2ere3n43k8ejedf65qrq4f4wr'); // or bitcoincash:qqpt9pqwvzqhlal4s2ere3n43k8ejedf65qrq4f4wr
+        address: '1A1C5oYHaxmS7i2HExd9mvwrRsntynGue9');
     // python uses: `[(TYPE_SCRIPT, ScriptOutput(bytes([OpCodes.OP_RETURN, *prefix, 32]) + session_hash), 0)]`
     // // final List<int> prefix = [4, 70, 85, 90, 0];
     // final output = bitbox.Output(
     //   script: Uint8List.fromList(
     //       [0x6a, 4, 70, 85, 90, 0, 32, ...List.generate(32, (index) => 0)]),
     //       // [0x6a, ...prefix, 32, ...List.generate(32, (index) => 0)]),
-    //   value: 0,
+    //   value: 0,w
     // );
 
     final tx = Transaction([input], []); // TODO add output.
@@ -47,7 +46,7 @@ void main() {
 
     expect(
       sigHash.toHex,
-      'ba41eaaa11ab0f1d40ffeef4d3c35559a4e9aed53011a0a4e05700287857eb60',
+      '96605bea42e2f757258f6f9256d260ec7a42bb50aef853f6a09b8548919e3cde',
     );
   });
 }
