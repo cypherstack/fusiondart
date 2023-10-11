@@ -1,12 +1,14 @@
 import 'package:bitbox/bitbox.dart' as bitbox;
+import 'package:coinlib/coinlib.dart' as coinlib;
+import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
-import 'package:fusiondart/src/models/transaction.dart';
-import 'package:fusiondart/src/util.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('Test Known Signature Bytes', () {
+  test('Test Known Signature Bytes', () async {
+    await coinlib.loadCoinlib();
+
     final input = bitbox.Input(
       hash: 'c0305ddaa027ebabf217df7adfd79c79a8920dad9b0fd534446f545594c40c37'
           .toUint8ListFromHex,
@@ -19,7 +21,19 @@ void main() {
       value: 1740046,
     );
 
-    // final output = // python has: `[(TYPE_SCRIPT, ScriptOutput(bytes([OpCodes.OP_RETURN, *prefix, 32]) + session_hash), 0)]`
+    final Output output = Output(
+        value: 0, // ???
+        address:
+            'qqpt9pqwvzqhlal4s2ere3n43k8ejedf65qrq4f4wr'); // or bitcoincash:qqpt9pqwvzqhlal4s2ere3n43k8ejedf65qrq4f4wr
+    // python uses: `[(TYPE_SCRIPT, ScriptOutput(bytes([OpCodes.OP_RETURN, *prefix, 32]) + session_hash), 0)]`
+    // // final List<int> prefix = [4, 70, 85, 90, 0];
+    // final output = bitbox.Output(
+    //   script: Uint8List.fromList(
+    //       [0x6a, 4, 70, 85, 90, 0, 32, ...List.generate(32, (index) => 0)]),
+    //       // [0x6a, ...prefix, 32, ...List.generate(32, (index) => 0)]),
+    //   value: 0,
+    // );
+
     final tx = Transaction([input], []); // TODO add output.
 
     // Calculate sigHash for signing.
