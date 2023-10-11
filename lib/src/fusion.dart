@@ -1222,17 +1222,25 @@ class Fusion {
 
     Utilities.debugPrint("Sending initial commitments etc.");
 
+    final playerCommit = PlayerCommit(
+      initialCommitments: myCommitments,
+      excessFee: Int64.parseHex(excessFee.toHex),
+      pedersenTotalNonce: genComponentsResults.pedersenTotalNonce,
+      randomNumberCommitment: Utilities.sha256(randomNumber),
+      blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
+    );
+
+    checkPlayerCommit(
+      playerCommit,
+      _serverParams!.minExcessFee,
+      _serverParams!.maxExcessFee,
+      _serverParams!.numComponents,
+    );
+
     // Send initial commitments, fees, and other data to the server.
     await Comms.sendPb(
       connection,
-      ClientMessage()
-        ..playercommit = PlayerCommit(
-          initialCommitments: myCommitments,
-          excessFee: Int64.parseHex(excessFee.toHex),
-          pedersenTotalNonce: genComponentsResults.pedersenTotalNonce,
-          randomNumberCommitment: Utilities.sha256(randomNumber),
-          blindSigRequests: blindSigRequests.map((r) => r.request).toList(),
-        ),
+      ClientMessage()..playercommit = playerCommit,
     );
 
     Utilities.debugPrint("Awaiting signature responses from the server...");
@@ -1312,6 +1320,15 @@ class Fusion {
     }
     if (messages.any((element) => element == null)) {
       throw FusionError('Messages list includes null values.');
+    }
+
+    for (final cc in messages) {
+      checkCovertComponent(
+        cc!,
+        Uint8List.fromList(roundPubKey),
+        _serverParams!.componentFeeRate,
+        network,
+      );
     }
 
     final targetDateTime = DateTime.fromMillisecondsSinceEpoch(

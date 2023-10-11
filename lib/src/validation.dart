@@ -108,12 +108,12 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
       nonce: (Uint8List.fromList(msg.pedersenTotalNonce)).toBigInt,
     );
 
-    check(pointsum == claimedCommit.pointPUncompressed,
+    check(pointsum.equals(claimedCommit.pointPUncompressed),
         "pedersen commitment mismatch");
-  } catch (e) {
-    throw ValidationError("pedersen commitment verification error");
+  } catch (e, s) {
+    throw ValidationError("pedersen commitment verification error: $e\n$s");
   }
-  check(pointsum == claimedCommit.pointPUncompressed,
+  check(pointsum.equals(claimedCommit.pointPUncompressed),
       "pedersen commitment mismatch");
   return commitMessages;
 }
