@@ -1,5 +1,6 @@
 import 'package:bitbox/bitbox.dart' as bitbox;
 import 'package:fusiondart/src/extensions/on_string.dart';
+import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/transaction.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:test/test.dart';
@@ -31,9 +32,8 @@ void main() {
     final sigHash = Utilities.doubleSha256(preimageBytes);
 
     expect(
-      sigHash,
-      'ba41eaaa11ab0f1d40ffeef4d3c35559a4e9aed53011a0a4e05700287857eb60'
-          .toUint8ListFromHex,
+      sigHash.toHex,
+      'ba41eaaa11ab0f1d40ffeef4d3c35559a4e9aed53011a0a4e05700287857eb60',
     );
   });
 }
