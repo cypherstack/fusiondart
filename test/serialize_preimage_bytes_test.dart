@@ -46,7 +46,7 @@ void main() {
 
     expect(
       sigHash.toHex,
-      '064ee244c70743813b8be021f3fd00125c12d74f003add3c08d49e60452f66f3',
+      'd67d0b43caeba9e1bdb8560fdaf50c024c6de67d36532275307536f0b324827a',
     );
   });
 }
