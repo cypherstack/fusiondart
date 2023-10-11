@@ -65,7 +65,7 @@ class Transaction {
         tx.inputs.add(input);
         inputIndices.add(i);
       } else if (comp.hasOutput()) {
-        final output = Output.fromOutputComponent(comp.output, network);
+        final output = Output.fromOutputComponent(comp.output);
         tx.outputs.add(output);
       } else if (!comp.hasBlank()) {
         throw FusionError("bad component");
@@ -85,10 +85,7 @@ class Transaction {
 
     tx.inputs.addAll(inputs);
     tx.outputs.addAll(outputs.map((e) => bitbox.Output(
-          script: Utilities.scriptOf(
-            address: e.address,
-            network: network,
-          ),
+          script: e.scriptPubKey,
           value: e.value,
         )));
 
@@ -123,7 +120,7 @@ class Transaction {
       outputs: outputs.map(
         (e) => coinlib.Output.fromScriptBytes(
           BigInt.from(e.value),
-          Utilities.scriptOf(address: e.address, network: network),
+          e.scriptPubKey,
         ),
       ),
       version: version.toInt(),
@@ -379,7 +376,7 @@ class Transaction {
 
     buf.addAll(amountBytes2);
 
-    final spk = Utilities.scriptOf(address: output.address, network: network);
+    final spk = output.scriptPubKey;
 
     buf.addAll(_varIntBytes(BigInt.from(spk.length)));
     buf.addAll(spk);

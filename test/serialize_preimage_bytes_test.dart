@@ -21,9 +21,9 @@ void main() {
       value: 40000,
     );
 
-    final Output output = Output(
-        value: 0, // ???
-        address: '1A1C5oYHaxmS7i2HExd9mvwrRsntynGue9');
+    // final Output output = Output(
+    //     value: 0, // ???
+    //     address: '1A1C5oYHaxmS7i2HExd9mvwrRsntynGue9');
     // python uses: `[(TYPE_SCRIPT, ScriptOutput(bytes([OpCodes.OP_RETURN, *prefix, 32]) + session_hash), 0)]`
     // // final List<int> prefix = [4, 70, 85, 90, 0];
     // final output = bitbox.Output(
@@ -32,6 +32,20 @@ void main() {
     //       // [0x6a, ...prefix, 32, ...List.generate(32, (index) => 0)]),
     //   value: 0,w
     // );
+    final output = Output.fromScriptPubKey(
+      scriptPubkey: [
+        0x6a,
+        4,
+        70,
+        85,
+        90,
+        0,
+        32,
+        ...List.generate(32, (index) => 0)
+      ],
+      // [0x6a, ...prefix, 32, ...List.generate(32, (index) => 0)]),
+      value: 0,
+    );
 
     final tx = Transaction([input], []); // TODO add output.
 

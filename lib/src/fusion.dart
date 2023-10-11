@@ -364,6 +364,7 @@ class Fusion {
         _registerAndWaitResult = await registerAndWait(
           connection: connection,
           allocatedOutputs: _allocatedOutputs!,
+          network: network,
         );
 
         Utilities.debugPrint("Starting covert submitter...");
@@ -572,6 +573,7 @@ class Fusion {
       BigInt safetySumIn,
       Map<int, int> safetyExcessFees,
     }) allocatedOutputs,
+    required coinlib.NetworkParams network,
   }) async {
     // Initialize a stopwatch to measure elapsed time.
     Stopwatch stopwatch = Stopwatch()..start();
@@ -894,8 +896,11 @@ class Fusion {
     _reservedAddresses = outAddrs;
 
     final outputs = Utilities.zip(outAmounts ?? [], outAddrs)
-        .map((pair) => Output(
-            value: pair[0] as int, address: (pair[1] as Address).address))
+        .map((pair) => Output.fromAddress(
+              value: pair[0] as int,
+              address: (pair[1] as Address).address,
+              network: network,
+            ))
         .toList();
 
     Utilities.debugPrint(
@@ -1608,7 +1613,7 @@ class Fusion {
         for (final o in tx.outputs) {
           final cO = coinlib.Output.fromScriptBytes(
             BigInt.from(o.value),
-            Utilities.scriptOf(address: o.address, network: network),
+            o.scriptPubKey,
           );
           cOutputs.add(cO);
         }

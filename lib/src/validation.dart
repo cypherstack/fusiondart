@@ -22,7 +22,7 @@ int componentContrib(
             Utilities.sizeOfInput(Uint8List.fromList(component.input.pubkey)),
             feerate);
   } else if (component.hasOutput()) {
-    Output out = Output.fromOutputComponent(component.output, network);
+    Output out = Output.fromOutputComponent(component.output);
     return -out.value.toInt() -
         Utilities.componentFee(
             Utilities.sizeOfOutput(

@@ -507,10 +507,7 @@ abstract final class OutputHandling {
     for (Output output in outputs) {
       // Calculate fee.
 
-      final script = Utilities.scriptOf(
-        address: output.address,
-        network: network,
-      );
+      final script = output.scriptPubKey;
 
       // Calculate fee.
       final fee =
