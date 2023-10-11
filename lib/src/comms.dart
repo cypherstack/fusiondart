@@ -12,45 +12,6 @@ import 'package:fusiondart/src/receive_messages.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart';
 
-/// Type definition for a function that creates a new instance of a Protobuf GeneratedMessage.
-typedef PbCreateFunc = GeneratedMessage Function();
-
-/// A mapping of Protobuf message types to their respective factory functions.
-///
-/// This map allows us to instantiate a new Protobuf message object given its type.
-Map<Type, PbCreateFunc> pbClassCreators = {
-  CovertResponse: () => CovertResponse(),
-  ClientMessage: () => ClientMessage(),
-  InputComponent: () => InputComponent(),
-  OutputComponent: () => OutputComponent(),
-  BlankComponent: () => BlankComponent(),
-  Component: () => Component(),
-  InitialCommitment: () => InitialCommitment(),
-  Proof: () => Proof(),
-  ClientHello: () => ClientHello(),
-  ServerHello: () => ServerHello(),
-  JoinPools: () => JoinPools(),
-  TierStatusUpdate: () => TierStatusUpdate(),
-  FusionBegin: () => FusionBegin(),
-  StartRound: () => StartRound(),
-  PlayerCommit: () => PlayerCommit(),
-  BlindSigResponses: () => BlindSigResponses(),
-  AllCommitments: () => AllCommitments(),
-  CovertComponent: () => CovertComponent(),
-  ShareCovertComponents: () => ShareCovertComponents(),
-  CovertTransactionSignature: () => CovertTransactionSignature(),
-  FusionResult: () => FusionResult(),
-  MyProofsList: () => MyProofsList(),
-  TheirProofsList: () => TheirProofsList(),
-  Blames: () => Blames(),
-  RestartRound: () => RestartRound(),
-  Error: () => Error(),
-  Ping: () => Ping(),
-  OK: () => OK(),
-  ServerMessage: () => ServerMessage(),
-  CovertMessage: () => CovertMessage(),
-};
-
 abstract final class Comms {
   static Future<void> sendPb(
     Connection connection,
