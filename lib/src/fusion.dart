@@ -1545,6 +1545,11 @@ class Fusion {
       }
 
       final fusionResultMsg = msg.fusionresult;
+
+      print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+      print("fusionResultMsg.ok = ${fusionResultMsg.ok}");
+      print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+
       if (fusionResultMsg.ok) {
         List<List<int>> allSigs = fusionResultMsg.txsignatures;
 

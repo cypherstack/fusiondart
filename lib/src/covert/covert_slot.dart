@@ -19,10 +19,20 @@ class CovertSlot {
   /// the time of the last submit action.
   DateTime? tSubmit;
 
+  int cnt = 0;
+  int con = 0;
+  int slot = 0;
+  Type? msg;
+
   /// Submits the work to be done within the slot.
   Future<void> submit() async {
     // Attempt to get the connection object from the covert connection.
     final connection = covConn!.connection;
+
+    cnt++;
+    con = covConn!.connNumber!;
+    slot = covConn!.slotNum!;
+    msg = subMsg?.runtimeType;
 
     // Throw an unrecoverable exception if the connection is null.
     if (connection == null) {
@@ -47,23 +57,37 @@ class CovertSlot {
     //
     // Send a Protocol Buffers message to initiate the work,
     // and set a timeout based on the submitTimeout property.
+    print("###### SENT   cnt=$cnt  conNum=$con    slot=$slot    type=$msg");
     await Comms.sendPb(connection, message, timeout: submitTimeout);
+    try {
+      // throws on error ( aka if not 'ok' )
+      print(
+          "###### RECEIVE   cnt=$cnt  conNum=$con    slot=$slot    type=$msg");
+      await Comms.recvPb(
+        ['ok'],
+        connection: connection,
+        covert: true,
+        timeout: submitTimeout,
+      );
+    } catch (e) {
+      print(
+          "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+      print("Covert.submit msg type = ${subMsg?.runtimeType}");
+      print("Slot num               = ${covConn?.slotNum}");
+      print("conn num               = ${covConn?.connNumber}");
+      print(
+          "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
-    // throws on error ( aka if not 'ok' )
-    await Comms.recvPb(
-      ['ok'],
-      connection: connection,
-      covert: true,
-      timeout: submitTimeout,
-    );
+      rethrow;
+    } finally {
+      // Set to null to indicate that the work has been completed.
+      subMsg = null;
 
-    // Set to null to indicate that the work has been completed.
-    subMsg = null;
+      tSubmit = null;
 
-    tSubmit = null;
-
-    // Reset the ping time for the associated covert connection.
-    // If a submission has been successfully made, no ping is needed.
-    covConn!.tPing = null; // if a submission is done, no ping is needed.
+      // Reset the ping time for the associated covert connection.
+      // If a submission has been successfully made, no ping is needed.
+      covConn!.tPing = null; // if a submission is done, no ping is needed.
+    }
   }
 }
