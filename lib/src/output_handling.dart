@@ -579,7 +579,7 @@ abstract final class OutputHandling {
       Proof proof = Proof(
         componentIdx: cnum,
         salt: salt,
-        pedersenNonce: pedersenCommitment.nonce.toBytes,
+        pedersenNonce: pedersenCommitment.nonce.toBytesPadded(32),
       );
 
       // Add result to list.
@@ -604,7 +604,7 @@ abstract final class OutputHandling {
     return (
       results: resultList,
       sumAmounts: sumAmounts,
-      pedersenTotalNonce: sumNonce.toBytes,
+      pedersenTotalNonce: sumNonce.toBytesPadded(32),
     );
   }
 

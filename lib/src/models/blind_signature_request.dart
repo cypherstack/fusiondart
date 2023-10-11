@@ -86,7 +86,7 @@ class BlindSignatureRequest {
 
   Uint8List get request {
     // Return the request as a Uint8List
-    return _e.toBytes;
+    return _e.toBytesPadded(32);
   }
 
   /// Finalizes the blind signature request.
@@ -151,7 +151,7 @@ class BlindSignatureRequest {
     }
 
     // Convert pointRNew.x to bytes
-    _pointRxNew = pointRNew.x!.toBigInteger()!.toBytes;
+    _pointRxNew = pointRNew.x!.toBigInteger()!.toBytesPadded(32);
 
     // Calculate y for the Jacobi symbol c
     final y = pointRNew.y?.toBigInteger();
