@@ -1600,7 +1600,7 @@ class Fusion {
           cInputs.add(cIn);
         }
 
-        for (final o in tx.outputs) {
+        for (final o in txData.tx.outputs) {
           final cO = coinlib.Output.fromScriptBytes(
             BigInt.from(o.value),
             o.scriptPubKey,
