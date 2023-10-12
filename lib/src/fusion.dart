@@ -123,23 +123,13 @@ class Fusion {
         "================================================================");
   }
 
-  // TODO parameterize; should these be fed in as parameters upon construction/instantiation?
-
   int _roundCount = 0; // Tracks the number of CashFusion rounds.
-
-  // Various state variables.
-  // List<Address> changeAddresses = [];
 
   bool _serverConnectedAndGreeted = false; // Have we connected to the server?
   bool _stopping = false; // Should fusion stop?
   bool _stoppingIfNotRunning = false; // Should fusion stop if it's not running?
   String _stopReason = ""; // Specifies the reason for stopping the operation.
 
-  // int numComponents = 0; // Tracks the number of components.
-  // double componentFeeRate = 0; // Defines the fee rate for each component.
-  // double minExcessFee = 0; // Specifies the minimum excess fee.
-  // double maxExcessFee = 0; // Specifies the maximum excess fee.
-  // List<int> availableTiers = []; // Lists the available CashFusion tiers.
   ({
     int numComponents,
     int componentFeeRate,
@@ -148,13 +138,6 @@ class Fusion {
     List<int> availableTiers,
   })? _serverParams;
 
-  // not used ????
-  // int maxOutputs = 0; // Maximum number of outputs allowed.
-
-  // int safetySumIn = 0; // The sum of all inputs, used for safety checks.
-  // Map<int, int> safetyExcessFees = {}; // Holds safety excess fees.
-  // Map<int, List<int>> tierOutputs = {}; // Associates tiers with outputs.
-  // Not sure if this should be using the Output model.
   ({
     List<UtxoDTO> inputs,
     Map<int, List<int>> tierOutputs,
@@ -808,7 +791,6 @@ class Fusion {
     );
 
     // Retrieve the output amounts for the given tier and prepare the output addresses.
-    // TODO: can this be empty? If not then an exception should be thrown
     List<int>? outAmounts = tierOutputs[tier];
     List<Address> outAddrs =
         await _getUnusedReservedChangeAddresses(outAmounts?.length ?? 0);
