@@ -1577,11 +1577,10 @@ class Fusion {
         }
         for (int i = 0; i < allSigs.length; i++) {
           List<int> sigBytes = allSigs[i];
-          String sig = "${base64.encode(sigBytes)}41";
-          bitbox.Input inp = tx.inputs[i];
-          if (sig.length != 64) {
+          if (sigBytes.length != 64) {
             throw FusionError('server relayed bad signature');
           }
+          bitbox.Input inp = txData.inputAndCompIndexes[i].input;
 
           final cIn = coinlib.P2PKHInput(
             prevOut: coinlib.OutPoint(
@@ -1591,9 +1590,11 @@ class Fusion {
             publicKey: coinlib.ECPublicKey.fromHex(
               inp.pubkeys![0]!.toHex,
             ),
-            // TODO validate null assertions above (hash!, index!, pubkeys![0]!.toHex).
             insig: coinlib.InputSignature.fromBytes(
-              base64Decode(sig),
+              Uint8List.fromList([
+                ...sigBytes,
+                0x41,
+              ]),
             ),
           );
 
@@ -1620,6 +1621,7 @@ class Fusion {
         String txHex = txn.toHex();
 
         final txid = await _broadcastTransaction(txHex);
+        print("BROADCAST: txid: $txid");
 
         assert(txid == txn.txid);
 
