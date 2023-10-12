@@ -22,85 +22,107 @@ abstract final class OutputHandling {
   /// coins.
   static Future<
       ({
-        List<(String, List<UtxoDTO>)> eligible, // Eligible.
-        List<(String, List<UtxoDTO>)> ineligible, // Ineligible.
-        BigInt sumValue, // sumValue.
-        bool hasUnconfirmed, // hasUnconfirmed.
-        bool hasCoinbase, // hasCoinbase.
-      })> _selectCoins(
-    List<UtxoDTO> _coins, {
-    required int currentChainHeight,
-    required Future<List<Address>> Function() getAddresses,
-    required Future<List<Map<String, dynamic>>> Function(String address)
-        getTransactionsByAddress,
-  }) async {
-    List<(String, List<UtxoDTO>)> eligible = []; // List of eligible inputs.
-    List<(String, List<UtxoDTO>)> ineligible = []; // List of ineligible inputs.
-    bool hasUnconfirmed = false; // Are there unconfirmed coins?
-    bool hasCoinbase = false; // Are there coinbase coins?
-    BigInt sumValue =
-        BigInt.zero; // Sum of the values of the eligible `Input`s.
-    int mincbheight = currentChainHeight + Fusion.COINBASE_MATURITY;
+        List<(String, List<UtxoDTO>)> eligible,
+        BigInt sumValue,
+      })> _selectCoinsV2(
+    List<UtxoDTO> _coins,
+  ) async {
+    BigInt sumValue = BigInt.zero;
+    Map<String, List<UtxoDTO>> temp = {};
 
-    // Loop through the addresses in the wallet.
-    for (Address address in await getAddresses()) {
-      // Get the coins for the address.
-      List<UtxoDTO> acoins =
-          _coins.where((e) => e.address == address.address).toList();
-
-      // Check if the address has any coins.
-      if (acoins.isEmpty) continue;
-
-      // Bool flag to indicate if the address is good (eligible).
-      bool good = true;
-
-      // In this Fusion plugin we are assuming all UTXOs passed in are eligible
-      // Loop through the coins and check for eligibility.
-      for (var i = 0; i < acoins.length; i++) {
-        // Get the coin.
-        var c = acoins[i];
-
-        // Add the amount to the sum.
-        sumValue += BigInt.from(c.value);
-
-        // In this Fusion plugin we are assuming all UTXOs passed in are eligible
-        // This can be changed in the future if an extra double check is wanted
-
-        // roughly what happens at: https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/plugin.py#L129-L139
-        /*
-        good = good &&
-            (i < 3 &&
-                c['token_data'] == null &&
-                c['slp_token'] == null &&
-                !c['is_frozen_coin'] &&
-                (!c['coinbase'] || c['height'] <= mincbheight)); // where `int mincbheight = localHeight + COINBASE_MATURITY;`
-
-        if (c['height'] <= 0) {
-          good = false;
-          hasUnconfirmed = true;
-        }
-
-        hasCoinbase = hasCoinbase || c['coinbase'];
-        */
-      }
-      if (good) {
-        // Add the address and coins to the eligible list.
-        eligible.add((address.address, acoins));
-      } else {
-        // Add the address and coins to the ineligible list.
-        ineligible.add((address.address, acoins));
-      }
+    for (final coin in _coins) {
+      temp[coin.address] ??= [];
+      temp[coin.address]!.add(coin);
+      sumValue += BigInt.from(coin.value);
     }
 
-    // Return the Record.
     return (
-      eligible: eligible.toList(),
-      ineligible: ineligible.toList(),
+      eligible: temp.entries.map((e) => (e.key, e.value)).toList(),
       sumValue: sumValue,
-      hasUnconfirmed: hasUnconfirmed,
-      hasCoinbase: hasCoinbase,
     );
   }
+  // OLD VERSION SAVED FOR POSSIBLE USE IN FUTURE IF _selectCoinsV2 IS NOT SUFFICIENT
+  // static Future<
+  //     ({
+  //       List<(String, List<UtxoDTO>)> eligible, // Eligible.
+  //       List<(String, List<UtxoDTO>)> ineligible, // Ineligible.
+  //       BigInt sumValue, // sumValue.
+  //       bool hasUnconfirmed, // hasUnconfirmed.
+  //       bool hasCoinbase, // hasCoinbase.
+  //     })> _selectCoins(
+  //   List<UtxoDTO> _coins, {
+  //   required int currentChainHeight,
+  //   required Future<List<Address>> Function() getAddresses,
+  //   required Future<List<Map<String, dynamic>>> Function(String address)
+  //       getTransactionsByAddress,
+  // }) async {
+  //   List<(String, List<UtxoDTO>)> eligible = []; // List of eligible inputs.
+  //   List<(String, List<UtxoDTO>)> ineligible = []; // List of ineligible inputs.
+  //   bool hasUnconfirmed = false; // Are there unconfirmed coins?
+  //   bool hasCoinbase = false; // Are there coinbase coins?
+  //   BigInt sumValue =
+  //       BigInt.zero; // Sum of the values of the eligible `Input`s.
+  //   int mincbheight = currentChainHeight + Fusion.COINBASE_MATURITY;
+  //
+  //   // Loop through the addresses in the wallet.
+  //   for (Address address in await getAddresses()) {
+  //     // Get the coins for the address.
+  //     List<UtxoDTO> acoins =
+  //         _coins.where((e) => e.address == address.address).toList();
+  //
+  //     // Check if the address has any coins.
+  //     if (acoins.isEmpty) continue;
+  //
+  //     // Bool flag to indicate if the address is good (eligible).
+  //     bool good = true;
+  //
+  //     // In this Fusion plugin we are assuming all UTXOs passed in are eligible
+  //     // Loop through the coins and check for eligibility.
+  //     for (var i = 0; i < acoins.length; i++) {
+  //       // Get the coin.
+  //       var c = acoins[i];
+  //
+  //       // Add the amount to the sum.
+  //       sumValue += BigInt.from(c.value);
+  //
+  //       // In this Fusion plugin we are assuming all UTXOs passed in are eligible
+  //       // This can be changed in the future if an extra double check is wanted
+  //
+  //       // roughly what happens at: https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/plugin.py#L129-L139
+  //       /*
+  //       good = good &&
+  //           (i < 3 &&
+  //               c['token_data'] == null &&
+  //               c['slp_token'] == null &&
+  //               !c['is_frozen_coin'] &&
+  //               (!c['coinbase'] || c['height'] <= mincbheight)); // where `int mincbheight = localHeight + COINBASE_MATURITY;`
+  //
+  //       if (c['height'] <= 0) {
+  //         good = false;
+  //         hasUnconfirmed = true;
+  //       }
+  //
+  //       hasCoinbase = hasCoinbase || c['coinbase'];
+  //       */
+  //     }
+  //     if (good) {
+  //       // Add the address and coins to the eligible list.
+  //       eligible.add((address.address, acoins));
+  //     } else {
+  //       // Add the address and coins to the ineligible list.
+  //       ineligible.add((address.address, acoins));
+  //     }
+  //   }
+  //
+  //   // Return the Record.
+  //   return (
+  //     eligible: eligible.toList(),
+  //     ineligible: ineligible.toList(),
+  //     sumValue: sumValue,
+  //     hasUnconfirmed: hasUnconfirmed,
+  //     hasCoinbase: hasCoinbase,
+  //   );
+  // }
 
   /// Selects random coins for fusion.
   ///
@@ -245,11 +267,14 @@ abstract final class OutputHandling {
     }
 
     // Get the coins.
-    final _selections = await _selectCoins(
+    // final _selections = await _selectCoins(
+    //   coins,
+    //   currentChainHeight: currentChainHeight,
+    //   getAddresses: getAddresses,
+    //   getTransactionsByAddress: getTransactionsByAddress,
+    // );
+    final _selections = await _selectCoinsV2(
       coins,
-      currentChainHeight: currentChainHeight,
-      getAddresses: getAddresses,
-      getTransactionsByAddress: getTransactionsByAddress,
     );
 
     // Select random coins from the eligible set.
