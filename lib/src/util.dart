@@ -102,9 +102,8 @@ abstract class Utilities {
     final bytes = Utilities.sha256([...seed, ...counterBytes]);
 
     // Take the first 8 bytes.
-    final first8Bytes = bytes.take(8).toList();
-    int int64 = ByteData.sublistView(Uint8List.fromList(first8Bytes))
-        .getUint64(0, Endian.big);
+    ByteData byteData = ByteData.sublistView(bytes, 0, 8);
+    int int64 = byteData.getUint64(0, Endian.big);
 
     // Perform the modulo operation.
     return ((int64 * numPositions) >> 64).toInt();
