@@ -1563,7 +1563,6 @@ class Fusion {
         } catch (e, s) {
           Utilities.debugPrint("BROADCAST FAILED: $e\n$s");
           // TODO not ignore this exception but handle it properly. Ignored for now as the tx gets broadcast but we want to test the remaining phases
-          // bool verifyBlames = true;
         }
       } else {
         // If not successful, identify bad components.
@@ -1648,8 +1647,6 @@ class Fusion {
     }
 
     // Send the encrypted proofs and the random number used to the server.
-    // The comment is asking if this call should be awaited or not,
-    // depending on whether the program needs to pause execution until the data is sent.
     await Comms.sendPb(
       connection,
       ClientMessage()
