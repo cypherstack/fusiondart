@@ -5,8 +5,10 @@ import 'package:coinlib/coinlib.dart' as coinlib;
 import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
+import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart';
+import 'package:fusiondart/src/protocol.dart';
 
 /// Class that represents a transaction.
 ///
@@ -34,7 +36,10 @@ class Transaction {
   ///
   /// Returns:
   ///   A tuple containing the Transaction and a list of input indices.
-  static (Transaction, List<int>) txFromComponents(
+  static ({
+    Transaction tx,
+    List<({bitbox.Input input, int compIndex})> inputAndCompIndexes
+  }) txFromComponents(
     List<List<int>> allComponents,
     List<int> sessionHash,
     coinlib.NetworkParams network,
@@ -42,7 +47,7 @@ class Transaction {
     // Initialize a new Transaction.
     Transaction tx = Transaction([], []);
 
-    final List<int> inputIndices = [];
+    final List<({bitbox.Input input, int compIndex})> inputAndCompIndexes = [];
     final comps =
         allComponents.map((e) => Component()..mergeFromBuffer(e)).toList();
 
@@ -63,7 +68,10 @@ class Transaction {
         );
 
         tx.inputs.add(input);
-        inputIndices.add(i);
+
+        inputAndCompIndexes.add(
+          (input: input, compIndex: i),
+        );
       } else if (comp.hasOutput()) {
         final output = Output.fromOutputComponent(comp.output);
         tx.outputs.add(output);
@@ -72,7 +80,7 @@ class Transaction {
       }
     }
 
-    return (tx, inputIndices);
+    return (tx: tx, inputAndCompIndexes: inputAndCompIndexes);
   }
 
   Uint8List serializePreimageBytesAlt(

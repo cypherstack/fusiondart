@@ -1481,31 +1481,23 @@ class Fusion {
       }
 
       // Build transaction from components and session hash.
-      (Transaction, List<int>) txData = Transaction.txFromComponents(
+      final txData = Transaction.txFromComponents(
         allComponents,
         sessionHash,
         network,
       );
-      Transaction tx = txData.$1;
-      List<int> inputIndices = txData.$2;
 
       // Initialize list to store covert transaction signature messages.
       List<CovertTransactionSignature?> covertTransactionSignatureMessages =
           List<CovertTransactionSignature?>.filled(myComponents.length, null);
 
-      // Combine transaction input indices and their corresponding inputs.
-      List<(int, bitbox.Input)> myCombined = List<(int, bitbox.Input)>.generate(
-        inputIndices.length,
-        (index) => (inputIndices[index], tx.inputs[index]),
-      );
-
       // Sign the covert transaction.
-      for (int i = 0; i < myCombined.length; i++) {
-        int cIdx = myCombined[i].$1;
-        final inp = myCombined[i].$2;
+      for (int i = 0; i < txData.inputAndCompIndexes.length; i++) {
+        final data = txData.inputAndCompIndexes[i];
+        final inp = data.input;
 
         // Skip if not my input.
-        int myCompIdx = myComponentIndexes.indexOf(cIdx);
+        final int myCompIdx = myComponentIndexes.indexOf(data.compIndex);
         if (myCompIdx == -1) continue; // not my input
 
         // Extract public and private keys.
@@ -1513,7 +1505,7 @@ class Fusion {
         final sec = await _getPrivateKeyForPubKey(pubKey);
 
         // Calculate sigHash for signing.
-        final preimageBytes = tx.serializePreimageBytes(
+        final preimageBytes = txData.tx.serializePreimageBytes(
           i,
           network: network,
           nHashType: 0x41,
@@ -1582,7 +1574,7 @@ class Fusion {
         final List<coinlib.Output> cOutputs = [];
 
         // Assemble and complete the transaction.
-        if (allSigs.length != tx.inputs.length) {
+        if (allSigs.length != txData.tx.inputs.length) {
           throw FusionError('Server gave wrong number of signatures.');
         }
         for (int i = 0; i < allSigs.length; i++) {
