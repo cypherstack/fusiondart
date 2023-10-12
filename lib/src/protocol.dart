@@ -53,7 +53,7 @@ abstract final class Protocol {
   static const T_START_COMPS = 5;
 
   // Time spent expecting covert components in the protocol in [seconds].
-  static const TS_EXPECTING_COVERT_COMPONENTS = 15.0;
+  static const TS_EXPECTING_COVERT_COMPONENTS = 15;
 
   // Start time for submitting signatures in the protocol in [seconds].
   static const T_START_SIGS = 20.0;
@@ -62,7 +62,7 @@ abstract final class Protocol {
   static const TS_EXPECTING_COVERT_SIGNATURES = 30.0;
 
   // Time spent expecting conclusion in the protocol in [seconds].
-  static const T_EXPECTING_CONCLUSION = 35.0;
+  static const T_EXPECTING_CONCLUSION = 35;
 
   // Start time for closing the protocol session normally or with blame.
   static const T_START_CLOSE = 45.0;
