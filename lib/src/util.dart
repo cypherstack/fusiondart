@@ -257,7 +257,7 @@ abstract class Utilities {
       k = order - k;
     }
 
-    Uint8List rBytes = R.x!.toBigInteger()!.toBytes;
+    Uint8List rBytes = R.x!.toBigInteger()!.toBytesPadded(32);
     Uint8List eBytes =
         Utilities.sha256([...rBytes, ...pubBytes, ...messageHash]);
     BigInt e = eBytes.toBigInt;
@@ -268,7 +268,7 @@ abstract class Utilities {
     print("s = ${s.toBytes.toHex}");
     // python: 71846de67ad3d913a8fdf9d8f3f73161a4c48ae81cb183b214765feb86e255ce (b'q\x84m\xe6z\xd3\xd9\x13\xa8\xfd\xf9\xd8\xf3\xf71a\xa4\xc4\x8a\xe8\x1c\xb1\x83\xb2\x14v_\xeb\x86\xe2U\xce')
 
-    return Uint8List.fromList([...rBytes, ...s.toBytes]);
+    return Uint8List.fromList([...rBytes, ...s.toBytesPadded(32)]);
   }
 
   /// Verifies a Schnorr signature.
