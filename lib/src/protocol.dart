@@ -65,7 +65,7 @@ abstract final class Protocol {
   static const T_EXPECTING_CONCLUSION = 35;
 
   // Start time for closing the protocol session normally or with blame.
-  static const T_START_CLOSE = 45.0;
+  static const T_START_CLOSE = 45;
   static const T_START_CLOSE_BLAME = 80;
 
   // Standard timeout value for miscellaneous operations in [seconds].

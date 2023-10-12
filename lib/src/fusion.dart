@@ -1529,7 +1529,7 @@ class Fusion {
           covertT0.toInt() * 1000); // covertT0 is in seconds
       covert.scheduleSubmissions(
           covertT0DateTime
-              .add(Duration(milliseconds: Protocol.T_START_SIGS.toInt())),
+              .add(Duration(seconds: Protocol.T_START_SIGS.toInt())),
           covertTransactionSignatureMessages);
 
       final timeout = Duration(
