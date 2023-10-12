@@ -1561,8 +1561,10 @@ class Fusion {
         throw Exception('Unexpected message type: ${msg.whichMsg()}');
       }
 
+      // Retrieve the FusionResult message from the ServerMessage.
       final fusionResultMsg = msg.fusionresult;
 
+      // Check if the fusion operation was successful.
       if (fusionResultMsg.ok) {
         List<List<int>> allSigs = fusionResultMsg.txsignatures;
 
@@ -1646,6 +1648,7 @@ class Fusion {
           Utilities.updateWalletLabel(txid, label);
         } catch (_) {
           // TODO not ignore this exception but handle it properly. Ignored for now as the tx gets broadcast but we want to test the remaining phases
+          // bool verifyBlames = true;
         }
       } else {
         // If not successful, identify bad components.
@@ -1660,7 +1663,7 @@ class Fusion {
     } else {
       // Case where 'skip_signatures' is True.
       // this should be empty already sooooo
-      // badComponents.clear();
+      badComponents.clear();
     }
 
     // Begin Blame phase logic.
@@ -1685,7 +1688,10 @@ class Fusion {
 
     // Ensure that the count is accurate.
     int N = othersCommitmentIdxes.length;
-    assert(N == allCommitments.length - myCommitments.length);
+    if (N != allCommitments.length - myCommitments.length) {
+      throw FusionError(
+          "Fusion failed with bad commitment count -- I have ${myCommitments.length} commitments, but there are ${allCommitments.length} total commitments.");
+    }
     if (N == 0) {
       throw FusionError(
           "Fusion failed with only me as player -- I can only blame myself.");
