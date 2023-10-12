@@ -41,7 +41,7 @@ abstract final class OutputHandling {
         BigInt sumValue, // sumValue.
         bool hasUnconfirmed, // hasUnconfirmed.
         bool hasCoinbase, // hasCoinbase.
-      })> selectCoins(
+      })> _selectCoins(
     List<UtxoDTO> _coins, {
     required int currentChainHeight,
     required Future<List<Address>> Function() getAddresses,
@@ -68,14 +68,7 @@ abstract final class OutputHandling {
       // Bool flag to indicate if the address is good (eligible).
       bool good = true;
 
-      // sw doesn't freeze addresses.
-      // Frozen UTXOs should not be passed in to fusion
-      /*
-      if (wallet.frozenAddresses.contains(address)) {
-        good = false;
-      }
-      */
-
+      // In this Fusion plugin we are assuming all UTXOs passed in are eligible
       // Loop through the coins and check for eligibility.
       for (var i = 0; i < acoins.length; i++) {
         // Get the coin.
@@ -84,8 +77,10 @@ abstract final class OutputHandling {
         // Add the amount to the sum.
         sumValue += BigInt.from(c.value);
 
-        // TODO check for tokens, maturity, etc.
-        // TODO DO NOT TEST THIS WITH A WALLET WITH TOKENS OR YOU MAY LOSE THEM !!!
+        // In this Fusion plugin we are assuming all UTXOs passed in are eligible
+        // This can be changed in the future if an extra double check is wanted
+
+        // roughly what happens at: https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/plugin.py#L129-L139
         /*
         good = good &&
             (i < 3 &&
@@ -132,7 +127,7 @@ abstract final class OutputHandling {
   ///
   /// Returns:
   ///   A `Future<List<Input>>` that completes with a list of random coins.
-  static Future<List<UtxoDTO>> selectRandomCoins(
+  static Future<List<UtxoDTO>> _selectRandomCoins(
     double fraction,
     List<(String, List<UtxoDTO>)> eligible,
     Future<List<Map<String, dynamic>>> Function(String address)
@@ -277,7 +272,7 @@ abstract final class OutputHandling {
     }
 
     // Get the coins.
-    final _selections = await selectCoins(
+    final _selections = await _selectCoins(
       coins,
       currentChainHeight: currentChainHeight,
       getAddresses: getAddresses,
@@ -285,7 +280,7 @@ abstract final class OutputHandling {
     );
 
     // Select random coins from the eligible set.
-    final inputs = await selectRandomCoins(
+    final inputs = await _selectRandomCoins(
       _getFraction(_selections.sumValue),
       _selections.eligible,
       getTransactionsByAddress,
