@@ -1532,11 +1532,9 @@ class Fusion {
               .add(Duration(milliseconds: Protocol.T_START_SIGS.toInt())),
           covertTransactionSignatureMessages);
 
-      // Wait for server's fusion result within the expected time frame.
-      int timeoutMillis = (Protocol.T_EXPECTING_CONCLUSION -
-              Protocol.TS_EXPECTING_COVERT_COMPONENTS)
-          .toInt();
-      Duration timeout = Duration(milliseconds: timeoutMillis);
+      final timeout = Duration(
+          seconds: Protocol.T_EXPECTING_CONCLUSION -
+              Protocol.TS_EXPECTING_COVERT_COMPONENTS);
       msg = await Comms.recvPb(
         [ReceiveMessages.fusionResult],
         connection: connection,
