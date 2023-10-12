@@ -123,8 +123,6 @@ class Fusion {
         "================================================================");
   }
 
-  int _roundCount = 0; // Tracks the number of CashFusion rounds.
-
   bool _serverConnectedAndGreeted = false; // Have we connected to the server?
   bool _stopping = false; // Should fusion stop?
   bool _stoppingIfNotRunning = false; // Should fusion stop if it's not running?
@@ -182,6 +180,8 @@ class Fusion {
     required coinlib.NetworkParams network,
   }) async {
     Utilities.debugPrint("DEBUG FUSION 223...fusion run....");
+
+    int roundCount = 0;
 
     try {
       if (inputsFromWallet.isEmpty) {
@@ -313,17 +313,15 @@ class Fusion {
 
         try {
           // Pool started. Keep running rounds until fail or complete.
-          while (true) {
-            _roundCount += 1;
-            Utilities.debugPrint("Running round $_roundCount...");
-            final success = await runRound(
+          bool done = false;
+          while (!done) {
+            done = await runRound(
+              roundCount: roundCount,
               covert: covert,
               connection: connection,
               network: network,
             );
-            if (success) {
-              break;
-            }
+            roundCount += 1;
           }
         } finally {
           covert.stop();
@@ -937,6 +935,7 @@ class Fusion {
   ///
   /// [covert] is a `CovertSubmitter` instance used for covert submissions.
   Future<bool> runRound({
+    required int roundCount,
     required CovertSubmitter covert,
     required Connection connection,
     required coinlib.NetworkParams network,
@@ -946,7 +945,7 @@ class Fusion {
     // Initial round status and timeout calculation.
     _updateStatus(
       status: FusionStatus.running,
-      info: "Starting round ${_roundCount.toString()}",
+      info: "Starting round $roundCount",
     );
 
     int timeoutInSeconds =
