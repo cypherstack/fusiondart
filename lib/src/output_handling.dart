@@ -21,8 +21,6 @@ abstract final class OutputHandling {
   /// unconfirmed coins, and a boolean flag indicating if there are coinbase
   /// coins.
   ///
-  /// TODO utilize a response class.
-  ///
   /// Parameters:
   /// - [_coins]: The set of coins from which to select.
   ///
@@ -37,13 +35,13 @@ abstract final class OutputHandling {
   ///   sum of the values of the eligible buckets, a boolean flag indicating if there are
   ///   unconfirmed coins, and a boolean flag indicating if there are coinbase coins.
   static Future<
-      (
-        List<(String, List<UtxoDTO>)>, // Eligible.
-        List<(String, List<UtxoDTO>)>, // Ineligible.
-        BigInt, // sumValue.
-        bool, // hasUnconfirmed.
-        bool // hasCoinbase.
-      )> selectCoins(
+      ({
+        List<(String, List<UtxoDTO>)> eligible, // Eligible.
+        List<(String, List<UtxoDTO>)> ineligible, // Ineligible.
+        BigInt sumValue, // sumValue.
+        bool hasUnconfirmed, // hasUnconfirmed.
+        bool hasCoinbase, // hasCoinbase.
+      })> selectCoins(
     List<UtxoDTO> _coins, {
     required int currentChainHeight,
     required Future<List<Address>> Function() getAddresses,
@@ -70,7 +68,8 @@ abstract final class OutputHandling {
       // Bool flag to indicate if the address is good (eligible).
       bool good = true;
 
-      // TODO check if address is frozen
+      // sw doesn't freeze addresses.
+      // Frozen UTXOs should not be passed in to fusion
       /*
       if (wallet.frozenAddresses.contains(address)) {
         good = false;
@@ -83,7 +82,7 @@ abstract final class OutputHandling {
         var c = acoins[i];
 
         // Add the amount to the sum.
-        sumValue += BigInt.from(c.value ?? 0); // TODO verify 0 works as default
+        sumValue += BigInt.from(c.value);
 
         // TODO check for tokens, maturity, etc.
         // TODO DO NOT TEST THIS WITH A WALLET WITH TOKENS OR YOU MAY LOSE THEM !!!
@@ -114,11 +113,11 @@ abstract final class OutputHandling {
 
     // Return the Record.
     return (
-      eligible.toList(),
-      ineligible.toList(),
-      sumValue,
-      hasUnconfirmed,
-      hasCoinbase
+      eligible: eligible.toList(),
+      ineligible: ineligible.toList(),
+      sumValue: sumValue,
+      hasUnconfirmed: hasUnconfirmed,
+      hasCoinbase: hasCoinbase,
     );
   }
 
@@ -278,46 +277,26 @@ abstract final class OutputHandling {
     }
 
     // Get the coins.
-    (
-      List<(String, List<UtxoDTO>)>, // Eligible.
-      List<(String, List<UtxoDTO>)>, // Ineligible.
-      BigInt, // sumValue.
-      bool, // hasUnconfirmed.
-      bool // hasCoinbase _selections = await selectCoins(_inputs);
-    ) _selections = await selectCoins(
+    final _selections = await selectCoins(
       coins,
       currentChainHeight: currentChainHeight,
       getAddresses: getAddresses,
       getTransactionsByAddress: getTransactionsByAddress,
     );
 
-    // Initialize the eligible set.
-    List<UtxoDTO> eligible = [];
-
-    // Loop through each key-value pair in the Map to extract Inputs and put them in the Set.
-    for ((String, List<UtxoDTO>) inputList in _selections.$1) {
-      for (final input in inputList.$2) {
-        if (!eligible.contains(input)) {
-          // Shouldn't this be accomplished by the Set?
-          eligible.add(input);
-        }
-      }
-    }
-
     // Select random coins from the eligible set.
     final inputs = await selectRandomCoins(
-      _getFraction(_selections.$3),
-      _selections.$1,
+      _getFraction(_selections.sumValue),
+      _selections.eligible,
       getTransactionsByAddress,
     );
-    /*await selectRandomCoins(
-            numComponents / eligible.length, _selections.$1);*/
-    int numInputs = inputs.length; // Number of inputs selected.
+
+    final numInputs = inputs.length; // Number of inputs selected.
 
     // Calculate limits on the number of components and outputs.
-    int maxComponents =
+    final maxComponents =
         min(serverParams.numComponents, Protocol.MAX_COMPONENTS);
-    int maxOutputs = maxComponents - numInputs;
+    final maxOutputs = maxComponents - numInputs;
 
     // More sanity checks.
     if (maxOutputs < 1) {
@@ -326,41 +305,38 @@ abstract final class OutputHandling {
     assert(maxOutputs >= 1);
 
     // Calculate the number of distinct inputs.
-    int numDistinct = inputs.map((e) => e.value).toSet().length;
-    int minOutputs = max(Protocol.MIN_TX_COMPONENTS - numDistinct, 1);
+    final numDistinct = inputs.map((e) => e.value).toSet().length;
+    final minOutputs = max(Protocol.MIN_TX_COMPONENTS - numDistinct, 1);
     if (maxOutputs < minOutputs) {
       throw FusionError(
-          'Too few distinct inputs selected ($numDistinct); cannot satisfy output count constraint (>= $minOutputs, <= $maxOutputs)');
+        'Too few distinct inputs selected ($numDistinct); cannot satisfy '
+        'output count constraint (>= $minOutputs, <= $maxOutputs)',
+      );
     }
 
     // Calculate the available amount for outputs.
-    BigInt sumInputsValue = BigInt.from(inputs
-            .map((input) => input.value)
-            .reduce((a, b) => (a ?? 0) + (b ?? 0)) ??
-        0);
-    // TODO verify 0s as defaults work above.
-    int inputFees = inputs.fold(
+    final sumInputsValue = inputs
+        .map(
+          (input) => BigInt.from(input.value),
+        )
+        .reduce(
+          (a, b) => a + b,
+        );
+
+    final inputFees = inputs.fold(
         0,
         (sum, input) =>
             sum +
             Utilities.componentFee(
                 Utilities.sizeOfInput(Uint8List.fromList(input.pubKey)),
                 serverParams.componentFeeRate));
-    // TODO implement sizeOfInput(), probably in Utilities.
-    /*
-    // Equivalent to the fold above.
-    int inputFees = 0;
-    for (Input input in inputs) {
-      inputFees +=
-      Utilities.componentFee(input.sizeOfInput(), componentFeeRate.toInt());
-    }
-     */
-    BigInt availForOutputs = sumInputsValue -
+
+    final availForOutputs = sumInputsValue -
         BigInt.from(inputFees) -
         BigInt.from(serverParams.minExcessFee);
 
     // Calculate fees per output.
-    int feePerOutput = Utilities.componentFee(
+    final feePerOutput = Utilities.componentFee(
       34,
       serverParams.componentFeeRate,
     );
@@ -591,7 +567,7 @@ abstract final class OutputHandling {
 
     // Sort resultList by commitser.
     resultList.sort((ComponentResult a, ComponentResult b) =>
-        compareUint8List(a.commitment, b.commitment));
+        _compareUint8List(a.commitment, b.commitment));
 
     // Calculate pedersen commitment for the total nonce.
     sumNonce = sumNonce % Utilities.secp256k1Params.n;
@@ -604,7 +580,7 @@ abstract final class OutputHandling {
   }
 
   /// Compare two Uint8Lists for sorting purposes.
-  static int compareUint8List(Uint8List a, Uint8List b) {
+  static int _compareUint8List(Uint8List a, Uint8List b) {
     for (int i = 0; i < a.length && i < b.length; i++) {
       if (a[i] < b[i]) return -1;
       if (a[i] > b[i]) return 1;
