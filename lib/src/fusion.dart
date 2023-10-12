@@ -1561,15 +1561,11 @@ class Fusion {
 
       final fusionResultMsg = msg.fusionresult;
 
-      print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-      print("fusionResultMsg.ok = ${fusionResultMsg.ok}");
-      print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-
       if (fusionResultMsg.ok) {
         List<List<int>> allSigs = fusionResultMsg.txsignatures;
 
-        final List<coinlib.Input> cInputs = [];
-        final List<coinlib.Output> cOutputs = [];
+        final List<bitbox.Input> bInputs = [];
+        final List<bitbox.Output> bOutputs = [];
 
         // Assemble and complete the transaction.
         if (allSigs.length != txData.tx.inputs.length) {
@@ -1590,15 +1586,16 @@ class Fusion {
             publicKey: coinlib.ECPublicKey.fromHex(
               inp.pubkeys![0]!.toHex,
             ),
-            insig: coinlib.InputSignature.fromBytes(
-              Uint8List.fromList([
-                ...sigBytes,
-                0x41,
-              ]),
-            ),
           );
 
-          cInputs.add(cIn);
+          inp.script = cIn.script.compiled;
+          inp.signatures = [
+            Uint8List.fromList([
+              ...sigBytes,
+              0x41,
+            ]),
+          ];
+          bInputs.add(inp);
         }
 
         for (final o in txData.tx.outputs) {
@@ -1606,24 +1603,32 @@ class Fusion {
             BigInt.from(o.value),
             o.scriptPubKey,
           );
-          cOutputs.add(cO);
+          // cOutputs.add(cO);
+
+          bOutputs.add(
+            bitbox.Output(
+              value: o.value,
+              script: cO.program!.script.compiled,
+            ),
+          );
         }
 
-        final txn = coinlib.Transaction(
-          inputs: cInputs,
-          outputs: cOutputs,
-          version:
-              1, // one seems to be floating around in the python code somewhere
+        final txn = bitbox.Transaction(
+          txData.tx.version.toInt(),
+          txData.tx.locktime.toInt(),
+          bInputs,
+          bOutputs,
         );
 
         // Finalize transaction details and update wallet label.
-        assert(txn.complete);
+
         String txHex = txn.toHex();
 
+        // TODO: handle txn-mempool-conflict. If not handled the exception will cause this round to exit prematurely
         final txid = await _broadcastTransaction(txHex);
         print("BROADCAST: txid: $txid");
 
-        assert(txid == txn.txid);
+        assert(txid == txn.getId());
 
         String sumInStr = Utilities.formatSatoshis(sumIn, numZeros: 8);
         String feeStr = totalFee.toString();
@@ -1635,7 +1640,7 @@ class Fusion {
         // restoring from mnemonic?
         String label =
             "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_registerAndWaitResult!.outputs.length}, $sumInStr BCH (−$feeStr sats $feeLoc)";
-        Utilities.updateWalletLabel(txn.txid, label);
+        Utilities.updateWalletLabel(txid, label);
       } else {
         // If not successful, identify bad components.
         badComponents.clear();
