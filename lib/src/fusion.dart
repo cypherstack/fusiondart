@@ -54,7 +54,6 @@ class Fusion {
 
   // Private late finals used for dependency injection.
   late final Future<List<Address>> Function() _getAddresses;
-  late final Future<List<UtxoDTO>> Function(String address) _getInputsByAddress;
   late final Future<List<Map<String, dynamic>>> Function(String address)
       _getTransactionsByAddress;
   late final Future<List<Address>> Function(int numberOfAddresses)
@@ -76,8 +75,6 @@ class Fusion {
   /// The methods injected here are used for various operations throughout the fusion process.
   Future<void> initFusion({
     required final Future<List<Address>> Function() getAddresses,
-    required final Future<List<UtxoDTO>> Function(String address)
-        getInputsByAddress,
     required final Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
     required final Future<List<Address>> Function(int numberOfAddresses)
@@ -93,7 +90,6 @@ class Fusion {
     required final Future<String> Function(String txHex) broadcastTransaction,
   }) async {
     _getAddresses = getAddresses;
-    _getInputsByAddress = getInputsByAddress;
     _getTransactionsByAddress = getTransactionsByAddress;
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
     _getSocksProxyAddress = getSocksProxyAddress;
@@ -194,47 +190,6 @@ class Fusion {
   // Not currently used. If needed, this should be made private and accessed using set/get
   // bool autofuseCoinbase = false; //   link to a setting in the wallet.
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/conf.py#L68
-
-  /// Adds Unspent Transaction Outputs (UTXOs) from [utxoList] to the `coins` list as `Input`s.
-  ///
-  /// Given a list of UTXOs [utxoList] (as represented by the `Record(String txid, int vout, int value)`),
-  /// this method converts them to `Input` objects and appends them to the internal `coins`
-  /// list, which will later be used in a fusion operation.
-  ///
-  /// Returns:
-  ///   Future<void> Returns a future that completes when the coins have been added.
-  Future<List<UtxoDTO>> addCoinsFromWallet(
-    List<UtxoDTO> utxoList,
-  ) async {
-    // TODO sanity check the state of `coins` before adding to it.
-
-    // Convert each UTXO info to an Input and add to 'coins'.
-
-    return utxoList;
-    // .map(
-    //   (e) => bitbox.Input.fromWallet(
-    //     txId: e.txid,
-    //     vout: e.vout,
-    //     value: BigInt.from(e.value),
-    //     pubKey: e.pubKey,
-    //   ),
-    // )
-    // .toList();
-
-    // TODO add validation and throw error if invalid UTXO detected
-  }
-
-  // /// Adds a change address [address] to the `changeAddresses` list.
-  // ///
-  // /// Takes an `Address` object and adds it to the internal `changeAddresses` list,
-  // /// which is used to send back any remaining balance from a fusion operation.
-  // ///
-  // /// Returns:
-  // ///   A future that completes when the address has been added.
-  // Future<void> addChangeAddress(Address address) async {
-  //   // Add address to List<Address> addresses[].
-  //   changeAddresses.add(address);
-  // }
 
   /// Executes the fusion operation.
   ///
@@ -353,7 +308,6 @@ class Fusion {
           currentChainHeight: currentChainHeight,
           serverParams: _serverParams!,
           getTransactionsByAddress: _getTransactionsByAddress,
-          getInputsByAddress: _getInputsByAddress,
           getAddresses: _getAddresses,
         );
         // In principle we can hook a pause in here -- user can tweak tier_outputs, perhaps cancelling some unwanted tiers.
@@ -1646,7 +1600,8 @@ class Fusion {
           String label =
               "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_registerAndWaitResult!.outputs.length}, $sumInStr BCH (−$feeStr sats $feeLoc)";
           Utilities.updateWalletLabel(txid, label);
-        } catch (_) {
+        } catch (e, s) {
+          Utilities.debugPrint("BROADCAST FAILED: $e\n$s");
           // TODO not ignore this exception but handle it properly. Ignored for now as the tx gets broadcast but we want to test the remaining phases
           // bool verifyBlames = true;
         }

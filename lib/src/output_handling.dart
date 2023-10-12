@@ -47,7 +47,6 @@ abstract final class OutputHandling {
     List<UtxoDTO> _coins, {
     required int currentChainHeight,
     required Future<List<Address>> Function() getAddresses,
-    required Future<List<UtxoDTO>> Function(String address) getInputsByAddress,
     required Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
   }) async {
@@ -62,7 +61,8 @@ abstract final class OutputHandling {
     // Loop through the addresses in the wallet.
     for (Address address in await getAddresses()) {
       // Get the coins for the address.
-      List<UtxoDTO> acoins = await getInputsByAddress(address.address);
+      List<UtxoDTO> acoins =
+          _coins.where((e) => e.address == address.address).toList();
 
       // Check if the address has any coins.
       if (acoins.isEmpty) continue;
@@ -266,7 +266,6 @@ abstract final class OutputHandling {
       List<int> availableTiers,
     }) serverParams,
     required Future<List<Address>> Function() getAddresses,
-    required Future<List<UtxoDTO>> Function(String address) getInputsByAddress,
     required Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
   }) async {
@@ -289,7 +288,6 @@ abstract final class OutputHandling {
       coins,
       currentChainHeight: currentChainHeight,
       getAddresses: getAddresses,
-      getInputsByAddress: getInputsByAddress,
       getTransactionsByAddress: getTransactionsByAddress,
     );
 
