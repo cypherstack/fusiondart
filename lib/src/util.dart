@@ -56,22 +56,11 @@ abstract class Utilities {
   // ===========================================================================
 
   /// Checks the input for ElectrumX server.
-  ///
-  /// Parameters:
-  /// - [inputComponent] The input component to be checked.
   static void checkInputElectrumX(InputComponent inputComponent) {
     throw UnimplementedError("checkInputElectrumX: TODO implement");
   }
 
   /// Calculates a random position based on a seed, number of positions, and a counter.
-  ///
-  /// Parameters:
-  /// - [seed] A Uint8List used as a seed.
-  /// - [numPositions] The number of positions to consider.
-  /// - [counter] The counter value.
-  ///
-  /// Returns:
-  ///   A random position calculated from the seed and counter.
   static int randPosition(Uint8List seed, int numPositions, int counter) {
     // Counter to bytes.
     Uint8List counterBytes = Uint8List(4);
@@ -89,15 +78,8 @@ abstract class Utilities {
     return ((int64 * numPositions) >> 64).toInt();
   }
 
+  // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/util.py#L70
   /// Determines the dust limit based on the length of the transaction.
-  ///
-  /// See https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/util.py#L70
-  ///
-  /// Parameters:
-  /// - [length] The length of the transaction.
-  ///
-  /// Returns:
-  ///   The calculated dust limit.
   static int dustLimit(int length) {
     return 3 * (length + 148);
     // length represents the size of the transaction in bytes.  148 bytes are
@@ -106,12 +88,6 @@ abstract class Utilities {
   }
 
   /// Extracts the address from an output script.
-  ///
-  /// Parameters:
-  /// - [scriptPubKey] The output script in Uint8List format.
-  ///
-  /// Returns:
-  ///   The extracted Address.
   static Address getAddressFromOutputScript(
     Uint8List scriptPubKey,
     coinlib.NetworkParams network, [

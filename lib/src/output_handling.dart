@@ -20,22 +20,6 @@ abstract final class OutputHandling {
   /// values of the eligible buckets, a boolean flag indicating if there are
   /// unconfirmed coins, and a boolean flag indicating if there are coinbase
   /// coins.
-  ///
-  /// TODO utilize a response class.
-  ///
-  /// Parameters:
-  /// - [_coins]: The set of coins from which to select.
-  ///
-  /// Returns:
-  ///   A `Future<(
-  ///   List<(String, List<Input>)>, // Eligible
-  ///   List<(String, List<Input>)>, // Ineligible
-  ///   int, // sumValue
-  ///   bool, // hasUnconfirmed
-  ///   bool // hasCoinbase
-  ///   )>` that completes with a Record containing the eligible inputs, ineligible inputs,
-  ///   sum of the values of the eligible buckets, a boolean flag indicating if there are
-  ///   unconfirmed coins, and a boolean flag indicating if there are coinbase coins.
   static Future<
       ({
         List<(String, List<UtxoDTO>)> eligible, // Eligible.
@@ -676,12 +660,6 @@ abstract final class OutputHandling {
   /// of coins to select.
   ///
   /// TODO implement custom modes.
-  ///
-  /// Parameters:
-  /// - [sumValue]: The sum of the values of the eligible buckets.
-  ///
-  /// Returns:
-  ///  A double representing the fraction of coins to select.
   static double _getFraction(BigInt sumValue) {
     String mode = 'normal'; // TODO get from wallet configuration
     // 'normal', 'consolidate', 'fan-out', etc.
