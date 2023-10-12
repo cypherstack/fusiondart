@@ -71,11 +71,10 @@ abstract class Utilities {
     final bytes = Utilities.sha256([...seed, ...counterBytes]);
 
     // Take the first 8 bytes.
-    ByteData byteData = ByteData.sublistView(bytes, 0, 8);
-    int int64 = byteData.getUint64(0, Endian.big);
+    final i6 = bytes.sublist(0, 8).toBigInt;
 
     // Perform the modulo operation.
-    return ((int64 * numPositions) >> 64).toInt();
+    return ((i6 * BigInt.from(numPositions)) >> 64).toInt();
   }
 
   // Translated from https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/util.py#L70
