@@ -1548,7 +1548,8 @@ class Fusion {
 
           assert(txid == txn.getId());
 
-          String sumInStr = Utilities.formatSatoshis(sumIn, numZeros: 8);
+          String sumInStr = sumIn
+              .toString(); // Used the old Utilities.formatSatoshis(sumIn, numZeros: 8);
           String feeStr = totalFee.toString();
           String feeLoc = 'fee';
 
