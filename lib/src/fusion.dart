@@ -194,13 +194,6 @@ class Fusion {
   /// Executes the fusion operation.
   ///
   /// This method orchestrates the entire lifecycle of a CashFusion operation.
-  ///
-  /// Returns:
-  ///   A `Future<void>` that resolves when the fusion operation is finished.
-  ///
-  /// Throws:
-  /// - FusionError: If any step in the fusion operation fails.
-  /// - Exception: For general exceptions.
   Future<void> fuse({
     required List<UtxoDTO> inputsFromWallet,
     required coinlib.NetworkParams network,
@@ -415,13 +408,6 @@ class Fusion {
   /// and bool [notIfRunning] (default: false).
   ///
   /// If an operation is in progress, stops it for the given reason.
-  ///
-  /// Parameters:
-  /// - [reason] (optional): The reason for stopping the operation.
-  /// - [notIfRunning] (optional): If true, the operation will not be stopped if it is running.
-  ///
-  /// Returns:
-  ///  void
   void stop([String reason = "stopped", bool notIfRunning = false]) {
     if (_stopping) {
       return;
@@ -444,15 +430,6 @@ class Fusion {
   /// This function is periodically called to determine whether the system should
   /// halt its operation.  Optional bool [running] indicates if the system is currently
   /// running (default is true).
-  ///
-  /// Parameters:
-  /// - [running] (optional): Indicates if the system is currently running.
-  ///
-  /// Returns:
-  /// `void`
-  ///
-  /// Throws:
-  /// - FusionError: If the system should stop.
   void checkStop({bool running = true}) {
     // Gets called occasionally from fusion thread to allow a stop point.
     if (_stopping || (!running && _stoppingIfNotRunning)) {
@@ -493,7 +470,7 @@ class Fusion {
   /// Returns:
   ///   A boolean flag indicating the wallet's capability to participate in fusion operations.
   ///
-  /// TODO implement
+  /// TODO implement.
   static bool walletCanFuse() {
     // TODO Implement logic here to return false if the wallet can't fuse (if it's read only or non P2PKH)
     return true;
@@ -504,12 +481,6 @@ class Fusion {
   /// This method is responsible for the client-side setup and management of the
   /// CashFusion protocol. It sends registration messages to the server,
   /// maintains state, and listens for updates through a [socketWrapper]
-  ///
-  /// Returns:
-  ///   A Future that resolves when the fusion process starts.
-  ///
-  /// Throws:
-  /// - FusionError: in case of any unexpected behavior.
   Future<
       ({
         int tier,
@@ -533,9 +504,6 @@ class Fusion {
     Stopwatch stopwatch = Stopwatch()..start();
 
     // Placeholder for messages from the server.
-    //
-    // This used to be `dynamic`, but then recv and Comms.recvPb were changed to return
-    // a GeneratedMessage.
     GeneratedMessage msg;
 
     // Initialize a map to store the outputs for each tier.
@@ -875,12 +843,6 @@ class Fusion {
   ///
   /// This method initializes a `CovertSubmitter` with the specified configuration,
   /// schedules the connections, and continuously checks the connection status.
-  ///
-  /// Throws:
-  /// - `FusionError` if the covert domain is badly encoded or if other errors occur.
-  ///
-  /// Returns:
-  ///   A `Future<CovertSubmitter>` that resolves to the initialized `CovertSubmitter`.
   Future<CovertSubmitter> startCovert({
     required int covertPort,
     required bool covertSSL,
@@ -992,9 +954,6 @@ class Fusion {
   /// and submitting components.
   ///
   /// [covert] is a `CovertSubmitter` instance used for covert submissions.
-  ///
-  /// Returns:
-  ///   A `Future<bool>` indicating the success or failure of the round.
   Future<bool> runRound({
     required CovertSubmitter covert,
     required Connection connection,

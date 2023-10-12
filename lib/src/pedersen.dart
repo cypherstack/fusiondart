@@ -10,9 +10,6 @@ class PedersenSetup {
   late final ECPoint _pointHG;
 
   /// Constructor initializes the Pedersen setup with a given H point.
-  ///
-  /// Parameters:
-  /// - [_H]: An EC point to initialize the Pedersen setup.
   PedersenSetup(Uint8List _hBytes) {
     // Deserialize hBytes to get point H.
     try {
@@ -40,14 +37,6 @@ class PedersenSetup {
   Uint8List get pointHG => Utilities.pointToSer(_pointHG, false);
 
   /// Create a new commitment.
-  ///
-  /// Parameters:
-  /// - [amount]: The amount to be committed.
-  /// - [nonce]: Optional. A BigInt representing the nonce.
-  /// - [PUncompressed]: Optional. The uncompressed representation of point P.
-  ///
-  /// Returns:
-  ///   A new `Commitment` object.
   Commitment commit(
     BigInt amount, {
     BigInt? nonce,
@@ -63,12 +52,6 @@ class PedersenSetup {
 }
 
 /// Class to encapsulate the Pedersen commitment.
-///
-/// Parameters:
-/// - [setup]: The Pedersen setup object.
-/// - [amountMod]: The amount to be committed.
-/// - [nonce]: A BigInt representing the nonce.
-/// - [pointPUncompressed]: The uncompressed representation of point P.
 class Commitment {
   // Private instance variables
   final PedersenSetup setup; // Added setup property to Commitment class
@@ -83,13 +66,6 @@ class Commitment {
   late final Uint8List _pointPUncompressed;
   late final Uint8List _pointPCompressed;
 
-  /// Constructor for Commitment.
-  ///
-  /// Parameters:
-  /// - [setup]: The Pedersen setup object.
-  /// - [amount]: The amount to be committed.
-  /// - [nonce] (optional). A BigInt representing the nonce.
-  /// - [pointPUncompressed] (optional). The uncompressed representation of point P.
   Commitment(
     this.setup,
     BigInt amount, {
@@ -155,13 +131,6 @@ class Commitment {
   }
 
   /// Calculate the initial point and nonce for a given setup and amount.
-  ///
-  /// Parameters:
-  /// - [setup]: The Pedersen setup object.
-  /// - [amount]: The amount to be committed.
-  ///
-  /// Returns:
-  ///   void
   void _calcInitial(PedersenSetup setup, BigInt amount) {
     // Retrieve the curve points H and HG from the Pedersen setup.
     final ECPoint pointH = setup._pointH;
@@ -192,12 +161,6 @@ class Commitment {
   }
 
   /// Add multiple Commitments together.
-  ///
-  /// Parameters:
-  /// - [commitmentIterable]: An iterable of Commitment objects.
-  ///
-  /// Returns:
-  ///   A new Commitment object.
   static Commitment addCommitments(Iterable<Commitment> commitmentIterable) {
     BigInt ktotal = BigInt.zero; // Changed to `BigInt` from `int`.
     BigInt atotal = BigInt.zero; // Changed to `BigInt` from `int`.
