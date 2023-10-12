@@ -40,14 +40,14 @@ abstract final class Protocol {
   static const COVERT_CONNECT_SPARES = 6;
 
   // Maximum allowable clock discrepancy in [seconds].
-  static const MAX_CLOCK_DISCREPANCY = 5.0;
+  static const MAX_CLOCK_DISCREPANCY = 5;
 
   // Warm-up time and slop value for the protocol in [seconds].
-  static const WARMUP_TIME = 30.0;
-  static const WARMUP_SLOP = 3.0;
+  static const WARMUP_TIME = 30;
+  static const WARMUP_SLOP = 3;
 
   // Time spent expecting commitments in the protocol in [seconds].
-  static const TS_EXPECTING_COMMITMENTS = 3.0;
+  static const TS_EXPECTING_COMMITMENTS = 3;
 
   // Start time for submitting components in the protocol in [seconds].
   static const T_START_COMPS = 5;
@@ -56,21 +56,21 @@ abstract final class Protocol {
   static const TS_EXPECTING_COVERT_COMPONENTS = 15;
 
   // Start time for submitting signatures in the protocol in [seconds].
-  static const T_START_SIGS = 20.0;
+  static const T_START_SIGS = 20;
 
   // Time spent expecting covert signatures in the protocol in [seconds].
-  static const TS_EXPECTING_COVERT_SIGNATURES = 30.0;
+  static const TS_EXPECTING_COVERT_SIGNATURES = 30;
 
   // Time spent expecting conclusion in the protocol in [seconds].
   static const T_EXPECTING_CONCLUSION = 35;
 
   // Start time for closing the protocol session normally or with blame.
   static const T_START_CLOSE = 45.0;
-  static const T_START_CLOSE_BLAME = 80.0;
+  static const T_START_CLOSE_BLAME = 80;
 
   // Standard timeout value for miscellaneous operations in [seconds].
-  static const STANDARD_TIMEOUT = 3.0;
+  static const STANDARD_TIMEOUT = 3;
 
   // Time allowed for verifying blame in the protocol in [seconds].
-  static const BLAME_VERIFY_TIME = 5.0;
+  static const BLAME_VERIFY_TIME = 5;
 }
