@@ -33,25 +33,6 @@ abstract class Utilities {
 
   // ===========================================================================
 
-  // // Bitcoincash Network
-  // final bitcoincash = NetworkType(
-  //     messagePrefix: '\x18Bitcoin Signed Message:\n',
-  //     bech32: 'bc',
-  //     bip32: Bip32Type(public: 0x0488b21e, private: 0x0488ade4),
-  //     pubKeyHash: 0x00,
-  //     scriptHash: 0x05,
-  //     wif: 0x80);
-  //
-  // final bitcoincashtestnet = NetworkType(
-  //     messagePrefix: '\x18Bitcoin Signed Message:\n',
-  //     bech32: 'tb',
-  //     bip32: Bip32Type(public: 0x043587cf, private: 0x04358394),
-  //     pubKeyHash: 0x6f,
-  //     scriptHash: 0xc4,
-  //     wif: 0xef);
-
-  // TODO: verify these
-
   static coinlib.NetworkParams get mainNet => coinlib.NetworkParams(
         wifPrefix: 0x80,
         p2pkhPrefix: 0x00,
@@ -79,8 +60,7 @@ abstract class Utilities {
   /// Parameters:
   /// - [inputComponent] The input component to be checked.
   static void checkInputElectrumX(InputComponent inputComponent) {
-    // TODO Implement.
-    debugPrint("checkInputElectrumX: TODO implement");
+    throw UnimplementedError("checkInputElectrumX: TODO implement");
   }
 
   /// Calculates a random position based on a seed, number of positions, and a counter.
@@ -232,11 +212,9 @@ abstract class Utilities {
 
     final G = Utilities.secp256k1Params.G;
     final order = Utilities.secp256k1Params.n;
-    final fieldsize = BigInt.two.pow(256) -
+    final fieldSize = BigInt.two.pow(256) -
         BigInt.two.pow(32) -
         BigInt.from(977); // This is p for secp256k1.
-
-    // ndata ??= Uint8List(0);
 
     BigInt secexp = privkey.toBigInt;
     if (!(secexp > BigInt.zero && secexp < order)) {
@@ -252,7 +230,7 @@ abstract class Utilities {
     BigInt k = nonceFunctionRfc6979(order, privkey, messageHash,
         ndata: ndata, algo16: algo16);
     ECPoint R = (G * k)!;
-    if (jacobi(R.y!.toBigInteger()!, fieldsize) == -BigInt.one) {
+    if (jacobi(R.y!.toBigInteger()!, fieldSize) == -BigInt.one) {
       k = order - k;
     }
 
@@ -262,10 +240,6 @@ abstract class Utilities {
     BigInt e = eBytes.toBigInt;
 
     BigInt s = (k + (e * secexp)) % order;
-    print("s = $s");
-    // python: 51345334206534631011717490181123043547171104899671934886156706814610857153998
-    print("s = ${s.toBytes.toHex}");
-    // python: 71846de67ad3d913a8fdf9d8f3f73161a4c48ae81cb183b214765feb86e255ce (b'q\x84m\xe6z\xd3\xd9\x13\xa8\xfd\xf9\xd8\xf3\xf71a\xa4\xc4\x8a\xe8\x1c\xb1\x83\xb2\x14v_\xeb\x86\xe2U\xce')
 
     return Uint8List.fromList([...rBytes, ...s.toBytesPadded(32)]);
   }
@@ -322,24 +296,7 @@ abstract class Utilities {
     return rX == rBytes.toBigInt;
   }
 
-  /// Formats a given number of satoshis.
-  ///
-  /// TODO implement.
-  ///
-  /// Parameters:
-  /// - [sats] The number of satoshis to format.
-  /// - [numZeros] The number of zeros for formatting (optional).
-  ///
-  /// Returns:
-  ///   The formatted satoshis as a string.
-  static String formatSatoshis(sats, {int numZeros = 8}) {
-    // To implement
-    throw UnimplementedError(" // TODO implement formatSatoshis.");
-  }
-
   /// Updates the wallet label for a given transaction ID.
-  ///
-  /// TODO implement.
   ///
   /// Parameters:
   /// - [txid] The transaction ID.
@@ -458,11 +415,6 @@ abstract class Utilities {
         "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"; // Bitcoin genesis hash
     List<int> _lastGenesisHash = genesis.toUint8ListFromHex.reversed.toList();
     return Uint8List.fromList(_lastGenesisHash);
-  }
-
-  static bool walletHasTransaction(String txid) {
-    // implement later based on wallet.
-    return true;
   }
 
   /// Generates an elliptic curve key pair based on the secp256k1 curve.
