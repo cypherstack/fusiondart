@@ -194,8 +194,7 @@ abstract class Utilities {
   /// Signs a [messageHash] using the given [privkey] and an optional [ndata].
   ///
   /// [ndata] is optional but for secure use it should be a random 32-byte value.
-  ///
-  /// TODO default to generating [ndata] if not provided unless testing.
+  /// And is not used in Fusion.
   static Uint8List schnorrSign(Uint8List privkey, Uint8List messageHash,
       {Uint8List? ndata}) {
     if (ndata != null && ndata.length != 32) {
