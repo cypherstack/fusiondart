@@ -1624,23 +1624,27 @@ class Fusion {
 
         String txHex = txn.toHex();
 
-        // TODO: handle txn-mempool-conflict. If not handled the exception will cause this round to exit prematurely
-        final txid = await _broadcastTransaction(txHex);
-        print("BROADCAST: txid: $txid");
+        try {
+          // TODO: handle txn-mempool-conflict. If not handled the exception will cause this round to exit prematurely
+          final txid = await _broadcastTransaction(txHex);
+          print("BROADCAST: txid: $txid");
 
-        assert(txid == txn.getId());
+          assert(txid == txn.getId());
 
-        String sumInStr = Utilities.formatSatoshis(sumIn, numZeros: 8);
-        String feeStr = totalFee.toString();
-        String feeLoc = 'fee';
+          String sumInStr = Utilities.formatSatoshis(sumIn, numZeros: 8);
+          String feeStr = totalFee.toString();
+          String feeLoc = 'fee';
 
-        // Label should probably not be set until tx has been broadcast?
-        // Is this tx label just for convenience?
-        // If not, is it important to know if a tx is a fusion tx when
-        // restoring from mnemonic?
-        String label =
-            "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_registerAndWaitResult!.outputs.length}, $sumInStr BCH (−$feeStr sats $feeLoc)";
-        Utilities.updateWalletLabel(txid, label);
+          // Label should probably not be set until tx has been broadcast?
+          // Is this tx label just for convenience?
+          // If not, is it important to know if a tx is a fusion tx when
+          // restoring from mnemonic?
+          String label =
+              "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_registerAndWaitResult!.outputs.length}, $sumInStr BCH (−$feeStr sats $feeLoc)";
+          Utilities.updateWalletLabel(txid, label);
+        } catch (_) {
+          // TODO not ignore this exception but handle it properly. Ignored for now as the tx gets broadcast but we want to test the remaining phases
+        }
       } else {
         // If not successful, identify bad components.
         badComponents.clear();
