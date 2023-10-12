@@ -1065,8 +1065,10 @@ class Fusion {
       timeout: Duration(seconds: timeoutInSeconds),
     );
 
-    // Initialize the covert timer base
+    /// The time when the covert timer was started.
     final covertT0 = DateTime.now().millisecondsSinceEpoch / 1000;
+
+    /// Returns the time since the covert timer was started in seconds.
     double covertClock() =>
         (DateTime.now().millisecondsSinceEpoch / 1000) - covertT0;
 
