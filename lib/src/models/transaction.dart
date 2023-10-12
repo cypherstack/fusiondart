@@ -51,6 +51,22 @@ class Transaction {
     final comps =
         allComponents.map((e) => Component()..mergeFromBuffer(e)).toList();
 
+    assert(sessionHash.length == 32);
+
+    final fuseId = Protocol.FUSE_ID.toUint8ListFromUtf8;
+    assert(fuseId.length == 4);
+    final prefix = [4, ...fuseId];
+
+    final opReturnScript = coinlib.Script.decompile(Uint8List.fromList([
+      0x6a, // OP_RETURN
+      ...prefix,
+      0x20, // aka 32 aka PUSH
+      ...sessionHash,
+    ]));
+
+    tx.outputs.add(Output.fromScriptPubKey(
+        value: 0, scriptPubkey: opReturnScript.compiled));
+
     for (int i = 0; i < comps.length; i++) {
       final comp = comps[i];
       if (comp.hasInput()) {

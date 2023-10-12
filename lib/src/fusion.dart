@@ -1505,7 +1505,7 @@ class Fusion {
         final sec = await _getPrivateKeyForPubKey(pubKey);
 
         // Calculate sigHash for signing.
-        final preimageBytes = txData.tx.serializePreimageBytes(
+        final preimageBytes = txData.tx.serializePreimageBytesAlt(
           i,
           network: network,
           nHashType: 0x41,
