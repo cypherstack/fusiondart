@@ -7,11 +7,6 @@ import 'package:fusiondart/src/extensions/on_list_int.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:socks_socket/socks_socket.dart';
 
-// TODO
-// This file might need some fixing up because each time we call fillBuf, we're trying to
-// remove data from a buffer but its a local copy , might not actually
-// remove the data from the socket buffer.  We may need a wrapper class for the buffer??
-
 /// Class to handle a connection.
 ///
 /// This class is used to send and receive messages over a socket.
@@ -65,16 +60,14 @@ class Connection {
         await socksSocket.connectTo(host, port);
 
         return Connection._(
-          socket:
-              socksSocket.socket, // This might not "just work", but it might.
+          socket: socksSocket.socket,
           receiveStream: socksSocket.responseController.stream,
           timeout: defaultTimeout,
         );
-        // TODO Close the socket.
-        // await socksSocket.close();
       } catch (e, s) {
         Utilities.debugPrint(
-            'openConnection(): Failed to open proxied connection: $e\n$s');
+          'openConnection(): Failed to open proxied connection: $e\n$s',
+        );
         rethrow;
       }
     } else {

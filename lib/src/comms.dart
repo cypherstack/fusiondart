@@ -71,8 +71,7 @@ abstract final class Comms {
       if (errorFieldInfo != null) {
         final error = pbMessage.getField(errorFieldInfo.tagNumber) as pb.Error;
 
-        // TODO: Do we need to check if this error message is empty?
-        throw FusionError("Server error: ${error.message}");
+        throw FusionError("Server error: \"${error.message}\"");
       }
 
       throw FusionError(

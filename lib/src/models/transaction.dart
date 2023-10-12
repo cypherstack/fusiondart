@@ -91,7 +91,6 @@ class Transaction {
     return (tx: tx, inputAndCompIndexes: inputAndCompIndexes);
   }
 
-  // Translated from Translated from https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash/transaction.py#L746
   Uint8List serializePreimageBytesAlt(
     int i, {
     required coinlib.NetworkParams network,
@@ -314,25 +313,6 @@ class Transaction {
     required coinlib.NetworkParams network,
     bool useCache = false,
   }) {
-    List<bitbox.Input> inputs = this.inputs;
-    int nOutputs = outputs.length;
-    List<int> meta = [inputs.length, nOutputs];
-
-    // if (useCache) {
-    //   try {
-    //     List<int> cmeta =
-    //         _cachedSighashTup[0]; // TODO cache sighash tuple (record).
-    //     List<Uint8List> res = _cachedSighashTup[1];
-    //     if (listEquals(cmeta, meta)) {
-    //       return res;
-    //     } else {
-    //       _cachedSighashTup = null;
-    //     }
-    //   } catch (e) {
-    //     // Handle the exception or simply continue
-    //   }
-    // }
-
     final List<int> prePrevouts = [];
     final List<int> preSeq = [];
     for (final input in inputs) {
@@ -359,10 +339,6 @@ class Transaction {
       Uint8List.fromList(preOuts),
     );
 
-    // _cachedSighashTup = [
-    //   meta,
-    //   [hashPrevouts, hashSequence, hashOutputs]
-    // ]; // TODO cache sighash tuple (record).
     return (
       hashPrevouts: hashPrevouts,
       hashSequence: hashSequence,

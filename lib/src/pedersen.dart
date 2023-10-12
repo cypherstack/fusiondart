@@ -28,8 +28,6 @@ class PedersenSetup {
     if (_pointHG.isInfinity) {
       throw InsecureHPoint();
     }
-
-    // TODO: check if we need https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/pedersen.py#L95-L130
   }
 
   // Getter methods to fetch _H and _HG points.
@@ -72,15 +70,12 @@ class Commitment {
     BigInt? nonce,
     Uint8List? pointPUncompressed,
   }) {
-    // TODO: ensure this is unique?
+    // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/pedersen.py#L160
     // Initialize nonce with a secure random value if not provided.
     this.nonce = nonce ??
         Utilities.secureRandomBigInt(
           Utilities.secp256k1Params.n,
         );
-    // Utilities.secureRandomBigInt(
-    //   Utilities.secp256k1Params.n.bitLength,
-    // );
 
     // Validate that nonce is within the allowed range (0, n).
     if (this.nonce <= BigInt.zero ||
