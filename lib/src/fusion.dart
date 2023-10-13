@@ -180,6 +180,9 @@ class Fusion {
 
     int roundCount = 0;
 
+    // Reset the UI state.
+    _updateStatus(status: FusionStatus.reset, info: "");
+
     try {
       if (inputsFromWallet.isEmpty) {
         throw FusionError('Started with no coins');
@@ -273,6 +276,8 @@ class Fusion {
 
         final currentChainHeight = await _getChainHeight();
 
+        // Allocate outputs for fusion.
+        _updateStatus(status: FusionStatus.setup, info: "");
         _allocatedOutputs = await OutputHandling.allocateOutputs(
           connection:
               connection!, // A non-null [connection] would've been caught by IO.greet()'s try-catch above, no need to check or handle it here.
@@ -287,6 +292,7 @@ class Fusion {
         Utilities.debugPrint("Registering for tiers, waiting for a pool...");
 
         // Register for tiers, wait for a pool.
+        _updateStatus(status: FusionStatus.waiting, info: "");
         _registerAndWaitResult = await registerAndWait(
           connection: connection,
           allocatedOutputs: _allocatedOutputs!,
