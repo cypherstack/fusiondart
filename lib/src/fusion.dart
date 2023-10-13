@@ -66,6 +66,7 @@ class Fusion {
   late final Future<Uint8List> Function(List<int> pubKey)
       _getPrivateKeyForPubKey;
   late final Future<String> Function(String txHex) _broadcastTransaction;
+  late final Future<void> Function(List<Address> addresses) _unReserveAddresses;
 
   /// Constructor that sets up a Fusion object.
   Fusion(this._fusionParams);
@@ -86,6 +87,8 @@ class Fusion {
     required final Future<Uint8List> Function(List<int> pubKey)
         getPrivateKeyForPubKey,
     required final Future<String> Function(String txHex) broadcastTransaction,
+    required final Future<void> Function(List<Address> addresses)
+        unReserveAddresses,
   }) async {
     _getTransactionsByAddress = getTransactionsByAddress;
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
@@ -95,6 +98,7 @@ class Fusion {
     _getTransactionJson = getTransactionJson;
     _getPrivateKeyForPubKey = getPrivateKeyForPubKey;
     _broadcastTransaction = broadcastTransaction;
+    _unReserveAddresses = unReserveAddresses;
 
     // Load coinlib.
     await coinlib.loadCoinlib();
@@ -363,10 +367,7 @@ class Fusion {
     } finally {
       // clearCoins();
       if (status.status != FusionStatus.complete) {
-        for (Output output in _registerAndWaitResult?.outputs ?? []) {
-          // TODO implement
-          /*Util.unreserve_change_address(output.addr);*/
-        }
+        await _unReserveAddresses(_reservedAddresses);
         if (!_serverConnectedAndGreeted) {
           notifyServerStatus(false, status: status);
         }
@@ -791,11 +792,14 @@ class Fusion {
 
     // Retrieve the output amounts for the given tier and prepare the output addresses.
     List<int>? outAmounts = tierOutputs[tier];
-    List<Address> outAddrs =
-        await _getUnusedReservedChangeAddresses(outAmounts?.length ?? 0);
+    final List<Address> outAddrs;
+    if (outAmounts != null && outAmounts.isNotEmpty) {
+      outAddrs = await _getUnusedReservedChangeAddresses(outAmounts.length);
+    } else {
+      outAddrs = [];
+    }
 
     // Populate reservedAddresses and outputs with the prepared amounts and addresses.
-    // TODO: this [reservedAddresses] is never read from????
     _reservedAddresses = outAddrs;
 
     final outputs = Utilities.zip(outAmounts ?? [], outAddrs)
