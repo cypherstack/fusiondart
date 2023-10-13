@@ -1,7 +1,7 @@
 enum FusionStatus {
+  connecting("connecting"),
   setup("setup"),
   waiting("waiting"),
-  connecting("connecting"),
   running("running"),
   complete("complete"),
   failed("failed"),
