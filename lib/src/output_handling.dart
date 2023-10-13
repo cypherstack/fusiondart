@@ -254,7 +254,6 @@ abstract final class OutputHandling {
       int maxExcessFee,
       List<int> availableTiers,
     }) serverParams,
-    required Future<List<Address>> Function() getAddresses,
     required Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
   }) async {

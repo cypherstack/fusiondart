@@ -53,7 +53,6 @@ class Fusion {
   final FusionParams _fusionParams;
 
   // Private late finals used for dependency injection.
-  late final Future<List<Address>> Function() _getAddresses;
   late final Future<List<Map<String, dynamic>>> Function(String address)
       _getTransactionsByAddress;
   late final Future<List<Address>> Function(int numberOfAddresses)
@@ -74,7 +73,6 @@ class Fusion {
   /// Method to initialize Fusion instance with necessary wallet methods.
   /// The methods injected here are used for various operations throughout the fusion process.
   Future<void> initFusion({
-    required final Future<List<Address>> Function() getAddresses,
     required final Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
     required final Future<List<Address>> Function(int numberOfAddresses)
@@ -89,7 +87,6 @@ class Fusion {
         getPrivateKeyForPubKey,
     required final Future<String> Function(String txHex) broadcastTransaction,
   }) async {
-    _getAddresses = getAddresses;
     _getTransactionsByAddress = getTransactionsByAddress;
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
     _getSocksProxyAddress = getSocksProxyAddress;
@@ -284,7 +281,6 @@ class Fusion {
           currentChainHeight: currentChainHeight,
           serverParams: _serverParams!,
           getTransactionsByAddress: _getTransactionsByAddress,
-          getAddresses: _getAddresses,
         );
         // In principle we can hook a pause in here -- user can tweak tier_outputs, perhaps cancelling some unwanted tiers.
 
