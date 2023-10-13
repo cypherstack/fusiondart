@@ -1520,30 +1520,35 @@ class Fusion {
 
         // Finalize transaction details and update wallet label.
 
-        String txHex = txn.toHex();
+        final txHex = txn.toHex();
+        final txid = txn.getId();
 
         try {
-          // TODO: handle txn-mempool-conflict. If not handled the exception will cause this round to exit prematurely
-          final txid = await _broadcastTransaction(txHex);
-          print("BROADCAST: txid: $txid");
+          final broadcastTxid = await _broadcastTransaction(txHex);
 
-          assert(txid == txn.getId());
-
-          String sumInStr = sumIn
-              .toString(); // Used the old Utilities.formatSatoshis(sumIn, numZeros: 8);
-          String feeStr = totalFee.toString();
-          String feeLoc = 'fee';
+          assert(broadcastTxid == txid);
 
           // Label should probably not be set until tx has been broadcast?
           // Is this tx label just for convenience?
           // If not, is it important to know if a tx is a fusion tx when
           // restoring from mnemonic?
           String label =
-              "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_registerAndWaitResult!.outputs.length}, $sumInStr BCH (−$feeStr sats $feeLoc)";
+              "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_registerAndWaitResult!.outputs.length},"
+              " $sumIn sats (−$totalFee sats fee)";
           Utilities.updateWalletLabel(txid, label);
+
+          // round success
+          return true;
         } catch (e, s) {
           Utilities.debugPrint("BROADCAST FAILED: $e\n$s");
-          // TODO not ignore this exception but handle it properly. Ignored for now as the tx gets broadcast but we want to test the remaining phases
+
+          if (e.toString().contains("txn-mempool-conflict")) {
+            // tx was already broadcast by another player
+            // round success
+            return true;
+          } else {
+            rethrow;
+          }
         }
       } else {
         // If not successful, identify bad components.
@@ -1800,6 +1805,7 @@ class Fusion {
     );
 
     // Return true to indicate successful execution of this part.
+    // TODO: should return false? The python does not explicitly return true here
     return true;
   } // /run_round()
 }
