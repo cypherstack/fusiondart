@@ -5,7 +5,8 @@ enum FusionStatus {
   running("running"),
   complete("complete"),
   failed("failed"),
-  exception("Exception");
+  exception("Exception"),
+  reset("reset"); // Used to reset the state of the Fusion UI.
 
   const FusionStatus(this.value);
 
