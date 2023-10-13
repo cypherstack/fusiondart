@@ -221,7 +221,9 @@ class Fusion {
       }
 
       // Connect to server.
-      _updateStatus(status: FusionStatus.connecting, info: "");
+      _updateStatus(
+          status: FusionStatus.connecting,
+          info: "Connecting to the CashFusion server.");
       try {
         try {
           connection = await Connection.openConnection(
@@ -237,8 +239,9 @@ class Fusion {
           Utilities.debugPrint("$s");
         }
       } catch (e) {
-        // TODO: _updateStatus with correct failure
-        //   _updateStatus(status: FusionStatus.???, info: "");
+        _updateStatus(
+            status: FusionStatus.failed,
+            info: "Failed to connect to the server!  Please try again.");
         Utilities.debugPrint("Connect failed: $e");
         String sslstr = _fusionParams.serverSsl ? ' SSL ' : '';
         throw FusionError(
@@ -281,7 +284,8 @@ class Fusion {
         final currentChainHeight = await _getChainHeight();
 
         // Allocate outputs for fusion.
-        _updateStatus(status: FusionStatus.setup, info: "");
+        _updateStatus(
+            status: FusionStatus.setup, info: "Allocating inputs for fusion.");
         _allocatedOutputs = await OutputHandling.allocateOutputs(
           connection:
               connection!, // A non-null [connection] would've been caught by IO.greet()'s try-catch above, no need to check or handle it here.
@@ -356,8 +360,8 @@ class Fusion {
       //   await Future<void>.delayed(Duration(seconds: 1));
       // }
 
-      // Set status to 'complete' with txid.
-      _updateStatus(status: FusionStatus.complete, info: '');
+      // Set status to 'complete' with txid.  TODO set info to txid.
+      _updateStatus(status: FusionStatus.complete, info: "Fusion complete.");
     } on FusionError catch (err, s) {
       Utilities.debugPrint('Failed: $err\n$s');
       _updateStatus(status: FusionStatus.failed, info: err.toString());
@@ -496,6 +500,9 @@ class Fusion {
 
     // Check if tierOutputs is empty and throw an error if so.
     if (tierOutputs.isEmpty) {
+      _updateStatus(
+          status: FusionStatus.failed,
+          info: "Failed to allocate inputs, please try again.");
       throw FusionError(
           'No outputs available at any tier (selected inputs were too small / too large).');
     }
@@ -1581,7 +1588,7 @@ class Fusion {
     // Update status to indicate that proofs are being sent.
     _updateStatus(
       status: FusionStatus.running,
-      info: "round failed - sending proofs",
+      info: "Round failed: sending proofs",
     );
     Utilities.debugPrint("sending proofs");
 
@@ -1652,7 +1659,7 @@ class Fusion {
     // Update the status to indicate that the program is in the process of checking proofs.
     _updateStatus(
       status: FusionStatus.running,
-      info: "round failed - checking proofs",
+      info: "Round failed: checking proofs",
     );
 
     // Receive the list of proofs from the other parties
@@ -1786,7 +1793,7 @@ class Fusion {
     // Update the status to indicate that the program is waiting for the round to restart.
     _updateStatus(
       status: FusionStatus.running,
-      info: "awaiting restart",
+      info: "Awaiting restart",
     );
 
     // Await the final 'restartround' message. It might take some time
