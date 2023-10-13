@@ -292,7 +292,6 @@ class Fusion {
         Utilities.debugPrint("Registering for tiers, waiting for a pool...");
 
         // Register for tiers, wait for a pool.
-        _updateStatus(status: FusionStatus.waiting, info: "");
         _registerAndWaitResult = await registerAndWait(
           connection: connection,
           allocatedOutputs: _allocatedOutputs!,
@@ -501,6 +500,7 @@ class Fusion {
     }
 
     Utilities.debugPrint('registering for tiers: $tiersSorted');
+    _updateStatus(status: FusionStatus.waiting, info: "");
 
     // Temporary initialization of some CashFusion parameters.
     int selfFuse = 1; // Temporary value for now.
