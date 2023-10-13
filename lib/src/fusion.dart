@@ -1802,8 +1802,7 @@ class Fusion {
                   Protocol.BLAME_VERIFY_TIME.round())),
     );
 
-    // Return true to indicate successful execution of this part.
-    // TODO: should return false? The python does not explicitly return true here
-    return true;
+    // Return false to trigger another runRound
+    return false;
   } // /run_round()
 }
