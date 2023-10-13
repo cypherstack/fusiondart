@@ -1359,7 +1359,7 @@ class Fusion {
           'Session hash mismatch (bug)!  Expected $sessionHash, found ${shareCovertComponentsMsg.sessionHash}');
     }
 
-    final Set<int> badComponents = {};
+    final Set<int> badComponentIndexes = {};
 
     // Handle covert signature submission.
     Utilities.debugPrint(
@@ -1552,18 +1552,20 @@ class Fusion {
         }
       } else {
         // If not successful, identify bad components.
-        badComponents.clear();
-        badComponents.addAll(fusionResultMsg.badComponents);
-        if (badComponents.intersection(myComponentIndexes.toSet()).isNotEmpty) {
+        badComponentIndexes.clear();
+        badComponentIndexes.addAll(fusionResultMsg.badComponents);
+        if (badComponentIndexes
+            .intersection(myComponentIndexes.toSet())
+            .isNotEmpty) {
           Utilities.debugPrint(
-              "bad components: $badComponents mine: $myComponentIndexes");
+              "bad components: $badComponentIndexes mine: $myComponentIndexes");
           throw FusionError("server thinks one of my components is bad!");
         }
       }
     } else {
       // Case where 'skip_signatures' is True.
       // this should be empty already sooooo
-      badComponents.clear();
+      badComponentIndexes.clear();
     }
 
     // Begin Blame phase logic.
@@ -1720,21 +1722,12 @@ class Fusion {
 
       try {
         // Validate the proof internally, adding it to the list of validated proofs if it's valid.
-        // Convert allComponents to List<Uint8List>, badComponents to List<int>, and round componentFeeRate.
-        List<Uint8List> allComponentsUint8 = allComponents
-            .map((component) => Uint8List.fromList(component))
-            .toList();
-        // Convert badComponents to List<int>
-        List<int> badComponentsList = badComponents.toList();
-        // Convert componentFeeRate to int if it's double.
-        int componentFeerateInt = _serverParams!.componentFeeRate;
-
         inpComp = validateProofInternal(
           proofBlob,
           commitment,
-          allComponentsUint8,
-          badComponentsList,
-          componentFeerateInt,
+          allComponents,
+          badComponentIndexes.toList(),
+          _serverParams!.componentFeeRate,
           network,
         );
       } on Exception catch (e) {

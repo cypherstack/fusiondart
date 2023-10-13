@@ -176,14 +176,14 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
 pb.InputComponent? validateProofInternal(
   Uint8List proofBlob,
   pb.InitialCommitment commitment,
-  List<Uint8List> allComponents,
+  List<List<int>> allComponents,
   List<int> badComponents,
   int componentFeerate,
   coinlib.NetworkParams network,
 ) {
   final msg = protoStrictParse(pb.Proof(), proofBlob);
 
-  Uint8List componentBlob;
+  final List<int> componentBlob;
   try {
     componentBlob = allComponents[msg.componentIdx];
   } catch (e) {
@@ -236,7 +236,7 @@ Future<pb.InputComponent> validateBlame(
   Uint8List encProof,
   Uint8List srcCommitBlob,
   Uint8List destCommitBlob,
-  List<Uint8List> allComponents,
+  List<List<int>> allComponents,
   List<int> badComponents,
   int componentFeerate,
   coinlib.NetworkParams network,
