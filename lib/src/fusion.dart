@@ -373,11 +373,10 @@ class Fusion {
     }
   } // End of `fuse()`.
 
-  /// Notifies the server about the current status of the system using bool [b]
-  /// and optional Record(String, String) status (status, message).
+  /// Notify the UI about server status updates.
   ///
-  /// Sends a status update to the server. The purpose and behavior of this method
-  /// depend on the application's requirements.
+  /// True means server is good, False it's bad. This ultimately makes its way
+  /// to the UI to tell the user there is a connectivity or other problem.
   ///
   /// TODO implement.
   void notifyServerStatus(
