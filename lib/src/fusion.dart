@@ -30,20 +30,21 @@ import 'package:protobuf/protobuf.dart';
 
 final bool kDebugPrintEnabled = true;
 
-// final class FusionParams {
-//   final String serverHost = "fusion.servo.cash";
-//   final int serverPort = 8789;
-//   final bool serverSsl = true;
-// }
-
 final class FusionParams {
   // CashFusion server host.
-  final String serverHost = "cashfusion.stackwallet.com";
+  String serverHost;
 
   // Server port.
-  final int serverPort = 8787;
+  int serverPort;
 
-  final bool serverSsl = false;
+  bool serverSsl;
+
+  FusionParams({
+    // TODO change this to Electron Cash's default, fusion.servo.cash or similar.
+    this.serverHost = "cashfusion.stackwallet.com",
+    this.serverPort = 8787,
+    this.serverSsl = false,
+  });
 }
 
 /// Fusion class is responsible for coordinating the CashFusion transaction process.
