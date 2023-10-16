@@ -42,7 +42,7 @@ final class FusionParams {
   /// Number of rounds to run.
   ///
   /// 0 means run until stopped.
-  int fusionRounds;
+  int roundCount;
 
   FusionParams({
     // TODO change this to Electron Cash's default before release:
@@ -51,7 +51,7 @@ final class FusionParams {
     this.serverHost = "cashfusion.stackwallet.com",
     this.serverPort = 8787,
     this.serverSsl = false,
-    this.fusionRounds = 0,
+    this.roundCount = 0,
   });
 }
 
