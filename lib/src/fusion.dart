@@ -31,13 +31,18 @@ import 'package:protobuf/protobuf.dart';
 final bool kDebugPrintEnabled = true;
 
 final class FusionParams {
-  // CashFusion server host.
+  /// CashFusion server host.
   String serverHost;
 
-  // Server port.
+  /// CashFusion server port.
   int serverPort;
 
   bool serverSsl;
+
+  /// Number of rounds to run.
+  ///
+  /// 0 means run until stopped.
+  int fusionRounds;
 
   FusionParams({
     // TODO change this to Electron Cash's default before release:
@@ -46,6 +51,7 @@ final class FusionParams {
     this.serverHost = "cashfusion.stackwallet.com",
     this.serverPort = 8787,
     this.serverSsl = false,
+    this.fusionRounds = 0,
   });
 }
 
