@@ -40,7 +40,9 @@ final class FusionParams {
   bool serverSsl;
 
   FusionParams({
-    // TODO change this to Electron Cash's default, fusion.servo.cash or similar.
+    // TODO change this to Electron Cash's default before release:
+    // this.serverHost = "fusion.servo.cash",
+    // this.serverPort = 8789,
     this.serverHost = "cashfusion.stackwallet.com",
     this.serverPort = 8787,
     this.serverSsl = false,
