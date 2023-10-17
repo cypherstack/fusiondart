@@ -71,7 +71,8 @@ class Fusion {
   late final Future<({InternetAddress host, int port})> Function()
       _getSocksProxyAddress;
   late final Future<int> Function() _getChainHeight;
-  late final void Function(FusionStatus) _updateStatusCallback;
+  late final void Function({required FusionStatus status, String? info})
+      _updateStatusCallback;
   late final Future<Map<String, dynamic>> Function(String txid)
       _getTransactionJson;
   late final Future<Uint8List> Function(List<int> pubKey)
@@ -90,7 +91,8 @@ class Fusion {
     required final Future<({InternetAddress host, int port})> Function()
         getSocksProxyAddress,
     required final Future<int> Function() getChainHeight,
-    required final void Function(FusionStatus) updateStatusCallback,
+    required final void Function({required FusionStatus status, String? info})
+        updateStatusCallback,
     required final Future<Map<String, dynamic>> Function(String txid)
         getTransactionJson,
     required final Future<Uint8List> Function(List<int> pubKey)
@@ -123,7 +125,7 @@ class Fusion {
     required String info,
   }) {
     _status = (status: status, info: info);
-    _updateStatusCallback(_status.status);
+    _updateStatusCallback(status: status, info: info);
 
     Utilities.debugPrint(
         "======= FusionStatus update ====================================");
