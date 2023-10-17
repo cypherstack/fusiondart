@@ -356,7 +356,7 @@ class Fusion {
         try {
           // Pool started. Keep running rounds until fail or complete.
           bool done = false;
-          while (!done && roundCount < _fusionParams.roundCount) {
+          while (!done) {
             done = await runRound(
               roundCount: roundCount,
               covert: covert,
@@ -364,6 +364,10 @@ class Fusion {
               network: network,
             );
             roundCount += 1;
+            if (_fusionParams.roundCount > 0 &&
+                roundCount >= _fusionParams.roundCount) {
+              done = true;
+            }
           }
         } finally {
           covert.stop();
