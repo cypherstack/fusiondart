@@ -191,6 +191,11 @@ class Fusion {
   // bool autofuseCoinbase = false; //   link to a setting in the wallet.
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/conf.py#L68
 
+  /// The transaction ID of the most recent fusion transaction.
+  ///
+  /// Null until first successful fusion.
+  String? lastTxId;
+
   /// Executes the fusion operation.
   ///
   /// This method orchestrates the entire lifecycle of a CashFusion operation.
@@ -1552,12 +1557,14 @@ class Fusion {
         // Finalize transaction details and update wallet label.
 
         final txHex = txn.toHex();
-        final txid = txn.getId();
+        lastTxId =
+            txn.getId(); // Converted to instance variable vs. previously-
+        // local variable to allow for waiting for tx to be broadcast.
 
         try {
           final broadcastTxid = await _broadcastTransaction(txHex);
 
-          assert(broadcastTxid == txid);
+          assert(broadcastTxid == lastTxId);
 
           // Label should probably not be set until tx has been broadcast?
           // Is this tx label just for convenience?
@@ -1566,7 +1573,7 @@ class Fusion {
           String label =
               "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_registerAndWaitResult!.outputs.length},"
               " $sumIn sats (−$totalFee sats fee)";
-          Utilities.updateWalletLabel(txid, label);
+          Utilities.updateWalletLabel(lastTxId!, label);
 
           // round success
           return true;
