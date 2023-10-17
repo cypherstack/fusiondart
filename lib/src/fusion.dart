@@ -359,6 +359,15 @@ class Fusion {
         } finally {
           covert.stop();
         }
+        // } catch (e) {
+        //   // Repeat until we allocate inputs.
+        //   if (e.toString() ==
+        //       "FusionError: No outputs available at any tier (selected inputs were too small / too large).") {
+        //     return fuse(
+        //       inputsFromWallet: inputsFromWallet,
+        //       network: network,
+        //     );
+        //   }
       } finally {
         try {
           // Close connection.
