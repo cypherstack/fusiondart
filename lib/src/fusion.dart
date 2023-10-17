@@ -347,7 +347,7 @@ class Fusion {
         try {
           // Pool started. Keep running rounds until fail or complete.
           bool done = false;
-          while (!done) {
+          while (!done && roundCount < _fusionParams.roundCount) {
             done = await runRound(
               roundCount: roundCount,
               covert: covert,
@@ -369,20 +369,31 @@ class Fusion {
         }
       }
 
-      // Not needed unless we start continuously running fuse
-      // //  Wait for transaction to show up in wallet.
-      // for (int i = 0; i < 60; i++) {
-      //   if (_stopping) {
-      //     break; // not an error
-      //   }
-      //
-      //
-      //   if (Utilities.walletHasTransaction(_txId)) {
-      //     break;
-      //   }
-      //
-      //   await Future<void>.delayed(Duration(seconds: 1));
-      // }
+      //  Wait for transaction to show up in wallet.
+      waitForTx:
+      for (int i = 0; i < 60; i++) {
+        if (_stopping) {
+          break; // not an error
+        }
+
+        if (lastTxId != null) {
+          // Should this null check be moved outside of this for?
+          bool wait = true;
+          await _getTransactionJson(lastTxId!).then((tx) {
+            if (tx['confirmations'] as int > 0) {
+              _updateStatus(
+                  status: FusionStatus.complete,
+                  info: "Fusion complete.  Transaction confirmed.");
+              wait = false;
+            }
+          });
+          if (!wait) {
+            break waitForTx;
+          }
+        }
+
+        await Future<void>.delayed(Duration(seconds: 1));
+      }
 
       // Set status to 'complete' with txid.  TODO set info to txid.
       _updateStatus(status: FusionStatus.complete, info: "Fusion complete.");
