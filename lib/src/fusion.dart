@@ -397,12 +397,6 @@ class Fusion {
 
       // Set status to 'complete' with txid.  TODO set info to txid.
       _updateStatus(status: FusionStatus.complete, info: "Fusion complete.");
-    } on FusionError catch (err, s) {
-      Utilities.debugPrint('Failed: $err\n$s');
-      _updateStatus(status: FusionStatus.failed, info: err.toString());
-    } catch (exc, s) {
-      Utilities.debugPrint('Exception: $exc\n$s');
-      _updateStatus(status: FusionStatus.exception, info: exc.toString());
     } finally {
       // clearCoins();
       if (status.status != FusionStatus.complete) {
