@@ -138,11 +138,15 @@ class Connection {
     // Initialize a buffer to store received data.
     List<int> recvBuf = [];
 
+    // temp byte list for error checking/handling
+    List<int>? chunk;
+
     int? messageLength;
 
     try {
       // Loop to read incoming data from the socket.
       await for (List<int> data in receiveStream) {
+        chunk = data;
         // Check if the operation has timed out.
         if (DateTime.now().isAfter(maxTime)) {
           throw SocketException('Timeout');
@@ -210,6 +214,15 @@ class Connection {
       Utilities.debugPrint('recvMessage exception: $e\n$s');
       rethrow;
       // Disable this rethrow if it causes too many issues, previously we just printed the exception
+    }
+
+    // Check if the connection has ended.
+    if (chunk == null || chunk.isEmpty) {
+      if (recvBuf.isNotEmpty) {
+        throw SocketException('Connection ended mid-message.');
+      } else {
+        throw SocketException('Connection ended while awaiting message.');
+      }
     }
 
     throw Exception(
