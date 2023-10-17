@@ -319,15 +319,24 @@ class Fusion {
         // Allocate outputs for fusion.
         _updateStatus(
             status: FusionStatus.setup, info: "Allocating inputs for fusion.");
-        _allocatedOutputs = await OutputHandling.allocateOutputs(
-          connection:
-              connection!, // A non-null [connection] would've been caught by IO.greet()'s try-catch above, no need to check or handle it here.
-          status: status.status,
-          coins: inputsFromWallet,
-          currentChainHeight: currentChainHeight,
-          serverParams: _serverParams!,
-          getTransactionsByAddress: _getTransactionsByAddress,
-        );
+
+        try {
+          _allocatedOutputs = await OutputHandling.allocateOutputs(
+            connection:
+                connection!, // A non-null [connection] would've been caught by IO.greet()'s try-catch above, no need to check or handle it here.
+            status: status.status,
+            coins: inputsFromWallet,
+            currentChainHeight: currentChainHeight,
+            serverParams: _serverParams!,
+            getTransactionsByAddress: _getTransactionsByAddress,
+          );
+        } catch (e, s) {
+          _updateStatus(
+              status: FusionStatus.failed,
+              info: "Failed to allocate inputs, please try again.");
+          Utilities.debugPrint("Exception allocating outputs: $e");
+          Utilities.debugPrint("$s");
+        }
         // In principle we can hook a pause in here -- user can tweak tier_outputs, perhaps cancelling some unwanted tiers.
 
         Utilities.debugPrint("Registering for tiers, waiting for a pool...");
