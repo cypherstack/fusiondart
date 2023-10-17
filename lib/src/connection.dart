@@ -61,7 +61,8 @@ class Connection {
 
         return Connection._(
           socket: socksSocket.socket,
-          receiveStream: socksSocket.responseController.stream,
+          receiveStream:
+              socksSocket.responseController.stream.asBroadcastStream(),
           timeout: defaultTimeout,
         );
       } catch (e, s) {
