@@ -191,9 +191,6 @@ class Fusion {
   // bool autofuseCoinbase = false; //   link to a setting in the wallet.
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/conf.py#L68
 
-  /// Instance variable used to store the CashFusion server connection.
-  Connection? connection;
-
   /// Executes the fusion operation.
   ///
   /// This method orchestrates the entire lifecycle of a CashFusion operation.
@@ -217,6 +214,8 @@ class Fusion {
       Utilities.debugPrint("$e\n$s");
       return;
     }
+
+    Connection? connection;
 
     try {
       // Check if can connect to Tor proxy, if not, raise FusionError.
@@ -246,7 +245,7 @@ class Fusion {
           info: "Connecting to the CashFusion server.");
       try {
         try {
-          connection ??= await Connection.openConnection(
+          connection = await Connection.openConnection(
             host: _fusionParams.serverHost,
             port: _fusionParams.serverPort,
             connTimeout: Duration(seconds: 5),
@@ -255,7 +254,6 @@ class Fusion {
             // proxyInfo null, connect directly.
             // TODO use proxyInfo for optional privacy for normally-overt comms.
           );
-          // TODO beyond just using null assignment, if not null, check conn.
         } catch (e, s) {
           Utilities.debugPrint("$s");
         }
