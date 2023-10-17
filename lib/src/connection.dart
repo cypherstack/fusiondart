@@ -212,7 +212,10 @@ class Connection {
       // Disable this rethrow if it causes too many issues, previously we just printed the exception
     }
 
-    throw Exception('recvMessage(): Should not reach this point');
+    throw Exception(
+      'recvMessage(): Should not reach this point normally. '
+      'State info: messageLength=$messageLength recvBuf=$recvBuf',
+    );
   }
 } // end of Connection class.
 
