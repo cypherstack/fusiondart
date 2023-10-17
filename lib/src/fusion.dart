@@ -163,22 +163,31 @@ class Fusion {
     List<int> lastHash,
   })? _registerAndWaitResult;
 
-  List<Address> _reservedAddresses = <Address>[]; // List of reserved addresses.
-  DateTime _tFusionBegin = DateTime.now(); // The timestamp when Fusion began.
+  /// List of reserved addresses.
+  List<Address> _reservedAddresses = <Address>[];
+
+  /// The time when Fusion began.
+  DateTime _tFusionBegin = DateTime.now();
 
   static const INACTIVE_TIME_LIMIT = Duration(minutes: 10);
-  static const int COINBASE_MATURITY = 100; // Maturity for coinbase UTXOs.
+
+  /// Maturity for coinbase UTXOs.
+  static const int COINBASE_MATURITY = 100;
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash/bitcoin.py#L65
-  static const int DEFAULT_MAX_COINS = 20; // Outputs to allocate for fusion.
+
+  /// Outputs to allocate for fusion.
+  static const int DEFAULT_MAX_COINS = 20;
   // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/plugin.py#L68
-  static const double KEEP_LINKED_PROBABILITY = 0.1; // Allowed linkability.
-  // For semi-linked addresses (that share txids in their history), allow linking them with this probability.
+
+  /// For semi-linked addresses (that share txids in their history), allow linking them with this probability.
+  static const double KEEP_LINKED_PROBABILITY = 0.1;
   // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/plugin.py#L62
-  static const COIN_FRACTION_FUDGE_FACTOR = 10; // Heuristic factor
-  // Guess that expected number of coins in wallet in equilibrium is = (this number) / fraction
+
+  /// Guess that expected number of coins in wallet in equilibrium is = (this number) / fraction
+  static const COIN_FRACTION_FUDGE_FACTOR = 10;
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/plugin.py#L60
 
-  // Not currently used. If needed, this should be made private and accessed using set/get
+  // /// Not currently used. If needed, this should be made private and accessed using set/get
   // bool autofuseCoinbase = false; //   link to a setting in the wallet.
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/conf.py#L68
 
@@ -191,6 +200,7 @@ class Fusion {
   }) async {
     Utilities.debugPrint("DEBUG FUSION 223...fusion run....");
 
+    /// Numbers of fusion rounds completed successfully.
     int roundCount = 0;
 
     // Reset the UI state.
