@@ -32,11 +32,16 @@ final bool kDebugPrintEnabled = true;
 
 final class FusionParams {
   /// CashFusion server host.
+  ///
+  /// Should default to Electron Cash's default: `fusion.servo.cash`.
   String serverHost;
 
   /// CashFusion server port.
+  ///
+  /// Should default to Electron Cash's default: `8789`.
   int serverPort;
 
+  /// Should SSL be used to connect to the CashFusion server?
   bool serverSsl;
 
   /// Number of rounds to run.
@@ -55,9 +60,6 @@ final class FusionParams {
   });
 }
 
-/// Fusion class is responsible for coordinating the CashFusion transaction process.
-///
-/// It maintains the state and controls the flow of a fusion operation.
 class Fusion {
   final FusionParams _fusionParams;
 
@@ -77,11 +79,9 @@ class Fusion {
   late final Future<String> Function(String txHex) _broadcastTransaction;
   late final Future<void> Function(List<Address> addresses) _unReserveAddresses;
 
-  /// Constructor that sets up a Fusion object.
   Fusion(this._fusionParams);
 
   /// Method to initialize Fusion instance with necessary wallet methods.
-  /// The methods injected here are used for various operations throughout the fusion process.
   Future<void> initFusion({
     required final Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
@@ -133,10 +133,17 @@ class Fusion {
         "================================================================");
   }
 
-  bool _serverConnectedAndGreeted = false; // Have we connected to the server?
-  bool _stopping = false; // Should fusion stop?
-  bool _stoppingIfNotRunning = false; // Should fusion stop if it's not running?
-  String _stopReason = ""; // Specifies the reason for stopping the operation.
+  /// Have we connected to the server?
+  bool _serverConnectedAndGreeted = false;
+
+  /// Should fusion stop?
+  bool _stopping = false;
+
+  /// Should fusion stop if it's not running?
+  bool _stoppingIfNotRunning = false;
+
+  /// Specifies the reason for stopping the fusion.
+  String _stopReason = "";
 
   ({
     int numComponents,
