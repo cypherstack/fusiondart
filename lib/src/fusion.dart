@@ -34,20 +34,20 @@ final class FusionParams {
   /// CashFusion server host.
   ///
   /// Should default to Electron Cash's default: `fusion.servo.cash`.
-  String serverHost;
+  final String serverHost;
 
   /// CashFusion server port.
   ///
   /// Should default to Electron Cash's default: `8789`.
-  int serverPort;
+  final int serverPort;
 
   /// Should SSL be used to connect to the CashFusion server?
-  bool serverSsl;
+  final bool serverSsl;
 
   /// Number of rounds to run.
   ///
   /// 0 means run until stopped.
-  int roundCount;
+  final int roundCount;
 
   FusionParams({
     // TODO change this to Electron Cash's default before release:
