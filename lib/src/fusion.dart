@@ -433,14 +433,27 @@ class Fusion {
         if (lastTxId != null) {
           // Should this null check be moved outside of this for?
           bool wait = true;
-          await _getTransactionJson(lastTxId!).then((tx) {
-            if (tx['confirmations'] as int > 0) {
-              _updateStatus(
-                  status: FusionStatus.complete,
-                  info: "Fusion complete.  Transaction confirmed.");
-              wait = false;
+          try {
+            await _getTransactionJson(lastTxId!).then((tx) {
+              if (tx['confirmations'] as int > 0) {
+                _updateStatus(
+                    status: FusionStatus.complete,
+                    info: "Fusion complete.  Transaction confirmed.");
+                wait = false;
+              }
+            });
+          } catch (e, s) {
+            if (e
+                .toString()
+                .contains("No such mempool or blockchain transaction")) {
+              // Transaction not found, wait.
+              Utilities.debugPrint("Transaction not found, waiting...");
+            } else {
+              Utilities.debugPrint("Exception getting transaction: $e");
+              Utilities.debugPrint("$s");
+              rethrow;
             }
-          });
+          }
           if (!wait) {
             break waitForTx;
           }
