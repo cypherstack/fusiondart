@@ -267,6 +267,7 @@ class Fusion {
             ssl: _fusionParams.serverSsl,
             // proxyInfo null, connect directly.
             // TODO use proxyInfo for optional privacy for normally-overt comms.
+            // See https://github.com/cypherstack/fusiondart/issues/2
           );
         } catch (e, s) {
           Utilities.debugPrint("$s");
@@ -461,6 +462,9 @@ class Fusion {
   /// If an operation is in progress, stops it for the given reason.
   Future<void> stop(
       [String reason = "stopped", bool notIfRunning = false]) async {
+    _updateStatus(status: FusionStatus.running, info: "Stopping fusion.");
+    // Could alternatively use FusionStatus.failed here.
+
     if (_stopping) {
       return;
     }
