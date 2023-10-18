@@ -341,6 +341,11 @@ class Fusion {
 
         Utilities.debugPrint("Registering for tiers, waiting for a pool...");
 
+        // Check if connection is null.
+        if (connection == null) {
+          throw FusionError("Connection is null");
+        }
+
         // Register for tiers, wait for a pool.
         _registerAndWaitResult = await registerAndWait(
           connection: connection,
