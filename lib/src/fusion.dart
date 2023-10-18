@@ -44,11 +44,6 @@ final class FusionParams {
   /// Should SSL be used to connect to the CashFusion server?
   final bool serverSsl;
 
-  /// Number of rounds to run.
-  ///
-  /// 0 means run until stopped.
-  final int roundCount;
-
   FusionParams({
     // TODO change this to Electron Cash's default before release:
     // this.serverHost = "fusion.servo.cash",
@@ -56,7 +51,6 @@ final class FusionParams {
     this.serverHost = "cashfusion.stackwallet.com",
     this.serverPort = 8787,
     this.serverSsl = false,
-    this.roundCount = 0,
   });
 }
 
@@ -213,7 +207,7 @@ class Fusion {
 
     _stopRequested = false;
 
-    /// Numbers of fusion rounds completed.
+    /// Number runRound calls
     int roundCount = 0;
 
     // Reset the UI state.
@@ -405,10 +399,6 @@ class Fusion {
               network: network,
             );
             roundCount += 1;
-            if (_fusionParams.roundCount > 0 &&
-                roundCount >= _fusionParams.roundCount) {
-              done = true;
-            }
           }
         } finally {
           covert.stop();
@@ -462,7 +452,7 @@ class Fusion {
         await Future<void>.delayed(Duration(seconds: 1));
       }
 
-      // Set status to 'complete' with txid.  TODO set info to txid.
+      // Set status to 'complete' with txid.
       _updateStatus(status: FusionStatus.complete, info: "Fusion complete.");
     } finally {
       // clearCoins();
