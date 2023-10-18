@@ -138,14 +138,8 @@ class Fusion {
   /// Have we connected to the server?
   bool _serverConnectedAndGreeted = false;
 
-  /// Should fusion stop?
-  bool _stopping = false;
-
-  /// Should fusion stop if it's not running?
-  bool _stoppingIfNotRunning = false;
-
-  /// Specifies the reason for stopping the fusion.
-  String _stopReason = "";
+  Completer<void>? _stopCompleter;
+  bool _stopRequested = false;
 
   ({
     int numComponents,
@@ -214,6 +208,11 @@ class Fusion {
   }) async {
     Utilities.debugPrint("DEBUG FUSION 223...fusion run....");
 
+    // new stopping completer
+    _stopCompleter = Completer();
+
+    _stopRequested = false;
+
     /// Numbers of fusion rounds completed successfully.
     int roundCount = 0;
 
@@ -239,11 +238,8 @@ class Fusion {
         throw FusionError("Can't connect to Tor proxy");
       }
 
-      try {
-        // Check stop condition
-        checkStop(running: false);
-      } catch (e) {
-        Utilities.debugPrint(e);
+      if (_checkStop(connection, null)) {
+        return;
       }
 
       try {
@@ -284,6 +280,10 @@ class Fusion {
         );
       }
 
+      if (_checkStop(connection, null)) {
+        return;
+      }
+
       // Once connection is successful, wrap operations inside this block.
       //
       // Within this block, version checks, downloads server params, handles coins and runs rounds.
@@ -299,7 +299,6 @@ class Fusion {
         }
 
         _serverConnectedAndGreeted = true;
-        notifyServerStatus(true);
 
         // In principle we can hook a pause in here -- user can insert coins after seeing server params.
         // If this can/will be done then this function should be broken in two
@@ -315,6 +314,10 @@ class Fusion {
         //   return;
         // }
 
+        if (_checkStop(connection, null)) {
+          return;
+        }
+
         final currentChainHeight = await _getChainHeight();
 
         // Allocate outputs for fusion.
@@ -323,14 +326,16 @@ class Fusion {
 
         try {
           _allocatedOutputs = await OutputHandling.allocateOutputs(
-            connection:
-                connection!, // A non-null [connection] would've been caught by IO.greet()'s try-catch above, no need to check or handle it here.
+            connection: connection!,
+            // A non-null [connection] would've been caught by IO.greet()'s try-catch above, no need to check or handle it here.
             status: status.status,
             coins: inputsFromWallet,
             currentChainHeight: currentChainHeight,
             serverParams: _serverParams!,
             getTransactionsByAddress: _getTransactionsByAddress,
           );
+        } on FusionStopRequested {
+          return;
         } catch (e, s) {
           _updateStatus(
               status: FusionStatus.failed,
@@ -342,29 +347,50 @@ class Fusion {
 
         Utilities.debugPrint("Registering for tiers, waiting for a pool...");
 
+        if (_checkStop(connection, null)) {
+          return;
+        }
+
         // Check if connection is null.
         if (connection == null) {
           throw FusionError("Connection is null");
         }
 
-        // Register for tiers, wait for a pool.
-        _registerAndWaitResult = await registerAndWait(
-          connection: connection,
-          allocatedOutputs: _allocatedOutputs!,
-          network: network,
-        );
+        try {
+          // Register for tiers, wait for a pool.
+          _registerAndWaitResult = await registerAndWait(
+            connection: connection,
+            allocatedOutputs: _allocatedOutputs!,
+            network: network,
+          );
+        } on FusionStopRequested {
+          return;
+        }
+
+        if (_checkStop(connection, null)) {
+          return;
+        }
 
         Utilities.debugPrint("Starting covert submitter...");
 
-        // launch the covert submitter
-        final covert = await startCovert(
-          covertPort: _registerAndWaitResult!.covertPort,
-          covertSSL: _registerAndWaitResult!.covertSSL,
-          covertDomainB: _registerAndWaitResult!.covertDomainB,
-          tFusionBegin: _tFusionBegin,
-          serverParams: _serverParams!,
-        );
+        final CovertSubmitter covert;
+        try {
+          // launch the covert submitter
+          covert = await startCovert(
+            connection: connection,
+            covertPort: _registerAndWaitResult!.covertPort,
+            covertSSL: _registerAndWaitResult!.covertSSL,
+            covertDomainB: _registerAndWaitResult!.covertDomainB,
+            tFusionBegin: _tFusionBegin,
+            serverParams: _serverParams!,
+          );
+        } on FusionStopRequested {
+          return;
+        }
 
+        if (_checkStop(connection, covert)) {
+          return;
+        }
         _updateStatus(
             status: FusionStatus.running, info: "Running fusion rounds.");
 
@@ -445,53 +471,41 @@ class Fusion {
     }
   } // End of `fuse()`.
 
-  /// Notify the UI about server status updates.
-  ///
-  /// True means server is good, False it's bad. This ultimately makes its way
-  /// to the UI to tell the user there is a connectivity or other problem.
-  ///
-  /// TODO implement.
-  void notifyServerStatus(
-    bool b, {
-    ({FusionStatus status, String info})? status,
-  }) {}
-
-  /// Stops the current operation with optional String [reason] (default: "stopped")
-  /// and bool [notIfRunning] (default: false).
-  ///
-  /// If an operation is in progress, stops it for the given reason.
-  Future<void> stop(
-      [String reason = "stopped", bool notIfRunning = false]) async {
+  Future<void> stop() async {
     _updateStatus(status: FusionStatus.running, info: "Stopping fusion.");
-    // Could alternatively use FusionStatus.failed here.
 
-    if (_stopping) {
+    if (_stopRequested) {
       return;
     }
-    if (notIfRunning) {
-      if (_stoppingIfNotRunning) {
-        return;
-      }
-      _stopReason = reason;
-      _stoppingIfNotRunning = true;
-    } else {
-      _stopReason = reason;
-      _stopping = true;
-    }
-    // Note the reason is only overwritten if we were not already stopping this way.
-    return;
+    _stopRequested = true;
+
+    return _stopCompleter!.future;
   }
 
   /// Checks if the system should stop the current operation.
   ///
   /// This function is periodically called to determine whether the system should
-  /// halt its operation.  Optional bool [running] indicates if the system is currently
-  /// running (default is true).
-  void checkStop({bool running = true}) {
+  /// halt its operation.
+  bool _checkStop(
+    Connection? connection,
+    CovertSubmitter? covertSubmitter,
+  ) {
     // Gets called occasionally from fusion thread to allow a stop point.
-    if (_stopping || (!running && _stoppingIfNotRunning)) {
-      throw FusionError(_stopReason);
+
+    if (_stopRequested) {
+      final List<Future<void>> futures = [];
+      if (connection != null) {
+        futures.add(connection.close());
+      }
+      if (covertSubmitter != null) {
+        futures.add(covertSubmitter.killConnections());
+      }
+
+      Future.wait(futures).then((value) => _stopCompleter!.complete());
+
+      return true;
     }
+    return false;
   }
 
   /// Checks the status of the coins in the wallet.
@@ -502,35 +516,6 @@ class Fusion {
   void checkCoins() {
     // Implement by calling wallet layer to check the coins are ok.
     return;
-  }
-
-  // /// Clears all coins from the internal `coins` list.
-  // ///
-  // /// Resets the internal coin list, effectively removing all stored coins.
-  // void clearCoins() {
-  //   _coins = [];
-  // }
-
-  /// Notifies the UI layer about changes to the `coins` list.
-  ///
-  /// Updates the UI to reflect changes in the internal list of coins.
-  ///
-  /// TODO implement.
-  void notifyCoinsUI() {
-    return;
-  }
-
-  /// Determines if the wallet is capable of participating in fusion operations.
-  ///
-  /// Checks various conditions to assess whether the wallet can be used for fusion.
-  ///
-  /// Returns:
-  ///   A boolean flag indicating the wallet's capability to participate in fusion operations.
-  ///
-  /// TODO implement.
-  static bool walletCanFuse() {
-    // TODO Implement logic here to return false if the wallet can't fuse (if it's read only or non P2PKH)
-    return true;
   }
 
   /// Registers a client to a fusion server and waits for the fusion process to start.
@@ -586,7 +571,9 @@ class Fusion {
     List<int> cashfusionTag = [1]; // Temporary value for now.
 
     // Prechecks before proceeding.
-    checkStop(running: false);
+    if (_checkStop(connection, null)) {
+      throw FusionStopRequested();
+    }
     checkCoins();
 
     // Prepare tags for joining the pool.
@@ -651,7 +638,9 @@ class Fusion {
       */
 
       // Prechecks before processing the received message.
-      checkStop(running: false);
+      if (_checkStop(connection, null)) {
+        throw FusionStopRequested();
+      }
       checkCoins();
 
       // Initialize a variable to store field information for "tierstatusupdate" in the message.
@@ -907,6 +896,7 @@ class Fusion {
   /// This method initializes a `CovertSubmitter` with the specified configuration,
   /// schedules the connections, and continuously checks the connection status.
   Future<CovertSubmitter> startCovert({
+    required Connection? connection,
     required int covertPort,
     required bool covertSSL,
     required Uint8List covertDomainB,
@@ -997,7 +987,10 @@ class Fusion {
 
         // Check the health of the CovertSubmitter and overall system.
         covert.checkOk();
-        checkStop();
+
+        if (_checkStop(connection, covert)) {
+          throw FusionStopRequested();
+        }
         checkCoins();
       }
     } catch (e) {
@@ -1204,7 +1197,9 @@ class Fusion {
     // Perform pre-submission checks and prepare a random number for later use.
     final randomNumber = Utilities.getRandomBytes(32);
     covert.checkOk();
-    checkStop();
+    if (_checkStop(connection, covert)) {
+      throw FusionStopRequested();
+    }
     checkCoins();
 
     Utilities.debugPrint("Sending initial commitments etc.");
@@ -1651,6 +1646,10 @@ class Fusion {
       // Case where 'skip_signatures' is True.
       // this should be empty already sooooo
       badComponentIndexes.clear();
+    }
+
+    if (_checkStop(connection, covert)) {
+      throw FusionStopRequested();
     }
 
     // Begin Blame phase logic.

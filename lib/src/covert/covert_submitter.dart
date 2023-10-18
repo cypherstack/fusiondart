@@ -80,6 +80,24 @@ class CovertSubmitter {
     }
   }
 
+  Future<void> killConnections() async {
+    for (final spare in spareConnections) {
+      try {
+        await spare.connection?.close();
+      } catch (_) {
+        // who cares? continue
+      }
+    }
+
+    for (final slot in slots) {
+      try {
+        await slot.covConn?.connection?.close();
+      } catch (_) {
+        // who cares? continue
+      }
+    }
+  }
+
   /// Stops all tasks and closes the connections.
   void stop([Exception? exception]) {
     if (stopping) {

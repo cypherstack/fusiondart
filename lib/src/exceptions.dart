@@ -77,3 +77,5 @@ class InsecureHPoint implements Exception {
   @override
   String toString() => "InsecureHPoint: $message";
 }
+
+final class FusionStopRequested implements Exception {}
