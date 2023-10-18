@@ -435,7 +435,7 @@ class Fusion {
       //  Wait for transaction to show up in wallet.
       waitForTx:
       for (int i = 0; i < 60; i++) {
-        if (_stopping) {
+        if (_stopRequested) {
           break; // not an error
         }
 
@@ -464,9 +464,6 @@ class Fusion {
       // clearCoins();
       if (status.status != FusionStatus.complete) {
         await _unReserveAddresses(_reservedAddresses);
-        if (!_serverConnectedAndGreeted) {
-          notifyServerStatus(false, status: status);
-        }
       }
     }
   } // End of `fuse()`.
