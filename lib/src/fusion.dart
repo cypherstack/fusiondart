@@ -392,13 +392,19 @@ class Fusion {
           // Pool started. Keep running rounds until fail or complete.
           bool done = false;
           while (!done) {
-            done = await runRound(
-              roundCount: roundCount,
-              covert: covert,
-              connection: connection,
-              network: network,
-            );
-            roundCount += 1;
+            try {
+              done = await runRound(
+                roundCount: roundCount,
+                covert: covert,
+                connection: connection,
+                network: network,
+              );
+              roundCount += 1;
+            } catch (e, s) {
+              Utilities.debugPrint("runRound failed: $e\n$s");
+              _updateStatus(status: FusionStatus.failed, info: "$e");
+              done = true;
+            }
           }
         } finally {
           covert.stop();
