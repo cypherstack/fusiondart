@@ -476,7 +476,7 @@ class Fusion {
     }
     _stopRequested = true;
 
-    return _stopCompleter!.future;
+    return _stopCompleter?.future;
   }
 
   /// Checks if the system should stop the current operation.
