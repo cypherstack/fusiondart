@@ -459,7 +459,8 @@ class Fusion {
   /// and bool [notIfRunning] (default: false).
   ///
   /// If an operation is in progress, stops it for the given reason.
-  void stop([String reason = "stopped", bool notIfRunning = false]) {
+  Future<void> stop(
+      [String reason = "stopped", bool notIfRunning = false]) async {
     if (_stopping) {
       return;
     }
@@ -474,6 +475,7 @@ class Fusion {
       _stopping = true;
     }
     // Note the reason is only overwritten if we were not already stopping this way.
+    return;
   }
 
   /// Checks if the system should stop the current operation.
