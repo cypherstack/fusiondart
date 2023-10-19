@@ -210,8 +210,10 @@ class Fusion {
     /// Number runRound calls
     int roundCount = 0;
 
-    // Reset the UI state.
-    _updateStatus(status: FusionStatus.reset, info: "");
+    // set connecting state if not already done
+    _updateStatus(
+        status: FusionStatus.connecting,
+        info: "Connecting to the CashFusion server.");
 
     try {
       if (inputsFromWallet.isEmpty) {
@@ -244,9 +246,6 @@ class Fusion {
       }
 
       // Connect to server.
-      _updateStatus(
-          status: FusionStatus.connecting,
-          info: "Connecting to the CashFusion server.");
       try {
         try {
           connection = await Connection.openConnection(
