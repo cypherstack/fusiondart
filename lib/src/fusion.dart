@@ -254,9 +254,7 @@ class Fusion {
             connTimeout: Duration(seconds: 5),
             defaultTimeout: Duration(seconds: 5),
             ssl: _fusionParams.serverSsl,
-            // proxyInfo null, connect directly.
-            // TODO use proxyInfo for optional privacy for normally-overt comms.
-            // See https://github.com/cypherstack/fusiondart/issues/2
+            proxyInfo: await _getSocksProxyAddress(),
           );
         } catch (e, s) {
           Utilities.debugPrint("$s");
