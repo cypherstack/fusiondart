@@ -277,6 +277,7 @@ class Fusion {
         } catch (e, s) {
           Utilities.debugPrint("Exception greeting server: $e");
           Utilities.debugPrint("$s");
+          rethrow;
         }
 
         _serverConnectedAndGreeted = true;
