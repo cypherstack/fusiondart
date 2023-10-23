@@ -240,27 +240,24 @@ class Fusion {
 
       // Connect to server.
       try {
-        try {
-          connection = await Connection.openConnection(
-            host: _fusionParams.serverHost,
-            port: _fusionParams.serverPort,
-            connTimeout: Duration(seconds: 5),
-            defaultTimeout: Duration(seconds: 5),
-            ssl: _fusionParams.serverSsl,
-            proxyInfo: await _getSocksProxyAddress(),
-          );
-        } catch (e, s) {
-          Utilities.debugPrint("$s");
-        }
-      } catch (e) {
+        connection = await Connection.openConnection(
+          host: _fusionParams.serverHost,
+          port: _fusionParams.serverPort,
+          connTimeout: Duration(seconds: 5),
+          defaultTimeout: Duration(seconds: 5),
+          ssl: _fusionParams.serverSsl,
+          proxyInfo: await _getSocksProxyAddress(),
+        );
+      } catch (e, s) {
         _updateStatus(
             status: FusionStatus.failed,
             info: "Failed to connect to the server!  Please try again.");
         Utilities.debugPrint("Connect failed: $e");
-        String sslstr = _fusionParams.serverSsl ? ' SSL ' : '';
+        Utilities.debugPrint(s);
+        String sslStr = _fusionParams.serverSsl ? ' SSL ' : '';
         throw FusionError(
           "Could not connect to "
-          "$sslstr${_fusionParams.serverHost}:${_fusionParams.serverPort}",
+          "$sslStr${_fusionParams.serverHost}:${_fusionParams.serverPort}",
         );
       }
 
