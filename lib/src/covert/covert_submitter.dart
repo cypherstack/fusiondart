@@ -222,7 +222,6 @@ class CovertSubmitter {
     for (CovertConnection c in spareConnections) {
       c.tPing = tStart;
       c.wakeupSet();
-      // c.wakeup.complete(true); // TODO make sure passing `true` is correct
     }
 
     // Then, notify the slots that there is a message to submit.
@@ -239,7 +238,6 @@ class CovertSubmitter {
           slot.tSubmit = tStart;
         }
         covConn.wakeupSet();
-        // covConn.wakeup.complete(true); // TODO make sure passing `true` is correct
       }
     }
   }
