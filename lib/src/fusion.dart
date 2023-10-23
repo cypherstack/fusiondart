@@ -238,13 +238,6 @@ class Fusion {
         return;
       }
 
-      try {
-        // Check coins
-        checkCoins();
-      } catch (e) {
-        Utilities.debugPrint(e);
-      }
-
       // Connect to server.
       try {
         try {
@@ -502,16 +495,6 @@ class Fusion {
     return false;
   }
 
-  /// Checks the status of the coins in the wallet.
-  ///
-  /// Verifies the integrity and validity of the coins stored in the internal wallet.
-  ///
-  /// TODO implement.
-  void checkCoins() {
-    // Implement by calling wallet layer to check the coins are ok.
-    return;
-  }
-
   /// Registers a client to a fusion server and waits for the fusion process to start.
   ///
   /// This method is responsible for the client-side setup and management of the
@@ -568,7 +551,6 @@ class Fusion {
     if (_checkStop(connection, null)) {
       throw FusionStopRequested();
     }
-    checkCoins();
 
     // Prepare tags for joining the pool.
     List<JoinPools_PoolTag> tags = [
@@ -635,7 +617,6 @@ class Fusion {
       if (_checkStop(connection, null)) {
         throw FusionStopRequested();
       }
-      checkCoins();
 
       // Initialize a variable to store field information for "tierstatusupdate" in the message.
       FieldInfo<dynamic>? fieldInfo =
@@ -985,7 +966,6 @@ class Fusion {
         if (_checkStop(connection, covert)) {
           throw FusionStopRequested();
         }
-        checkCoins();
       }
     } catch (e) {
       // Stop the CovertSubmitter and re-throw the error.
@@ -1194,7 +1174,6 @@ class Fusion {
     if (_checkStop(connection, covert)) {
       throw FusionStopRequested();
     }
-    checkCoins();
 
     Utilities.debugPrint("Sending initial commitments etc.");
 
@@ -1271,7 +1250,6 @@ class Fusion {
     // best for our privacy if we just leave now.
     // (This also is our first call to check_connected.)
     covert.checkConnected();
-    checkCoins();
 
     // Start covert component submissions
     Utilities.debugPrint("starting covert component submission");
