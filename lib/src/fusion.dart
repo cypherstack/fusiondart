@@ -1366,6 +1366,8 @@ class Fusion {
 
     // TODO check the components list and see if there are enough inputs/outputs
     // for there to be significant privacy.
+    //
+    // This is also a TODO in the Python reference: https://github.com/Electron-Cash/Electron-Cash/blob/397f43c848e270a7405795c4643a2805d872675f/electroncash_plugins/fusion/fusion.py#L936-L937
 
     List<List<int>> allCommitmentsInts = allCommitments
         .map((commitment) => commitment.writeToBuffer().toList())
