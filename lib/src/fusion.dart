@@ -129,6 +129,10 @@ class Fusion {
         "================================================================");
   }
 
+  /// Have we connected to the server?
+  // Assigned but not used.
+  // bool _serverConnectedAndGreeted = false;
+
   Completer<void>? _stopCompleter;
   bool _stopRequested = false;
 
@@ -276,6 +280,8 @@ class Fusion {
           Utilities.debugPrint("$s");
           rethrow;
         }
+
+        // _serverConnectedAndGreeted = true;
 
         // In principle we can hook a pause in here -- user can insert coins after seeing server params.
         // If this can/will be done then this function should be broken in two
