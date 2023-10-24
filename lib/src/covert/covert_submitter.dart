@@ -57,15 +57,12 @@ class CovertSubmitter {
       if (s.covConn != null) {
         // Wake up the connection associated with the slot.
         s.covConn!.wakeupSet();
-        // s.covConn!.wakeup
-        //     .complete(true); // TODO make sure passing `true` is correct
       }
     }
 
     // Wake up all the spare connections, too.
     for (CovertConnection c in spareConnections) {
       c.wakeupSet();
-      // c.wakeup.complete(true); // TODO make sure passing `true` is correct
     }
   }
 
@@ -201,7 +198,6 @@ class CovertSubmitter {
     if (covConn != null) {
       // Wake up the connection associated with the slot.
       covConn.wakeupSet();
-      // covConn.wakeup.complete(true); // TODO make sure passing `true` is correct
     }
   }
 
@@ -307,10 +303,11 @@ class CovertSubmitter {
             '[${covConn.connNumber}] connection established after ${((tEnd - tBegin) / 1000).toStringAsFixed(3)}s');
 
         // Set the ping time for the connection.
-        covConn.delay = randTrap(rng) * (randSpan ?? 1);
+        covConn.delay = randTrap(rng) * randSpan;
 
         // Note the time at which the ping was sent.
-        int lastActionTime = DateTime.now().millisecondsSinceEpoch;
+        // Assigned but not used.
+        // int lastActionTime = DateTime.now().millisecondsSinceEpoch;
 
         // STATE 2 - Working.
         while (!stopping) {
@@ -366,7 +363,7 @@ class CovertSubmitter {
           }
 
           // Note the time at which the action was completed.
-          lastActionTime = DateTime.now().millisecondsSinceEpoch;
+          // lastActionTime = DateTime.now().millisecondsSinceEpoch;
         }
 
         // STATE 3 - Stopping.
@@ -395,9 +392,6 @@ class CovertSubmitter {
             slots[slotNum].covConn = spare;
             spare.slotNum = slotNum;
             spare.wakeupSet();
-            // spare.wakeup
-            //     .complete(true); // TODO make sure passing `true` is correct.
-            // TODO Python code is using set, possibly dealing with multi thread... Double check this is ok.
 
             // Clear the slot number for the connection.
             covConn.slotNum = null;

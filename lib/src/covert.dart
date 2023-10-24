@@ -50,7 +50,6 @@ class TorLimiter {
   int lifetime;
 
   /// Internal count to track the number of operations.
-  // Declare a lock here, may need a special Dart package for this... how about a mutex?
   int _count = 0;
 
   /// Getter for the current count of operations.
@@ -61,14 +60,9 @@ class TorLimiter {
   /// Constructor that initializes the limiter with a given [lifetime].
   TorLimiter(this.lifetime);
 
-  /// Cleans up old timestamps from the queue.
-  /// This method is currently not implemented.
-  void cleanup() {}
-
   /// Increases the internal count.
   void bump() {
     _count++;
-    // TODO decrement the count after disconnection.
   }
 }
 
