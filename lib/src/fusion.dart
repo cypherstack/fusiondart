@@ -415,7 +415,8 @@ class Fusion {
         }
 
         if (lastTxId != null) {
-          // Should this null check be moved outside of this for?
+          // This null check shouldn't be moved outside of this for because if
+          // we don't know what txid to wait for, we still want to wait 60 secs.
           bool wait = true;
           try {
             await _getTransactionJson(lastTxId!).then((tx) {
