@@ -189,11 +189,6 @@ class Fusion {
   // bool autofuseCoinbase = false; //   link to a setting in the wallet.
   // https://github.com/Electron-Cash/Electron-Cash/blob/48ac434f9c7d94b335e1a31834ee2d7d47df5802/electroncash_plugins/fusion/conf.py#L68
 
-  /// The transaction ID of the most recent fusion transaction.
-  ///
-  /// Null until first successful fusion.
-  String? lastTxId;
-
   /// Executes the fusion operation.
   ///
   /// This method orchestrates the entire lifecycle of a CashFusion operation.
@@ -207,6 +202,8 @@ class Fusion {
     _stopCompleter = Completer();
 
     _stopRequested = false;
+
+    String? txid;
 
     /// Number runRound calls
     int roundCount = 0;
@@ -374,10 +371,9 @@ class Fusion {
 
         try {
           // Pool started. Keep running rounds until fail or complete.
-          bool done = false;
-          while (!done) {
+          while (txid == null) {
             try {
-              done = await runRound(
+              txid = await runRound(
                 roundCount: roundCount,
                 covert: covert,
                 connection: connection,
@@ -387,7 +383,7 @@ class Fusion {
             } catch (e, s) {
               Utilities.debugPrint("runRound failed: $e\n$s");
               _updateStatus(status: FusionStatus.failed, info: "$e");
-              done = true;
+              rethrow;
             }
           }
         } finally {
@@ -403,40 +399,27 @@ class Fusion {
         }
       }
 
-      //  Wait for transaction to show up in wallet.
-      waitForTx:
+      //  Wait for transaction to show up on the server.
       for (int i = 0; i < 60; i++) {
         if (_stopRequested) {
           break; // not an error
         }
 
-        if (lastTxId != null) {
-          // This null check shouldn't be moved outside of this for because if
-          // we don't know what txid to wait for, we still want to wait 60 secs.
-          bool wait = true;
-          try {
-            await _getTransactionJson(lastTxId!).then((tx) {
-              if (tx['confirmations'] as int > 0) {
-                _updateStatus(
-                    status: FusionStatus.complete,
-                    info: "Fusion complete.  Transaction confirmed.");
-                wait = false;
-              }
-            });
-          } catch (e, s) {
-            if (e
-                .toString()
-                .contains("No such mempool or blockchain transaction")) {
-              // Transaction not found, wait.
-              Utilities.debugPrint("Transaction not found, waiting...");
-            } else {
-              Utilities.debugPrint("Exception getting transaction: $e");
-              Utilities.debugPrint("$s");
-              rethrow;
-            }
-          }
-          if (!wait) {
-            break waitForTx;
+        try {
+          // Will throw if tx not found
+          await _getTransactionJson(txid);
+
+          break; // tx found
+        } catch (e, s) {
+          if (e
+              .toString()
+              .contains("No such mempool or blockchain transaction")) {
+            // Transaction not found, wait.
+            Utilities.debugPrint("Transaction not found, waiting...");
+          } else {
+            Utilities.debugPrint("Exception getting transaction: $e");
+            Utilities.debugPrint("$s");
+            rethrow;
           }
         }
 
@@ -955,13 +938,14 @@ class Fusion {
   }
 
   /// Runs a round of the Fusion protocol.
+  /// Returns the txid of a successfully submitted txn, otherwise null.
   ///
   /// This method takes care of various steps in the Fusion protocol round,
   /// including receiving and validating server messages, creating commitments,
   /// and submitting components.
   ///
   /// [covert] is a `CovertSubmitter` instance used for covert submissions.
-  Future<bool> runRound({
+  Future<String?> runRound({
     required int roundCount,
     required CovertSubmitter covert,
     required Connection connection,
@@ -1547,7 +1531,7 @@ class Fusion {
         // Finalize transaction details and update wallet label.
 
         final txHex = txn.toHex();
-        lastTxId =
+        final lastTxId =
             txn.getId(); // Converted to instance variable vs. previously-
         // local variable to allow for waiting for tx to be broadcast.
 
@@ -1557,14 +1541,14 @@ class Fusion {
           assert(broadcastTxid == lastTxId);
 
           // round success
-          return true;
+          return lastTxId;
         } catch (e, s) {
           Utilities.debugPrint("BROADCAST FAILED: $e\n$s");
 
           if (e.toString().contains("txn-mempool-conflict")) {
             // tx was already broadcast by another player
             // round success
-            return true;
+            return lastTxId;
           } else {
             rethrow;
           }
@@ -1820,7 +1804,7 @@ class Fusion {
                   Protocol.BLAME_VERIFY_TIME.round())),
     );
 
-    // Return false to trigger another runRound
-    return false;
+    // Return null to trigger another runRound
+    return null;
   } // /run_round()
 }
