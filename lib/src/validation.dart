@@ -244,9 +244,8 @@ Future<pb.InputComponent> validateBlame(
   final destCommit = pb.InitialCommitment();
   destCommit.mergeFromBuffer(destCommitBlob);
 
-  // TODO: why is this unused???
-  // Looks unused in the python code as well...
-  List<int> destPubkey = destCommit.communicationKey;
+  // Removed unused var.  This is unused in the python reference, too.
+  // List<int> destPubkey = destCommit.communicationKey;
 
   final srcCommit = pb.InitialCommitment();
   srcCommit.mergeFromBuffer(srcCommitBlob);
