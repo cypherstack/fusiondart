@@ -1554,15 +1554,6 @@ class Fusion {
 
           assert(broadcastTxid == lastTxId);
 
-          // Label should probably not be set until tx has been broadcast?
-          // Is this tx label just for convenience?
-          // If not, is it important to know if a tx is a fusion tx when
-          // restoring from mnemonic?
-          String label =
-              "CashFusion ${_allocatedOutputs!.inputs.length}⇢${_registerAndWaitResult!.outputs.length},"
-              " $sumIn sats (−$totalFee sats fee)";
-          Utilities.updateWalletLabel(lastTxId!, label);
-
           // round success
           return true;
         } catch (e, s) {

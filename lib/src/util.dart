@@ -262,14 +262,6 @@ abstract class Utilities {
     return rX == rBytes.toBigInt;
   }
 
-  /// Updates the wallet label for a given transaction ID.
-  ///
-  /// TODO implement.
-  static void updateWalletLabel(String txid, String label) {
-    // TODO implement; call the wallet layer.
-    throw UnimplementedError(" // TODO implement updateWalletLabel");
-  }
-
   /// Generates a random sequence of bytes of a given [length].
   static Uint8List getRandomBytes(int length, {Random? random}) {
     final rand = random ?? Random.secure();
