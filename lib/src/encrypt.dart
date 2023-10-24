@@ -7,8 +7,6 @@ import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/pointycastle.dart' hide Mac;
 
-import 'exceptions.dart';
-
 /// Encrypts a [message] using a provided EC [pubKey].
 ///
 /// Optionally pads to a specified length [padToLength].
