@@ -129,9 +129,6 @@ class Fusion {
         "================================================================");
   }
 
-  /// Have we connected to the server?
-  bool _serverConnectedAndGreeted = false;
-
   Completer<void>? _stopCompleter;
   bool _stopRequested = false;
 
@@ -272,15 +269,13 @@ class Fusion {
         // Version check and download server params.
         try {
           _serverParams = await Comms.greet(
-            connection: connection!,
+            connection: connection,
           );
         } catch (e, s) {
           Utilities.debugPrint("Exception greeting server: $e");
           Utilities.debugPrint("$s");
           rethrow;
         }
-
-        _serverConnectedAndGreeted = true;
 
         // In principle we can hook a pause in here -- user can insert coins after seeing server params.
         // If this can/will be done then this function should be broken in two
@@ -308,7 +303,7 @@ class Fusion {
 
         try {
           _allocatedOutputs = await OutputHandling.allocateOutputs(
-            connection: connection!,
+            connection: connection,
             // A non-null [connection] would've been caught by IO.greet()'s try-catch above, no need to check or handle it here.
             status: status.status,
             coins: inputsFromWallet,
@@ -331,11 +326,6 @@ class Fusion {
 
         if (_checkStop(connection, null)) {
           return;
-        }
-
-        // Check if connection is null.
-        if (connection == null) {
-          throw FusionError("Connection is null");
         }
 
         try {
@@ -400,7 +390,7 @@ class Fusion {
       } finally {
         try {
           // Close connection.
-          await connection!.close();
+          await connection.close();
         } catch (e, s) {
           Utilities.debugPrint("Exception closing connection: $e");
           Utilities.debugPrint("$s");
@@ -571,7 +561,6 @@ class Fusion {
 
     _updateStatus(status: FusionStatus.waiting, info: 'Registered for tiers');
 
-    // TODO make Entry class or otherwise type this section.
     Map<dynamic, String> tiersStrings = {
       for (var entry in tierOutputs.entries)
         entry.key:
@@ -590,8 +579,6 @@ class Fusion {
         covert: false,
         timeout: Duration(seconds: 10),
       );
-
-      /*if (msg == null) continue;*/
 
       // Check for a FusionBegin message.
       FieldInfo<dynamic>? fieldInfoFusionBegin =
@@ -645,7 +632,6 @@ class Fusion {
             msg.getField(fieldInfo.tagNumber) as TierStatusUpdate;
         statuses = tierStatusUpdate.statuses;
       } else {
-        // TODO: Handle this differently?
         throw Exception("messageIsTierStatusUpdate is false");
       }
 
@@ -660,8 +646,6 @@ class Fusion {
 
       // Loop through each entry in statuses to find the maximum fraction and best time.
       for (var entry in statuses.entries) {
-        // TODO make Entry class or otherwise type this section
-
         // Calculate the fraction of players to minimum players.
         final double frac = ((entry.value.players.toInt())) /
             ((entry.value.minPlayers.toInt()));
@@ -699,7 +683,7 @@ class Fusion {
             }
           }
         }
-        // TODO handle else case when timeRemaining field is missing.
+        // Do we need to handle the else case when timeRemaining is missing?
       }
 
       // Initialize lists to store tiers for different display sections.
@@ -743,9 +727,7 @@ class Fusion {
             INACTIVE_TIME_LIMIT.inMilliseconds) {
           throw FusionError('stopping due to inactivity');
         }
-        // TODO handle else case
       }
-      // TODO handle else case
 
       // Final status assignment based on calculated variables
       if (bestTime != null) {
@@ -797,9 +779,6 @@ class Fusion {
 
     // Retrieve the FusionBegin message from the ServerMessage.
     FusionBegin fusionBeginMsg = msg.fusionbegin;
-
-    // Calculate how many seconds have passed since the stopwatch was started.
-    int elapsedSeconds = stopwatch.elapsedMilliseconds ~/ 1000;
 
     // Calculate the time discrepancy between the server and the client.
     double clockMismatch = fusionBeginMsg.serverTime.toInt() -
@@ -927,13 +906,6 @@ class Fusion {
           seconds: Protocol.COVERT_CONNECT_TIMEOUT,
         ),
       );
-
-      /*
-      Utilities.debugPrint("DEBUG return early from covert");
-      // Return the CovertSubmitter instance early.
-      // TODO finish method.
-      return covert;
-      */
 
       // Loop a bit before we're expecting startRound, watching for status updates.
       final tend = tFusionBegin.add(Duration(
@@ -1199,9 +1171,6 @@ class Fusion {
 
     Utilities.debugPrint("Awaiting signature responses from the server...");
 
-    // We intermittently get a `bad blind sig request` error here...
-    // TODO make sure the socket's open and ready for writing before sending the message.
-
     // Await blind signature responses from the server
     msg = await Comms.recvPb(
       [ReceiveMessages.blindSigResponses],
@@ -1330,7 +1299,7 @@ class Fusion {
       // Search for the index of the commitment in the list of all commitments.
       final int index =
           allCommitmentsBytes.indexWhere((element) => element.equals(c));
-      // TODO replace Utilities.listEquals with ListEquality.
+
       if (index == -1) {
         throw FusionError(
             'One or more of my commitments missing. Did not find ${c.toHex}.');
