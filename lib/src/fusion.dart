@@ -433,6 +433,7 @@ class Fusion {
       if (status.status != FusionStatus.complete) {
         await _unReserveAddresses(_reservedAddresses);
       }
+      _stopCompleter?.complete();
     }
   } // End of `fuse()`.
 
