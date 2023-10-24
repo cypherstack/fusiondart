@@ -1,3 +1,4 @@
+import 'package:fusiondart/fusiondart.dart';
 import 'package:fusiondart/src/comms.dart';
 import 'package:fusiondart/src/covert/covert_connection.dart';
 import 'package:fusiondart/src/exceptions.dart';
@@ -39,7 +40,6 @@ class CovertSlot {
       throw Unrecoverable('connection is null');
     }
 
-    // TODO: this is probably not the right way to handle this?
     final message = CovertMessage();
     switch (subMsg!.runtimeType) {
       case CovertComponent:
@@ -57,11 +57,12 @@ class CovertSlot {
     //
     // Send a Protocol Buffers message to initiate the work,
     // and set a timeout based on the submitTimeout property.
-    print("###### SENT   cnt=$cnt  conNum=$con    slot=$slot    type=$msg");
+    Utilities.debugPrint(
+        "###### SENT   cnt=$cnt  conNum=$con    slot=$slot    type=$msg");
     await Comms.sendPb(connection, message, timeout: submitTimeout);
     try {
       // throws on error ( aka if not 'ok' )
-      print(
+      Utilities.debugPrint(
           "###### RECEIVE   cnt=$cnt  conNum=$con    slot=$slot    type=$msg");
       await Comms.recvPb(
         ['ok'],
@@ -70,12 +71,12 @@ class CovertSlot {
         timeout: submitTimeout,
       );
     } catch (e) {
-      print(
+      Utilities.debugPrint(
           "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-      print("Covert.submit msg type = ${subMsg?.runtimeType}");
-      print("Slot num               = ${covConn?.slotNum}");
-      print("conn num               = ${covConn?.connNumber}");
-      print(
+      Utilities.debugPrint("Covert.submit msg type = ${subMsg?.runtimeType}");
+      Utilities.debugPrint("Slot num               = ${covConn?.slotNum}");
+      Utilities.debugPrint("conn num               = ${covConn?.connNumber}");
+      Utilities.debugPrint(
           "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
       rethrow;
