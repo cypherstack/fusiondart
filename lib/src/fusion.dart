@@ -1617,6 +1617,8 @@ class Fusion {
           othersCommitmentIdxes[Utilities.randPosition(randomNumber, N, i)]]);
     }
 
+    Utilities.debugPrint("dstCommits: $dstCommits");
+
     // Generate the encrypted proofs.
     List<Uint8List> encryptedProofs = [];
 
@@ -1644,6 +1646,9 @@ class Fusion {
         rethrow;
       }
     }
+
+    Utilities.debugPrint("encryptedProofs: $encryptedProofs");
+    Utilities.debugPrint("randomNumber: $randomNumber");
 
     // Send the encrypted proofs and the random number used to the server.
     await Comms.sendPb(
@@ -1679,17 +1684,15 @@ class Fusion {
     // Cast the received message to TheirProofsList for type safety.
     TheirProofsList proofsList = (msg as ServerMessage).theirproofslist;
 
-    // Declare variables to hold the private key and initial commitment for each proof.
-    List<int>? privKey;
-    InitialCommitment commitmentBlob;
-
     // Iterate over each received proof to validate or blame them.
     for (var i = 0; i < proofsList.proofs.length; i++) {
       TheirProofsList_RelayedProof rp = proofsList.proofs[i];
+      final Uint8List commitmentBlob;
+      final Uint8List privKey;
       try {
         // Obtain private key and commitment information for the current proof.
         privKey = privKeys[rp.dstKeyIdx];
-        commitmentBlob = allCommitments[rp.srcCommitmentIdx];
+        commitmentBlob = allCommitments[rp.srcCommitmentIdx].writeToBuffer();
       } on RangeError catch (_) {
         // If the indices are invalid, throw an error.
         throw FusionError("Server relayed bad proof indices");
@@ -1722,8 +1725,8 @@ class Fusion {
       // Parsing the received commitment.
       InitialCommitment commitment = InitialCommitment();
       try {
-        commitment.mergeFromBuffer(
-            commitmentBlob as List<int>); // Method to parse protobuf data.
+        commitment
+            .mergeFromBuffer(commitmentBlob); // Method to parse protobuf data.
       } on FormatException catch (_) {
         // If the commitment data is invalid, throw an error.
         throw FusionError("Server relayed bad commitment");
