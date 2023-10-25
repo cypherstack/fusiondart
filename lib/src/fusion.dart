@@ -1670,7 +1670,7 @@ class Fusion {
     int countInputs = 0;
 
     // Cast the received message to TheirProofsList for type safety.
-    TheirProofsList proofsList = msg as TheirProofsList;
+    TheirProofsList proofsList = (msg as ServerMessage).theirproofslist;
 
     // Declare variables to hold the private key and initial commitment for each proof.
     List<int>? privKey;
@@ -1678,7 +1678,7 @@ class Fusion {
 
     // Iterate over each received proof to validate or blame them.
     for (var i = 0; i < proofsList.proofs.length; i++) {
-      TheirProofsList_RelayedProof rp = msg.proofs[i];
+      TheirProofsList_RelayedProof rp = proofsList.proofs[i];
       try {
         // Obtain private key and commitment information for the current proof.
         privKey = privKeys[rp.dstKeyIdx];
@@ -1773,7 +1773,7 @@ class Fusion {
       }
     }
     Utilities.debugPrint(
-        "checked ${msg.proofs.length} proofs, $countInputs of them inputs");
+        "checked ${proofsList.proofs.length} proofs, $countInputs of them inputs");
 
     // Send the blame list to the server
     await Comms.sendPb(
