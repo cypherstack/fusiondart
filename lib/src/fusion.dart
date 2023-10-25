@@ -432,7 +432,9 @@ class Fusion {
       if (status.status != FusionStatus.complete) {
         await _unReserveAddresses(_reservedAddresses);
       }
-      _stopCompleter?.complete();
+      if (_stopCompleter?.isCompleted == false) {
+        _stopCompleter?.complete();
+      }
     }
   } // End of `fuse()`.
 
