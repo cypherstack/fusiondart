@@ -57,8 +57,26 @@ abstract class Utilities {
   // ===========================================================================
 
   /// Checks the input for ElectrumX server.
-  static void checkInputElectrumX(InputComponent inputComponent) {
-    throw UnimplementedError("checkInputElectrumX: TODO implement");
+  static Future<void> checkInputElectrumX(
+    InputComponent inputComponent,
+    bool isTestnet,
+    Future<bool> Function(String, String, int) checkUtxoExists,
+  ) async {
+    final addr = coinlib.P2PKHAddress.fromPublicKey(
+      coinlib.ECPublicKey.fromHex(
+          Uint8List.fromList(inputComponent.pubkey).toHex),
+      version: isTestnet ? testNet.p2pkhPrefix : mainNet.p2pkhPrefix,
+    );
+
+    final exists = await checkUtxoExists(
+      addr.toString(),
+      Uint8List.fromList(inputComponent.prevTxid.reversed.toList()).toHex,
+      inputComponent.prevIndex,
+    );
+
+    if (!exists) {
+      throw Exception("this is dumb control flow");
+    }
   }
 
   /// Calculates a random position based on a seed, number of positions, and a counter.

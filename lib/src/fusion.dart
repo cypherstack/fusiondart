@@ -79,6 +79,7 @@ class Fusion {
       _getPrivateKeyForPubKey;
   late final Future<String> Function(String txHex) _broadcastTransaction;
   late final Future<void> Function(List<Address> addresses) _unReserveAddresses;
+  late final Future<bool> Function(String, String, int) _checkUtxoExists;
 
   Fusion(this._fusionParams);
 
@@ -100,6 +101,7 @@ class Fusion {
     required final Future<String> Function(String txHex) broadcastTransaction,
     required final Future<void> Function(List<Address> addresses)
         unReserveAddresses,
+    required final Future<bool> Function(String, String, int) checkUtxoExists,
   }) async {
     _getTransactionsByAddress = getTransactionsByAddress;
     _getUnusedReservedChangeAddresses = getUnusedReservedChangeAddresses;
@@ -110,6 +112,7 @@ class Fusion {
     _getPrivateKeyForPubKey = getPrivateKeyForPubKey;
     _broadcastTransaction = broadcastTransaction;
     _unReserveAddresses = unReserveAddresses;
+    _checkUtxoExists = checkUtxoExists;
 
     // Load coinlib.
     await coinlib.loadCoinlib();
@@ -1568,6 +1571,8 @@ class Fusion {
       badComponentIndexes.clear();
     }
 
+    Utilities.debugPrint("badComponentIndexes: $badComponentIndexes");
+
     if (_checkStop(connection, covert)) {
       throw FusionStopRequested();
     }
@@ -1591,6 +1596,8 @@ class Fusion {
         othersCommitmentIdxes.add(i);
       }
     }
+
+    Utilities.debugPrint("othersCommitmentIdxes: $othersCommitmentIdxes");
 
     // Ensure that the count is accurate.
     int N = othersCommitmentIdxes.length;
@@ -1750,7 +1757,7 @@ class Fusion {
         countInputs++;
         try {
           // Perform additional validation by checking against the blockchain.
-          Utilities.checkInputElectrumX(inpComp);
+          await Utilities.checkInputElectrumX(inpComp, false, _checkUtxoExists);
         } on Exception catch (e) {
           // If the input component doesn't match the blockchain, add the proof to the blame list.
           Utilities.debugPrint(
