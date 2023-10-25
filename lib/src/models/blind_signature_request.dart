@@ -23,7 +23,7 @@ class BlindSignatureRequest {
   late BigInt _c;
   late BigInt _e;
 
-  late BigInt _eNew; // Written to but never read?
+  // late BigInt _eNew; // Written to but never read
 
   // Storage for intermediary and final results.
   late Uint8List _pointRxNew;
@@ -51,7 +51,7 @@ class BlindSignatureRequest {
         Utilities.sha256(_pointRxNew + _pubKeyCompressed + messageHash);
     final eHash = bytes.toBigInt;
     _e = (_c * eHash + _b) % _order;
-    _eNew = eHash % _order;
+    // _eNew = eHash % _order;
   }
 
   /// Returns the request as a Uint8List.
