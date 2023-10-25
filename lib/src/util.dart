@@ -17,8 +17,9 @@ import 'package:pointycastle/ecc/ecc_fp.dart' as fp;
 
 /// A utility class that provides various helper functions.
 abstract class Utilities {
+  static bool enableDebugPrint = false;
   static void debugPrint(Object? object) {
-    if (kDebugPrintEnabled) {
+    if (enableDebugPrint) {
       // ignore: avoid_print
       print(object);
     }
@@ -330,14 +331,6 @@ abstract class Utilities {
       bytes.addAll(x);
     }
     return Utilities.sha256(bytes);
-  }
-
-  static Uint8List getCurrentGenesisHash() {
-    // TODO feed in from wallet.
-    String genesis =
-        "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"; // Bitcoin genesis hash
-    List<int> _lastGenesisHash = genesis.toUint8ListFromHex.reversed.toList();
-    return Uint8List.fromList(_lastGenesisHash);
   }
 
   /// Generates an elliptic curve key pair based on the secp256k1 curve.

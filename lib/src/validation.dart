@@ -202,11 +202,10 @@ pb.InputComponent? validateProofInternal(
     "salt commitment mismatch",
   );
 
-  // TODO validate
-  Iterable<int> iterableSalt = msg.salt;
+  final iterableSalt = msg.salt;
   check(
-    Utilities.sha256(Uint8List.fromList([...iterableSalt, ...componentBlob])) ==
-        commitment.saltedComponentHash,
+    Utilities.sha256(Uint8List.fromList([...iterableSalt, ...componentBlob]))
+        .equals(Uint8List.fromList(commitment.saltedComponentHash)),
     "salted component hash mismatch",
   );
 

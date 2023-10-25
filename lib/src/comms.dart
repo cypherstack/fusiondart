@@ -9,7 +9,6 @@ import 'package:fusiondart/src/protobuf/fusion.pb.dart';
 import 'package:fusiondart/src/protobuf/fusion.pb.dart' as pb;
 import 'package:fusiondart/src/protocol.dart';
 import 'package:fusiondart/src/receive_messages.dart';
-import 'package:fusiondart/src/util.dart';
 import 'package:protobuf/protobuf.dart';
 
 abstract final class Comms {
@@ -105,11 +104,12 @@ abstract final class Comms {
         List<int> availableTiers,
       })> greet({
     required Connection connection,
+    required Uint8List genesisHash,
   }) async {
     // Create the ClientHello message with version and genesis hash.
     final clientHello = ClientHello(
       version: Uint8List.fromList(utf8.encode(Protocol.VERSION)),
-      genesisHash: Utilities.getCurrentGenesisHash(),
+      genesisHash: genesisHash,
     );
 
     // Wrap the ClientHello in a ClientMessage.

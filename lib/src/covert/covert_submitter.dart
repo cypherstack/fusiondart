@@ -114,8 +114,6 @@ class CovertSubmitter {
   }
 
   /// Schedules connections for tasks and runs them unawaited.
-  ///
-  /// TODO implement multithreading, which ElectronCash does in Python
   void scheduleConnectionsAndStartRunningThem(
     DateTime tStart,
     Duration tSpan, {
@@ -178,26 +176,6 @@ class CovertSubmitter {
           connectTimeout,
         ),
       );
-    }
-  }
-
-  /// Schedules a task to be submitted.
-  ///
-  /// This method schedules a submission or ping task for the specified covert slot.
-  void scheduleSubmit(int slotNum, DateTime tStart, GeneratedMessage subMsg) {
-    // Get the covert slot for the specified slot number.
-    CovertSlot slot = slots[slotNum];
-
-    // Ensure that the slot is done before setting new work.
-    assert(slot.done, "tried to set new work when prior work not done");
-
-    // Set the work to be done and update the time of the last submit action.
-    slot.subMsg = subMsg;
-    slot.tSubmit = tStart;
-    CovertConnection? covConn = slot.covConn;
-    if (covConn != null) {
-      // Wake up the connection associated with the slot.
-      covConn.wakeupSet();
     }
   }
 

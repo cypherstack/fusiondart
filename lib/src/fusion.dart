@@ -13,6 +13,7 @@ import 'package:fusiondart/src/encrypt.dart';
 import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/extensions/on_big_int.dart';
 import 'package:fusiondart/src/extensions/on_list_int.dart';
+import 'package:fusiondart/src/extensions/on_string.dart';
 import 'package:fusiondart/src/extensions/on_uint8list.dart';
 import 'package:fusiondart/src/models/address.dart';
 import 'package:fusiondart/src/models/blind_signature_request.dart';
@@ -28,8 +29,6 @@ import 'package:fusiondart/src/util.dart';
 import 'package:fusiondart/src/validation.dart';
 import 'package:protobuf/protobuf.dart';
 
-final bool kDebugPrintEnabled = true;
-
 final class FusionParams {
   /// CashFusion server host.
   ///
@@ -44,14 +43,21 @@ final class FusionParams {
   /// Should SSL be used to connect to the CashFusion server?
   final bool serverSsl;
 
+  final Uint8List genesisHash;
+
+  final bool enableDebugPrint;
+
   FusionParams({
-    // TODO change this to Electron Cash's default before release:
-    // this.serverHost = "fusion.servo.cash",
-    // this.serverPort = 8789,
-    this.serverHost = "cashfusion.stackwallet.com",
-    this.serverPort = 8787,
-    this.serverSsl = false,
-  });
+    required this.serverHost,
+    required this.serverPort,
+    required this.serverSsl,
+    required String genesisHashHex,
+    this.enableDebugPrint = false,
+  }) : genesisHash = Uint8List.fromList(
+          genesisHashHex.toUint8ListFromHex.reversed.toList(),
+        ) {
+    Utilities.enableDebugPrint = enableDebugPrint;
+  }
 }
 
 class Fusion {
@@ -271,6 +277,7 @@ class Fusion {
         try {
           _serverParams = await Comms.greet(
             connection: connection,
+            genesisHash: _fusionParams.genesisHash,
           );
         } catch (e, s) {
           Utilities.debugPrint("Exception greeting server: $e");
@@ -282,17 +289,6 @@ class Fusion {
 
         // In principle we can hook a pause in here -- user can insert coins after seeing server params.
         // If this can/will be done then this function should be broken in two
-        //
-        //
-        // move this further up for now
-        // try {
-        //   if (_coins.isEmpty) {
-        //     throw FusionError('Started with no coins');
-        //   }
-        // } catch (e) {
-        //   Utilities.debugPrint(e);
-        //   return;
-        // }
 
         if (_checkStop(connection, null)) {
           return;
