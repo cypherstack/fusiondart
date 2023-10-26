@@ -38,8 +38,9 @@ fusion.FusionParams serverParams = fusion.FusionParams(
    serverPort: 8789,
    serverSsl: true,
    genesisHashHex: "000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943",
-   enableDebugPrint: true, // Set to false for release.
    mode: fusion.FusionMode.normal, // normal, fanout, or consolidate.
+   torForOver: false,
+   enableDebugPrint: true, // Set to false for release.
 );
 
 // Instantiate a Fusion object with custom parameters.
