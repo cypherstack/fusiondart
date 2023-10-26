@@ -11,17 +11,11 @@ These actions may result in loss of funds, tokens, or both.  Outputs are not cur
 
 ## Features
 
- - [x] Connect to a CashFusion server
- - [x] Create CashFusion sessions
- - [x] Join CashFusion sessions
- - [x] Send and receive CashFusion messages
- - [ ] Send and receive CashFusion transactions
- - [ ] Send and receive CashFusion status updates
- - [ ] Send and receive CashFusion errors
- - [ ] Send and receive CashFusion session stats
- - [ ] Send and receive CashFusion session stats updates
- - [ ] Send and receive CashFusion session stats errors
- - [ ] Send and receive CashFusion session stats updates errors
+ - [x] Testnet support
+ - [x] Connect to CashFusion servers
+ - [x] Send and receive CashFusion messages and status updates
+ - [x] Register for CashFusion tiers
+ - [x] Send and receive CashFusion transactions
 
 ## Getting started
 
@@ -38,8 +32,42 @@ Check `/example` folder for a sample app.
 ```dart
 import 'package:fusiondart/fusiondart.dart';
 
-// TODO
+// Use server host and port which ultimately come from text fields.
+fusion.FusionParams serverParams = fusion.FusionParams(
+   serverHost: "fusion.servo.cash",
+   serverPort: 8789,
+   serverSsl: true,
+   genesisHashHex: "000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943",
+   enableDebugPrint: true, // Set to false for release.
+   mode: fusion.FusionMode.normal, // normal, fanout, or consolidate.
+);
+
+// Instantiate a Fusion object with custom parameters.
+_mainFusionObject = fusion.Fusion(serverParams);
+
+// Pass wallet functions to the Fusion object.
+await _mainFusionObject!.initFusion(
+   getTransactionsByAddress: _getTransactionsByAddress,
+   getUnusedReservedChangeAddresses: _getUnusedReservedChangeAddresses,
+   getSocksProxyAddress: _getSocksProxyAddress,
+   getChainHeight: _getChainHeight,
+   updateStatusCallback: _updateStatus,
+   checkUtxoExists: _checkUtxoExists,
+   getTransactionJson: _getTransactionJson,
+   getPrivateKeyForPubKey: _getPrivateKeyForPubKey,
+   broadcastTransaction: _broadcastTransaction,
+   unReserveAddresses: _unReserveAddresses,
+);
+
+
+// Fuse UTXOs.
+await _mainFusionObject!.fuse(
+   inputsFromWallet: coinList,
+   network: fusion.Utilities.testNet,
+);
 ```
+
+See [cypherstack/stack_wallet/lib/services/mixins/fusion_wallet_interface.dart](https://github.com/cypherstack/stack_wallet/blob/fusion/lib/services/mixins/fusion_wallet_interface.dart) for a working example.
 
 ## Building Dart Files from fusion.proto
 

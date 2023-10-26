@@ -445,14 +445,20 @@ class Fusion {
   } // End of `fuse()`.
 
   Future<void> stop() async {
-    _updateStatus(status: FusionStatus.running, info: "Stopping fusion.");
+    _updateStatus(
+      status: FusionStatus.running,
+      info: "Stopping fusion.",
+    );
 
     if (_stopRequested) {
       return;
     }
     _stopRequested = true;
 
-    return _stopCompleter?.future;
+    await Future.any([
+      Future<void>.delayed(Duration(minutes: 4)),
+      _stopCompleter?.future ?? Future(() {}),
+    ]);
   }
 
   /// Checks if the system should stop the current operation.
