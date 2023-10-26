@@ -9,6 +9,7 @@ void main() {
       serverPort: 2,
       serverSsl: false,
       genesisHashHex: "AA",
+      mode: FusionMode.normal,
     ));
 
     expect(f, isA<Fusion>());

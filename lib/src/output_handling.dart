@@ -256,6 +256,7 @@ abstract final class OutputHandling {
     }) serverParams,
     required Future<List<Map<String, dynamic>>> Function(String address)
         getTransactionsByAddress,
+    required FusionMode mode,
   }) async {
     Utilities.debugPrint("DBUG allocateoutputs 746");
     Utilities.debugPrint("CHECK socketwrapper 746");
@@ -278,7 +279,7 @@ abstract final class OutputHandling {
 
     // Select random coins from the eligible set.
     final inputs = await _selectRandomCoins(
-      _getFraction(_selections.sumValue),
+      _getFraction(_selections.sumValue, mode),
       _selections.eligible,
       getTransactionsByAddress,
     );
@@ -684,9 +685,7 @@ abstract final class OutputHandling {
   /// of coins to select.
   ///
   /// TODO implement custom modes.
-  static double _getFraction(BigInt sumValue) {
-    String mode = 'normal'; // TODO get from wallet configuration
-    // 'normal', 'consolidate', 'fan-out', etc.
+  static double _getFraction(BigInt sumValue, FusionMode mode) {
     double fraction = 0.1;
 
     // TODO implement custom modes.
@@ -704,11 +703,11 @@ abstract final class OutputHandling {
       }
       // Note: fraction at this point could be <0 or >1 but doesn't matter.
     } else */
-    if (mode == 'consolidate') {
+    if (mode == FusionMode.consolidate) {
       fraction = 1.0;
-    } else if (mode == 'normal') {
+    } else if (mode == FusionMode.normal) {
       fraction = 0.5;
-    } else if (mode == 'fan-out') {
+    } else if (mode == FusionMode.fanout) {
       fraction = 0.1;
     }
 

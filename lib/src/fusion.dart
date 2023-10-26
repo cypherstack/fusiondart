@@ -29,6 +29,8 @@ import 'package:fusiondart/src/util.dart';
 import 'package:fusiondart/src/validation.dart';
 import 'package:protobuf/protobuf.dart';
 
+enum FusionMode { normal, fanout, consolidate }
+
 final class FusionParams {
   /// CashFusion server host.
   ///
@@ -45,6 +47,8 @@ final class FusionParams {
 
   final Uint8List genesisHash;
 
+  final FusionMode mode;
+
   final bool enableDebugPrint;
 
   FusionParams({
@@ -52,6 +56,7 @@ final class FusionParams {
     required this.serverPort,
     required this.serverSsl,
     required String genesisHashHex,
+    required this.mode,
     this.enableDebugPrint = false,
   }) : genesisHash = Uint8List.fromList(
           genesisHashHex.toUint8ListFromHex.reversed.toList(),
@@ -312,6 +317,7 @@ class Fusion {
             currentChainHeight: currentChainHeight,
             serverParams: _serverParams!,
             getTransactionsByAddress: _getTransactionsByAddress,
+            mode: _fusionParams.mode,
           );
         } on FusionStopRequested {
           return;
