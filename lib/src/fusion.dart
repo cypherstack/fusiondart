@@ -49,6 +49,9 @@ final class FusionParams {
 
   final FusionMode mode;
 
+  /// Should Tor be used for typically-over connections?
+  final bool torForOvert;
+
   final bool enableDebugPrint;
 
   FusionParams({
@@ -57,6 +60,7 @@ final class FusionParams {
     required this.serverSsl,
     required String genesisHashHex,
     required this.mode,
+    required this.torForOvert,
     this.enableDebugPrint = false,
   }) : genesisHash = Uint8List.fromList(
           genesisHashHex.toUint8ListFromHex.reversed.toList(),
@@ -258,7 +262,7 @@ class Fusion {
           connTimeout: Duration(seconds: 5),
           defaultTimeout: Duration(seconds: 5),
           ssl: _fusionParams.serverSsl,
-          proxyInfo: await _getSocksProxyAddress(),
+          proxyInfo: _fusionParams.torForOvert ? await _getSocksProxyAddress() : null,
         );
       } catch (e, s) {
         _updateStatus(
