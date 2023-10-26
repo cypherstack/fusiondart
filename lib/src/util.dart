@@ -20,8 +20,9 @@ abstract class Utilities {
   static bool enableDebugPrint = false;
   static void debugPrint(Object? object) {
     if (enableDebugPrint) {
+      final now = DateTime.now();
       // ignore: avoid_print
-      print(object);
+      print("${now.toLocal().toIso8601String()}:: $object");
     }
   }
 
