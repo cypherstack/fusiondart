@@ -2,224 +2,157 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
-import 'package:fusiondart/src/socketwrapper.dart';
+import 'package:fusiondart/src/extensions/on_list_int.dart';
+import 'package:fusiondart/src/util.dart';
+import 'package:socks_socket/socks_socket.dart';
 
-/*
-This file might need some fixing up because each time we call fillBuf, we're trying to
-remove data from a buffer but its a local copy , might not actually
-remove the data from the socket buffer.  We may need a wrapper class for the buffer??
-
- */
-
-class BadFrameError extends Error {
-  final String message;
-
-  BadFrameError(this.message);
-
-  @override
-  String toString() => message;
-}
-
-Future<Connection> openConnection(
-  String host,
-  int port, {
-  double connTimeout = 5.0,
-  double defaultTimeout = 5.0,
-  bool ssl = false,
-  dynamic socksOpts,
-}) async {
-  try {
-    // Dart's Socket class handles connection timeout internally.
-    Socket socket = await Socket.connect(host, port);
-    if (ssl) {
-      // We can use SecureSocket.secure to upgrade socket connection to SSL/TLS.
-      socket = await SecureSocket.secure(socket);
-    }
-
-    return Connection(
-        socket: socket, timeout: Duration(seconds: defaultTimeout.toInt()));
-  } catch (e) {
-    throw 'Failed to open connection: $e';
-  }
-}
-
+/// Class to handle a connection.
+///
+/// This class is used to send and receive messages over a socket.
 class Connection {
   Duration timeout = Duration(seconds: 1);
-  Socket? socket;
 
+  final Socket socket;
+
+  final Stream<List<int>> receiveStream;
+
+  /// Defines the maximum length allowed for a message in [bytes], set to 200 KB.
   static const int MAX_MSG_LENGTH = 200 * 1024;
-  static final Uint8List magic =
-      Uint8List.fromList([0x76, 0x5b, 0xe8, 0xb4, 0xe4, 0x39, 0x6d, 0xcf]);
-  final Uint8List recvbuf = Uint8List(0);
 
-  Connection({required this.socket, this.timeout = const Duration(seconds: 1)});
+  /// Magic bytes used for protocol identification.
+  static final magic = [0x76, 0x5b, 0xe8, 0xb4, 0xe4, 0x39, 0x6d, 0xcf];
 
-  Connection.withoutSocket({this.timeout = const Duration(seconds: 1)});
+  int messageLength = 0;
 
-  Future<void> sendMessageWithSocketWrapper(
-      SocketWrapper socketwrapper, List<int> msg,
-      {Duration? timeout}) async {
-    timeout ??= this.timeout;
-    print("DEBUG sendmessage msg sending ");
-    print(msg);
-    final lengthBytes = Uint8List(4);
-    final byteData = ByteData.view(lengthBytes.buffer);
-    byteData.setUint32(0, msg.length, Endian.big);
+  /// Constructor to initialize a Connection object with a socket.
+  Connection._({
+    required this.socket,
+    required this.receiveStream,
+    this.timeout = const Duration(seconds: 1),
+  });
 
-    final frame = <int>[]
-      ..addAll(Connection.magic)
-      ..addAll(lengthBytes)
-      ..addAll(msg);
-
-    try {
-      socketwrapper.send(frame);
-    } on SocketException catch (e) {
-      throw TimeoutException('Socket write timed out', timeout);
-    }
-  }
-
-  Future<void> sendMessage(List<int> msg, {Duration? timeout}) async {
-    timeout ??= this.timeout;
-
-    final lengthBytes = Uint8List(4);
-    final byteData = ByteData.view(lengthBytes.buffer);
-    byteData.setUint32(0, msg.length, Endian.big);
-
-    print(Connection.magic);
-    final frame = <int>[]
-      ..addAll(Connection.magic)
-      ..addAll(lengthBytes)
-      ..addAll(msg);
-
-    try {
-      StreamController<List<int>> controller = StreamController();
-
-      controller.stream.listen((data) {
-        socket?.add(data);
-      });
-
+  /// Asynchronous function to open a new connection.
+  static Future<Connection> openConnection({
+    required String host,
+    required int port,
+    Duration connTimeout = const Duration(seconds: 5),
+    Duration defaultTimeout = const Duration(seconds: 5),
+    bool ssl = false,
+    ({InternetAddress host, int port})? proxyInfo,
+  }) async {
+    // Before we connect to host and port, if proxyInfo is not null, we should connect to the proxy first.
+    if (proxyInfo != null) {
       try {
-        controller.add(frame);
-        // Remove the socket.flush() if it doesn't help.
-        // await socket?.flush();
-      } catch (e) {
-        print('Error when adding to controller: $e');
-      } finally {
-        controller.close();
+        // From https://github.com/cypherstack/tor/blob/53b1c97a41542956fc6887878ba3147abae20ccd/example/lib/main.dart#L166
+
+        // Instantiate a socks socket at localhost and on the port selected by the tor service.
+        var socksSocket = await SOCKSSocket.create(
+          proxyHost: proxyInfo.host.address,
+          proxyPort: proxyInfo.port,
+          sslEnabled: ssl,
+        );
+
+        // Connect to the socks instantiated above.
+        await socksSocket.connect();
+
+        // Connect to CashFusion server.
+        await socksSocket.connectTo(host, port);
+
+        return Connection._(
+          socket: socksSocket.socket,
+          receiveStream:
+              socksSocket.responseController.stream.asBroadcastStream(),
+          timeout: defaultTimeout,
+        );
+      } catch (e, s) {
+        Utilities.debugPrint(
+          'openConnection(): Failed to open proxied connection: $e\n$s',
+        );
+        rethrow;
       }
-    } on SocketException catch (e) {
-      throw TimeoutException('Socket write timed out', timeout);
-    }
-  }
-
-  void close() {
-    socket?.close();
-  }
-
-  Future<List<int>> fillBuf2(
-      SocketWrapper socketwrapper, List<int> recvBuf, int n,
-      {Duration? timeout}) async {
-    final maxTime = timeout != null ? DateTime.now().add(timeout) : null;
-
-    await for (var data in socketwrapper.socket!.cast<List<int>>()) {
-      print("DEBUG fillBuf2 1 - new data received: $data");
-      if (maxTime != null && DateTime.now().isAfter(maxTime)) {
-        throw SocketException('Timeout');
-      }
-
-      if (data.isEmpty) {
-        if (recvBuf.isNotEmpty) {
-          throw SocketException('Connection ended mid-message.');
+    } else {
+      try {
+        // Connect to host and port.
+        //
+        // Dart's Socket class handles connection timeout internally.
+        final Socket socket;
+        if (ssl) {
+          socket = await SecureSocket.connect(host, port, timeout: connTimeout);
         } else {
-          throw SocketException('Connection ended while awaiting message.');
+          socket = await Socket.connect(host, port, timeout: connTimeout);
         }
-      }
 
-      recvBuf.addAll(data);
-      print(
-          "DEBUG fillBuf2 2 - data added to recvBuf, new length: ${recvBuf.length}");
-
-      if (recvBuf.length >= n) {
-        print("DEBUG fillBuf2 3 - breaking loop, recvBuf is big enough");
-        break;
+        // Create a Connection object and return it.
+        return Connection._(
+          socket: socket,
+          receiveStream: socket.asBroadcastStream(),
+          timeout: defaultTimeout,
+        );
+      } catch (e, s) {
+        Utilities.debugPrint(
+            'openConnection(): Failed to open direct connection: $e\n$s');
+        rethrow;
       }
     }
-
-    return recvBuf;
   }
 
-  Future<List<int>> fillBuf(int n, {Duration? timeout}) async {
-    var recvBuf = <int>[];
-    socket?.listen((data) {
-      print('Received from server: $data');
-    }, onDone: () {
-      print('Server closed connection.');
-      socket?.destroy();
-    }, onError: (error) {
-      print('Error: $error');
-      socket?.destroy();
+  /// Asynchronous method to send a message.
+  Future<void> sendMessage(List<int> msg, {Duration? timeout}) async {
+    // Use class-level timeout if no argument-level timeout is provided.
+    timeout ??= this.timeout;
+
+    // Prepare the 4-byte length header for the message.
+    final lengthBytes = Uint8List(4);
+    final byteData = ByteData.view(lengthBytes.buffer);
+    byteData.setUint32(0, msg.length, Endian.big);
+
+    // Construct the frame to send. The frame includes:
+    // - The "magic" bytes for validation
+    // - The 4-byte length header
+    // - The message itself
+    final frame = [...Connection.magic, ...lengthBytes, ...msg];
+
+    socket.add(frame);
+    await socket.flush().timeout(timeout, onTimeout: () {
+      throw TimeoutException('sendMessage Socket write timed out', timeout);
     });
-    return recvBuf;
-
-    StreamSubscription<List<int>>? subscription; // Declaration moved here
-    subscription = socket!.listen(
-      (List<int> data) {
-        recvBuf.addAll(data);
-        if (recvBuf.length >= n) {
-          subscription?.cancel();
-        }
-      },
-      onError: (e) {
-        subscription?.cancel();
-        if (e is Exception) {
-          throw e;
-        } else {
-          throw Exception(e ?? 'Error in `subscription` socket!.listen');
-        }
-      },
-      onDone: () {
-        print("DEBUG ON DONE");
-        if (recvBuf.length < n) {
-          throw SocketException(
-              'Connection closed before enough data was received');
-        }
-      },
-    );
-
-    if (timeout != null) {
-      Future.delayed(timeout, () {
-        if (recvBuf.length < n) {
-          subscription?.cancel();
-          throw SocketException('Timeout');
-        }
-      });
-    }
-
-    return recvBuf;
   }
 
-  Future<List<int>> recv_message2(SocketWrapper socketwrapper,
-      {Duration? timeout}) async {
-    print("START OF RECV2");
-    if (timeout == null) {
-      timeout = this.timeout;
-    }
+  /// Asynchronous close a socket.
+  Future<void> close() {
+    return socket.close();
+  }
 
-    final maxTime = timeout != null ? DateTime.now().add(timeout) : null;
+  /// Receive a message with a socket wrapper.
+  Future<List<int>> recvMessage({
+    Duration? timeout,
+  }) async {
+    Utilities.debugPrint("START OF RECV2");
+    // Use class-level timeout if no argument-level timeout is provided.
+    timeout ??= this.timeout;
 
+    // Calculate the absolute max time for this operation based on the timeout.
+    final maxTime = DateTime.now().add(timeout);
+
+    // Initialize a buffer to store received data.
     List<int> recvBuf = [];
-    int bytesRead = 0;
 
-    print("DEBUG recv_message2 1 - about to read the header");
+    // temp byte list for error checking/handling
+    List<int>? chunk;
+
+    int? messageLength;
 
     try {
-      await for (var data in socketwrapper.receiveStream) {
-        if (maxTime != null && DateTime.now().isAfter(maxTime)) {
+      // Loop to read incoming data from the socket.
+      await for (List<int> data in receiveStream) {
+        chunk = data;
+        // Check if the operation has timed out.
+        if (DateTime.now().isAfter(maxTime)) {
           throw SocketException('Timeout');
         }
 
+        // Check if the connection has ended.
         if (data.isEmpty) {
           if (recvBuf.isNotEmpty) {
             throw SocketException('Connection ended mid-message.');
@@ -228,63 +161,86 @@ class Connection {
           }
         }
 
+        // Append received data to the receive buffer.
         recvBuf.addAll(data);
 
-        if (bytesRead < 12) {
-          bytesRead += data.length;
-        }
-
+        // Check if we've received enough bytes to start processing the header.
         if (recvBuf.length >= 12) {
-          final magic = recvBuf.sublist(0, 8);
+          // Check if we've already read the message length.
+          if (messageLength == null) {
+            // No, so read the header to get the message length.
+            Utilities.debugPrint(
+                "DEBUG recv_message2 1 - about to read the header");
+            // Extract and validate the magic bytes from the received data.
+            final magic = recvBuf.sublist(0, 8);
 
-          if (!ListEquality().equals(magic, Connection.magic)) {
-            throw BadFrameError('Bad magic in frame: ${hex.encode(magic)}');
+            if (!magic.equals(Connection.magic)) {
+              throw BadFrameError('Bad magic in frame: ${hex.encode(magic)}');
+            }
+            // Extract the message length from the received data.
+            final byteData = ByteData.view(
+                Uint8List.fromList(recvBuf.sublist(8, 12)).buffer);
+            messageLength = byteData.getUint32(0, Endian.big);
+
+            // Validate the message length.
+            if (messageLength > MAX_MSG_LENGTH) {
+              throw BadFrameError(
+                  'Got a frame with msg_length=$messageLength > $MAX_MSG_LENGTH (max)');
+            }
           }
 
-          final byteData =
-              ByteData.view(Uint8List.fromList(recvBuf.sublist(8, 12)).buffer);
-          final messageLength = byteData.getUint32(0, Endian.big);
-
-          if (messageLength > MAX_MSG_LENGTH) {
-            throw BadFrameError(
-                'Got a frame with msg_length=$messageLength > $MAX_MSG_LENGTH (max)');
-          }
-
-          /*
-          print("DEBUG recv_message2 3 - about to read the message body, messageLength: $messageLength");
-
-          print("DEBUG recvfbuf len is ");
-          print(recvBuf.length);
-          print("bytes read is ");
-          print(bytesRead);
-          print("message length is ");
-          print(messageLength);
-
-           */
-          if (recvBuf.length == bytesRead && bytesRead == 12 + messageLength) {
+          // Check if the entire message has been received.
+          if (recvBuf.length == 12 + messageLength) {
+            // Extract and return the received message.
             final message = recvBuf.sublist(12, 12 + messageLength);
 
-            //print("DEBUG recv_message2 4 - message received, length: ${message.length}");
-            //print("DEBUG recv_message2 5 - message content: $message");
-            print("END OF RECV2");
+            Utilities.debugPrint(
+                "DEBUG recv_message2 4 - message received, length: ${message.length}");
+            Utilities.debugPrint(
+                "DEBUG recv_message2 5 - message content: $message");
+            // Utilities.debugPrint(utf8.decode(message));
+            Utilities.debugPrint("END OF RECV2");
             return message;
-          } else {
-            // Throwing exception if the length doesn't match
+          } else if (recvBuf.length > 12 + messageLength) {
+            // We've received more than the entire message, throw an exception.
             throw Exception(
-                'Message length mismatch: expected ${12 + messageLength} bytes, received ${recvBuf.length} bytes.');
+              'Message length mismatch: expected $messageLength bytes, received ${recvBuf.length} bytes.',
+            );
           }
         }
       }
-    } on SocketException catch (e) {
-      print('Socket exception: $e');
+    } catch (e, s) {
+      // Handle any SocketExceptions that may occur.
+      Utilities.debugPrint('recvMessage exception: $e\n$s');
+      rethrow;
+      // Disable this rethrow if it causes too many issues, previously we just printed the exception
     }
 
-    // This is a default return in case of exceptions.
-    return [];
-  }
+    // Check if the connection has ended.
+    if (chunk == null || chunk.isEmpty) {
+      if (recvBuf.isNotEmpty) {
+        throw SocketException('Connection ended mid-message.');
+      } else {
+        throw SocketException('Connection ended while awaiting message.');
+      }
+    }
 
-  Future<List<int>> recv_message({Duration? timeout}) async {
-    // DEPRECATED
-    return [];
+    throw Exception(
+      'recvMessage(): Should not reach this point normally. '
+      'State info: messageLength=$messageLength recvBuf=$recvBuf',
+    );
   }
-} // END OF CLASS
+} // end of Connection class.
+
+/// Class to handle a bad frame error.
+class BadFrameError extends Error {
+  /// The error message String.
+  final String message;
+
+  /// Constructor to initialize a BadFrameError object.
+  BadFrameError(this.message);
+
+  /// Returns a string representation of this object.
+  @override
+  String toString() => message;
+}

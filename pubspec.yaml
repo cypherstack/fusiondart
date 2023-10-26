@@ -7,13 +7,23 @@ environment:
   sdk: ^3.0.6
 
 dependencies:
-  collection: ^1.17.1
   convert: ^3.1.1
   crypto: ^3.0.3
   cryptography: ^2.5.0
   fixnum: ^1.1.0
   pointycastle: ^3.7.3
   protobuf: ^2.0.0
+  coinlib: ^1.0.0
+  hex: ^0.2.0
+  bitbox:
+    git:
+      url: https://github.com/PiRK/bitbox-flutter.git
+      ref: 50bf29957514a5712466ba37590a851212a244bf
+
+  socks_socket:
+    git:
+      url: https://github.com/cypherstack/socks_socket.git
+      ref: master
 
 dev_dependencies:
   lints: ^2.0.0

@@ -1,195 +1,217 @@
 import 'dart:typed_data';
 
+import 'package:fusiondart/src/exceptions.dart';
 import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/ecc/api.dart';
 
-ECDomainParameters getDefaultParams() {
-  return ECDomainParameters("secp256k1");
-}
-
-class NullPointError implements Exception {
-  String errMsg() => 'NullPointError: Either Hpoint or HGpoint is null.';
-}
-
-class NonceRangeError implements Exception {
-  final String message;
-  NonceRangeError(
-      [this.message = "Nonce value must be in the range 0 < nonce < order"]);
-  String toString() => "NonceRangeError: $message";
-}
-
-class ResultAtInfinity implements Exception {
-  final String message;
-  ResultAtInfinity([this.message = "Result is at infinity"]);
-  String toString() => "ResultAtInfinity: $message";
-}
-
-class InsecureHPoint implements Exception {
-  final String message;
-  InsecureHPoint(
-      [this.message =
-          "The H point has a known discrete logarithm, which means the commitment setup is broken"]);
-  String toString() => "InsecureHPoint: $message";
-}
-
+/// Class responsible for setting up a Pedersen commitment.
 class PedersenSetup {
-  late ECPoint _H;
-  late ECPoint _HG;
-  late ECDomainParameters _params;
-  ECDomainParameters get params => _params;
+  late final ECPoint _pointH;
+  late final ECPoint _pointHG;
 
-  PedersenSetup(this._H) {
-    _params = new ECDomainParameters("secp256k1");
-    // validate H point
-    if (!Util.isPointOnCurve(_H, _params.curve)) {
-      throw Exception('H is not a valid point on the curve');
+  /// Constructor initializes the Pedersen setup with a given H point.
+  PedersenSetup(Uint8List _hBytes) {
+    // Deserialize hBytes to get point H.
+    try {
+      _pointH = Utilities.serToPoint(_hBytes, Utilities.secp256k1Params);
+    } catch (_) {
+      throw ArgumentError("H could not be parsed");
     }
-    _HG = Util.combinePubKeys([_H, _params.G]);
+
+    // Calculate H + G to get HG.
+    try {
+      _pointHG = (_pointH + Utilities.secp256k1Params.G)!;
+    } catch (_) {
+      throw Exception('Failed to compute HG');
+    }
+
+    if (_pointHG.isInfinity) {
+      throw InsecureHPoint();
+    }
   }
 
-  Uint8List get H => _H.getEncoded(false);
-  Uint8List get HG => _HG.getEncoded(false);
+  // Getter methods to fetch _H and _HG points.
+  Uint8List get pointH => Utilities.pointToSer(_pointH, false);
+  Uint8List get pointHG => Utilities.pointToSer(_pointHG, false);
 
-  Commitment commit(BigInt amount, {BigInt? nonce, Uint8List? PUncompressed}) {
-    return Commitment(this, amount, nonce: nonce, PUncompressed: PUncompressed);
+  /// Create a new commitment.
+  Commitment commit(
+    BigInt amount, {
+    BigInt? nonce,
+    Uint8List? pointPUncompressed,
+  }) {
+    return Commitment(
+      this,
+      amount,
+      nonce: nonce,
+      pointPUncompressed: pointPUncompressed,
+    );
   }
 }
 
+/// Class to encapsulate the Pedersen commitment.
 class Commitment {
-  late PedersenSetup setup; // Added setup property to Commitment class
-  late BigInt amountMod;
-  late BigInt nonce;
-  late Uint8List PUncompressed;
+  // Private instance variables
+  final PedersenSetup setup; // Added setup property to Commitment class
 
-  Commitment(this.setup, BigInt amount,
-      {BigInt? nonce, Uint8List? PUncompressed}) {
-    this.nonce = nonce ?? Util.secureRandomBigInt(setup.params.n.bitLength);
-    amountMod = amount % setup.params.n;
+  late final BigInt nonce;
 
-    if (this.nonce <= BigInt.zero || this.nonce >= setup.params.n) {
+  late final BigInt amountMod;
+
+  Uint8List get pointPUncompressed => _pointPUncompressed;
+  Uint8List get pointPCompressed => _pointPCompressed;
+
+  late final Uint8List _pointPUncompressed;
+  late final Uint8List _pointPCompressed;
+
+  Commitment(
+    this.setup,
+    BigInt amount, {
+    BigInt? nonce,
+    Uint8List? pointPUncompressed,
+  }) {
+    // https://github.com/Electron-Cash/Electron-Cash/blob/master/electroncash_plugins/fusion/pedersen.py#L160
+    // Initialize nonce with a secure random value if not provided.
+    this.nonce = nonce ??
+        Utilities.secureRandomBigInt(
+          Utilities.secp256k1Params.n,
+        );
+
+    // Validate that nonce is within the allowed range (0, n).
+    if (this.nonce <= BigInt.zero ||
+        this.nonce >= Utilities.secp256k1Params.n) {
       throw NonceRangeError();
     }
 
-    ECPoint? Hpoint = setup._H;
-    ECPoint? HGpoint = setup._HG;
+    // Take the modulus of the amount to ensure it fits within the group order.
+    amountMod =
+        amount % Utilities.secp256k1Params.n; // setup.params.n is order.
 
-    if (Hpoint == null || HGpoint == null) {
-      throw NullPointError();
-    }
+    // Retrieve curve points H and HG.
+    final pointH = setup._pointH;
+    final pointHG = setup._pointHG;
 
-    BigInt multiplier1 = (amountMod - this.nonce) % setup.params.n;
-    BigInt multiplier2 = this.nonce;
+    // Compute multipliers for points H and HG.
+    BigInt a = amountMod;
+    BigInt k = this.nonce;
 
-    ECPoint? HpointMultiplied = Hpoint * multiplier1;
-    ECPoint? HGpointMultiplied = HGpoint * multiplier2;
+    // Multiply curve points by multipliers.
+    ECPoint? pointHMultiplied =
+        pointH * ((a - k) % Utilities.secp256k1Params.n);
+    ECPoint? pointHGMultiplied = pointHG * k;
 
-    ECPoint? Ppoint = HpointMultiplied != null && HGpointMultiplied != null
-        ? HpointMultiplied + HGpointMultiplied
+    // Add the multiplied points to get the commitment point P.
+    ECPoint? pointP = pointHMultiplied != null && pointHGMultiplied != null
+        ? pointHMultiplied + pointHGMultiplied
         : null;
 
-    if (Ppoint == setup.params.curve.infinity) {
+    // Check if point P ends up at infinity, which shouldn't happen.
+    if (pointP == Utilities.secp256k1Params.curve.infinity) {
       throw ResultAtInfinity();
     }
 
-    this.PUncompressed =
-        PUncompressed ?? Ppoint?.getEncoded(false) ?? Uint8List(0);
+    if (pointPUncompressed == null) {
+      // Do initial calculation of point P and nonce.
+      _calcInitial(setup, amount);
+    } else {
+      _pointPUncompressed = pointPUncompressed;
+      _pointPCompressed = Utilities.pointToSer(
+        Utilities.serToPoint(
+          _pointPUncompressed,
+          Utilities.secp256k1Params,
+        ),
+        true,
+      );
+    }
   }
 
-  void calcInitial(PedersenSetup setup, BigInt amount) {
-    amountMod = amount % setup.params.n;
-    nonce = Util.secureRandomBigInt(setup.params.n.bitLength);
+  /// Calculate the initial point and nonce for a given setup and amount.
+  void _calcInitial(PedersenSetup setup, BigInt amount) {
+    // Retrieve the curve points H and HG from the Pedersen setup.
+    final ECPoint pointH = setup._pointH;
+    final ECPoint pointHG = setup._pointHG;
 
-    ECPoint? Hpoint = setup._H;
-    ECPoint? HGpoint = setup._HG;
+    // Legwork towards calculating the point P.
+    BigInt k = nonce;
+    BigInt a = amountMod;
+    ECPoint? pointHMultiplied = pointH *
+        ((a - k) % Utilities.secp256k1Params.n); // setup.params.n is order.
+    ECPoint? pointHGMultiplied = pointHG * k;
 
-    if (nonce <= BigInt.zero || nonce >= setup.params.n) {
-      throw NonceRangeError();
-    }
-
-    if (Hpoint == null || HGpoint == null) {
+    if (pointHMultiplied == null || pointHGMultiplied == null) {
       throw NullPointError();
     }
 
-    BigInt multiplier1 = amountMod;
-    BigInt multiplier2 = nonce;
+    // Sum the two multiplied points to get the final point P.
+    ECPoint pointP = ((pointHMultiplied) + (pointHGMultiplied))!;
 
-    ECPoint? HpointMultiplied = Hpoint * multiplier1;
-    ECPoint? HGpointMultiplied = HGpoint * multiplier2;
-
-    ECPoint? Ppoint = HpointMultiplied != null && HGpointMultiplied != null
-        ? HpointMultiplied + HGpointMultiplied
-        : null;
-
-    if (Ppoint == setup.params.curve.infinity) {
+    // Check if the resulting point P is at infinity, which should not occur.
+    if (pointP == Utilities.secp256k1Params.curve.infinity) {
       throw ResultAtInfinity();
     }
 
-    PUncompressed = Ppoint?.getEncoded(false) ?? Uint8List(0);
+    // Store both forms of the point P
+    _pointPUncompressed = pointP.getEncoded(false);
+    _pointPCompressed = pointP.getEncoded(true);
   }
 
-  static Uint8List add_points(Iterable<Uint8List> pointsIterable) {
-    ECDomainParameters params =
-        getDefaultParams(); // Using helper function here
-    var pointList =
-        pointsIterable.map((pser) => Util.ser_to_point(pser, params)).toList();
-
-    if (pointList.isEmpty) {
-      throw ArgumentError('Empty list');
-    }
-
-    ECPoint pSum =
-        pointList.first; // Initialize pSum with the first point in the list
-
-    for (var i = 1; i < pointList.length; i++) {
-      pSum = (pSum + pointList[i])!;
-    }
-
-    if (pSum == params.curve.infinity) {
-      throw Exception('Result is at infinity');
-    }
-
-    return Util.point_to_ser(pSum, false);
-  }
-
-  Commitment addCommitments(Iterable<Commitment> commitmentIterable) {
-    BigInt ktotal = BigInt.zero; // Changed to BigInt from int
-    BigInt atotal = BigInt.zero; // Changed to BigInt from int
+  /// Add multiple Commitments together.
+  static Commitment addCommitments(Iterable<Commitment> commitmentIterable) {
+    BigInt ktotal = BigInt.zero; // Changed to `BigInt` from `int`.
+    BigInt atotal = BigInt.zero; // Changed to `BigInt` from `int`.
     List<Uint8List> points = [];
-    List<PedersenSetup> setups = []; // Changed Setup to PedersenSetup
+    List<PedersenSetup> setups = []; // Changed Setup to PedersenSetup.
+
+    // Loop through each commitment to sum up nonces and amounts.
     for (Commitment c in commitmentIterable) {
       ktotal += c.nonce;
-      atotal += c.amountMod; // Changed from amount to amountMod
-      points.add(c.PUncompressed);
+      atotal += c.amountMod; // Changed from amount to amountMod.
+      points.add(c.pointPUncompressed);
       setups.add(c.setup);
     }
 
+    // Check for empty list of points.
     if (points.isEmpty) {
       throw ArgumentError('Empty list');
     }
 
+    // Check if all setups are the same.
     PedersenSetup setup = setups[0]; // Changed Setup to PedersenSetup
     if (!setups.every((s) => s == setup)) {
       throw ArgumentError('Mismatched setups');
     }
 
-    ktotal = ktotal % setup.params.n; // Changed order to setup.params.n
+    // Compute sum of nonces modulo group order.
+    ktotal =
+        ktotal % Utilities.secp256k1Params.n; // Changed order to setup.params.n
 
+    // Check if summed nonce is zero.
     if (ktotal == BigInt.zero) {
-      // Changed comparison from 0 to BigInt.zero
+      // Changed comparison from 0 to `BigInt.zero`.
       throw Exception('Nonce range error');
     }
 
-    Uint8List? PUncompressed;
+    // Compute the sum of points if possible, else set to `null`.
+    Uint8List? pointPUncompressed;
     if (points.length < 512) {
       try {
-        PUncompressed = add_points(points);
+        pointPUncompressed = Utilities.addPoints(
+          points,
+          Utilities.secp256k1Params,
+        );
       } on Exception {
-        PUncompressed = null;
+        pointPUncompressed = null;
       }
     } else {
-      PUncompressed = null;
+      pointPUncompressed = null;
     }
-    return Commitment(setup, atotal,
-        nonce: ktotal, PUncompressed: PUncompressed);
+
+    // Return new Commitment object with summed values.
+    return Commitment(
+      setup,
+      atotal,
+      nonce: ktotal,
+      pointPUncompressed: pointPUncompressed,
+    );
   }
 }

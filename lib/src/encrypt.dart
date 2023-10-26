@@ -1,136 +1,197 @@
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart' as crypto;
 import 'package:cryptography/cryptography.dart';
+import 'package:fusiondart/src/exceptions.dart';
+import 'package:fusiondart/src/extensions/on_list_int.dart';
+import 'package:fusiondart/src/extensions/on_uint8list.dart';
+import 'package:fusiondart/src/util.dart';
 import 'package:pointycastle/pointycastle.dart' hide Mac;
 
-import 'util.dart';
-
-final ECDomainParameters params = ECDomainParameters('secp256k1');
-final BigInt order = params.n;
-
-class EncryptionFailed implements Exception {}
-
-class DecryptionFailed implements Exception {}
-
-Future<Uint8List> encrypt(Uint8List message, ECPoint pubkey,
-    {int? padToLength}) async {
-  ECPoint pubpoint;
+/// Encrypts a [message] using a provided EC [pubKey].
+///
+/// Optionally pads to a specified length [padToLength].
+Future<Uint8List> encrypt(
+  Uint8List message,
+  Uint8List pubKey, {
+  int? padToLength,
+}) async {
+  // Initialize public point from the public key
+  final ECPoint pubPoint;
   try {
-    pubpoint = Util.ser_to_point(pubkey.getEncoded(true), params);
+    pubPoint = Utilities.serToPoint(pubKey, Utilities.secp256k1Params);
   } catch (_) {
-    throw EncryptionFailed();
+    throw EncryptionFailed(); // If serialization to point fails, throw encryption failed exception.
   }
-  var nonceSec = Util.secureRandomBigInt(params.n.bitLength);
-  var G_times_nonceSec = params.G * nonceSec;
-  if (G_times_nonceSec == null) {
+
+  // Generate secure random nonce.
+  final BigInt nonceSec = Utilities.secureRandomBigInt(
+    Utilities.secp256k1Params.n,
+  );
+
+  // Calculate G * nonceSec
+  final ECPoint? gTimesNonceSec = Utilities.secp256k1Params.G * nonceSec;
+  if (gTimesNonceSec == null) {
     throw Exception('Multiplication of G with nonceSec resulted in null');
   }
-  var noncePub = Util.point_to_ser(G_times_nonceSec, true);
 
-  var pubpoint_times_nonceSec = pubpoint * nonceSec;
-  if (pubpoint_times_nonceSec == null) {
+  // Serialize G_times_nonceSec to bytes
+  final Uint8List noncePub = Utilities.pointToSer(gTimesNonceSec, true);
+
+  // Calculate public point * nonceSec
+  ECPoint? pubPointTimesNonceSec = pubPoint * nonceSec;
+  if (pubPointTimesNonceSec == null) {
     throw Exception(
-        'Multiplication of pubpoint with nonceSec resulted in null');
+        'Multiplication of pubPoint with nonceSec resulted in null');
   }
-  var key = crypto.sha256
-      .convert(Util.point_to_ser(pubpoint_times_nonceSec, true))
-      .bytes;
 
-  var plaintext = Uint8List(4 + message.length)
+  // Create a SHA-256 hash as the symmetric key.
+  final List<int> key =
+      Utilities.sha256(Utilities.pointToSer(pubPointTimesNonceSec, true));
+
+  // Prepare plaintext with message length prepended.
+  Uint8List plaintext = Uint8List(4 + message.length)
     ..buffer.asByteData().setUint32(0, message.length, Endian.big)
     ..setRange(4, 4 + message.length, message);
+
+  // Handle padding for AES encryption.
   if (padToLength == null) {
-    padToLength =
-        ((plaintext.length + 15) ~/ 16) * 16; // round up to nearest 16
+    padToLength = ((plaintext.length + 15) ~/ 16) *
+        16; // Round up to nearest 16 bytes for AES block size.
   } else if (padToLength % 16 != 0) {
     throw ArgumentError('$padToLength not multiple of 16');
   }
   if (padToLength < plaintext.length) {
     throw ArgumentError('$padToLength < ${plaintext.length}');
   }
+
+  // Actual padding.
   plaintext = Uint8List(padToLength)
     ..setRange(0, message.length + 4, plaintext);
 
+  // Initialize secret key, MAC algorithm, and cipher.
   final secretKey = SecretKey(key);
+  final cipher = AesCbc.with256bits(
+    macAlgorithm: Hmac.sha256(),
+    paddingAlgorithm: PaddingAlgorithm.zero,
+  );
 
-  final macAlgorithm = Hmac(Sha256());
+  // IV is set to zeros: https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/encrypt.py#L97
+  final nonce = Uint8List(16);
 
-  final cipher = AesCbc.with128bits(macAlgorithm: macAlgorithm);
+  // Perform AES encryption.
+  final secretBox = await cipher.encrypt(
+    plaintext,
+    secretKey: secretKey,
+    nonce: nonce,
+  );
 
-  final nonce = Uint8List(16); // Random nonce
-  final secretBox =
-      await cipher.encrypt(plaintext, secretKey: secretKey, nonce: nonce);
-
+  // Prepare final ciphertext.
   final ciphertext = secretBox.cipherText;
 
-  return Uint8List(
-      noncePub.length + ciphertext.length + secretBox.mac.bytes.length)
-    ..setRange(0, noncePub.length, noncePub)
-    ..setRange(noncePub.length, noncePub.length + ciphertext.length, ciphertext)
-    ..setRange(
-        noncePub.length + ciphertext.length,
-        noncePub.length + ciphertext.length + secretBox.mac.bytes.length,
-        secretBox.mac.bytes);
+  // truncate mac (as done in the python code)
+  final mac = secretBox.mac.bytes.sublist(0, 16);
+
+  // Combine nonce, ciphertext, and MAC to create the final encrypted message.
+  return Uint8List.fromList([
+    ...noncePub,
+    ...ciphertext,
+    ...mac,
+  ]);
 }
 
+/// Decrypts data using a symmetric key.
 Future<Uint8List> decryptWithSymmkey(Uint8List data, Uint8List key) async {
+  // Check if the incoming data has a minimum length to contain all the elements.
   if (data.length < 33 + 16 + 16) {
     throw DecryptionFailed();
   }
-  var ciphertext = data.sublist(33, data.length - 16);
+
+  // Extract the actual ciphertext from the data (skipping nonce and MAC).
+  Uint8List ciphertext = data.sublist(33, data.length - 16);
+
+  // Check if the ciphertext's length is a multiple of the AES block size.
   if (ciphertext.length % 16 != 0) {
     throw DecryptionFailed();
   }
 
+  // Initialize the secret key and cipher.
   final secretKey = SecretKey(key);
-  final cipher = AesCbc.with128bits(macAlgorithm: Hmac.sha256());
-  final nonce = Uint8List(16); // Random nonce
+  final cipher = AesCbc.with256bits(
+    macAlgorithm: Hmac.sha256(),
+    paddingAlgorithm: PaddingAlgorithm.zero,
+  );
 
-  final secretBox = SecretBox(ciphertext,
-      mac: Mac(data.sublist(data.length - 16)), nonce: nonce);
+  // IV https://github.com/Electron-Cash/Electron-Cash/blob/ba01323b732d1ae4ba2ca66c40e3f27bb92cee4b/electroncash_plugins/fusion/encrypt.py#L119
+  final nonce = Uint8List(16);
+
+  final extractedMacBytes = data.sublist(data.length - 16);
+
+  final calculatedHMAC = await Hmac(Sha256()).calculateMac(
+    ciphertext,
+    secretKey: secretKey,
+    nonce: nonce,
+  );
+
+  if (!calculatedHMAC.bytes.sublist(0, 16).equals(extractedMacBytes)) {
+    throw DecryptionFailed();
+  }
+
+  // Initialize the SecretBox with the ciphertext, MAC and nonce.
+  final secretBox = SecretBox(
+    ciphertext,
+    mac: calculatedHMAC,
+    nonce: nonce,
+  );
+
+  // Perform the decryption.
   final plaintext = await cipher.decrypt(secretBox, secretKey: secretKey);
 
+  // Check if the decrypted plaintext has at least 4 bytes (for the length field).
   if (plaintext.length < 4) {
     throw DecryptionFailed();
   }
 
+  // Convert plaintext to ByteData to read the length field.
   Uint8List uint8list = Uint8List.fromList(plaintext);
   ByteData byteData = ByteData.sublistView(uint8list);
-  var msgLength = byteData.getUint32(0, Endian.big);
+  int msgLength = byteData.getUint32(0, Endian.big);
 
+  // Check if the length field in the decrypted message matches the actual message length.
   if (msgLength + 4 > plaintext.length) {
     throw DecryptionFailed();
   }
+
+  // Extract and return the actual message from the decrypted plaintext.
   return Uint8List.fromList(plaintext.sublist(4, 4 + msgLength));
 }
 
-Future<Tuple<Uint8List, Uint8List>> decrypt(
-    Uint8List data, ECPrivateKey privkey) async {
+/// Decrypts an encrypted message using a provided EC private key.
+Future<({Uint8List decrypted, Uint8List symmetricKey})> decrypt(
+  Uint8List data,
+  Uint8List privateKey,
+) async {
+  // Ensure the encrypted data is of the minimum required length.
   if (data.length < 33 + 16 + 16) {
     throw DecryptionFailed();
   }
-  var noncePub = data.sublist(0, 33);
+  // Extract the public part of the nonce from the incoming data.
+  Uint8List noncePub = data.sublist(0, 33);
   ECPoint noncePoint;
+
+  // Attempt to deserialize the nonce point.
   try {
-    noncePoint = Util.ser_to_point(noncePub, params);
+    noncePoint = Utilities.serToPoint(noncePub, Utilities.secp256k1Params);
   } catch (_) {
     throw DecryptionFailed();
   }
 
-  // DOUBLE CHECK THIS IS RIGHT IDEA MATCHING PYTHON.
+  final ECPoint? point = noncePoint * privateKey.toBigInt;
 
-  ECPoint G = params.G;
-  final List<int> key;
+  // Generate the symmetric key using the SHA-256 hash of the computed point.
+  final key = Utilities.sha256(Utilities.pointToSer(point!, true));
+  // Use the symmetric key to decrypt the data.
+  final decryptedData = await decryptWithSymmkey(data, key);
 
-  if (privkey.d != null) {
-    var point = (G * privkey.d)! + noncePoint;
-    key = crypto.sha256.convert(Util.point_to_ser(point!, true)).bytes;
-    // ...
-    var decryptedData = await decryptWithSymmkey(data, Uint8List.fromList(key));
-    return Tuple(decryptedData, Uint8List.fromList(key));
-  } else {
-    // Handle the situation where privkey.d or noncePoint is null
-    throw Exception("FIXME");
-  }
+  // Return the decrypted data and the symmetric key used for decryption.
+  return (decrypted: decryptedData, symmetricKey: Uint8List.fromList(key));
 }

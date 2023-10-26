@@ -1,8 +1,10 @@
-/// Support for doing something awesome.
-///
-/// More dartdocs go here.
+/// CashFusion Dart library.
 library;
 
 export 'src/fusion.dart';
-
-// TODO: Export any libraries intended for clients of this package.
+export 'src/models/address.dart';
+export 'src/models/output.dart';
+export 'src/models/transaction.dart';
+export 'src/models/utxo_dto.dart';
+export 'src/status.dart';
+export 'src/util.dart';
