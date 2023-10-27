@@ -4,10 +4,9 @@ A Dart package for interacting with CashFusion servers.
 
 # WARNING
 
- - Do not test this with a wallet with significant funds.
  - Do not test this with a wallet with tokens.
 
-These actions may result in loss of funds, tokens, or both.  Outputs are not currently checked for tokens and their use in CashFusion transactions will almost certainly lead to their loss.
+Do not import/inject CashToken, SLP, and other non-standard outputs into this package.  Fusiondart itself does not currently check for tokens and their use in CashFusion transactions will almost certainly lead to their loss.
 
 ## Features
 
@@ -69,6 +68,10 @@ await _mainFusionObject!.fuse(
 ```
 
 See [cypherstack/stack_wallet/lib/services/mixins/fusion_wallet_interface.dart](https://github.com/cypherstack/stack_wallet/blob/fusion/lib/services/mixins/fusion_wallet_interface.dart) for a working example.
+
+## Contributing
+
+See https://github.com/cypherstack/fusiondart/issues for a list of issues to which you may contribute.  Please PR against the `staging` branch.
 
 ## Building Dart Files from fusion.proto
 
