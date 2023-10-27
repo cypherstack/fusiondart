@@ -422,6 +422,7 @@ class Fusion {
           break; // tx found
         } catch (_) {
           // tx not found or some other error
+          Utilities.debugPrint("Did not get transaction: $_");
         }
 
         await Future<void>.delayed(Duration(seconds: 1));
