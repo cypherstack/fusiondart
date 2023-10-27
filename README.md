@@ -22,11 +22,9 @@ Do not import/inject CashToken, SLP, and other non-standard outputs into this pa
 
 FusionDart uses [coinlib](https://github.com/peercoin/coinlib) for cryptocurrency calculations, which [needs to be built](https://github.com/peercoin/coinlib/tree/master/coinlib#building-for-linux).  Build it according to their documentation ([macOS instructions here](https://github.com/peercoin/coinlib/tree/master/coinlib#building-for-macos)).
 
-### Example
-
-Check `/example` folder for a sample app.
-
 ## Usage
+
+See [cypherstack/stack_wallet/lib/services/mixins/fusion_wallet_interface.dart](https://github.com/cypherstack/stack_wallet/blob/fusion/lib/services/mixins/fusion_wallet_interface.dart) for a working example.  It follows this basic pattern:
 
 ```dart
 import 'package:fusiondart/fusiondart.dart';
@@ -67,7 +65,7 @@ await _mainFusionObject!.fuse(
 );
 ```
 
-See [cypherstack/stack_wallet/lib/services/mixins/fusion_wallet_interface.dart](https://github.com/cypherstack/stack_wallet/blob/fusion/lib/services/mixins/fusion_wallet_interface.dart) for a working example.
+You will need to define the injected methods `_getTransactionsByAddress`, `_getUnusedReservedChangeAddresses`, etc.
 
 ## Contributing
 
