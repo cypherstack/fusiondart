@@ -198,7 +198,9 @@ pb.InputComponent? validateProofInternal(
 
   check(msg.salt.length == 32, "salt wrong length");
   check(
-    Utilities.sha256(msg.salt as Uint8List) == comp.saltCommitment,
+    Utilities.sha256(Uint8List.fromList(msg.salt))
+        .toList()
+        .equals(comp.saltCommitment),
     "salt commitment mismatch",
   );
 
@@ -219,7 +221,7 @@ pb.InputComponent? validateProofInternal(
   );
 
   check(
-    Uint8List.fromList(pCommitted) == claimedCommit.pointPUncompressed,
+    Uint8List.fromList(pCommitted).equals(claimedCommit.pointPUncompressed),
     "pedersen commitment mismatch",
   );
 
