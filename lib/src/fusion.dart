@@ -262,7 +262,8 @@ class Fusion {
           connTimeout: Duration(seconds: 5),
           defaultTimeout: Duration(seconds: 5),
           ssl: _fusionParams.serverSsl,
-          proxyInfo: _fusionParams.torForOvert ? await _getSocksProxyAddress() : null,
+          proxyInfo:
+              _fusionParams.torForOvert ? await _getSocksProxyAddress() : null,
         );
       } catch (e, s) {
         _updateStatus(
@@ -419,17 +420,9 @@ class Fusion {
           await _getTransactionJson(txid);
 
           break; // tx found
-        } catch (e, s) {
-          if (e
-              .toString()
-              .contains("No such mempool or blockchain transaction")) {
-            // Transaction not found, wait.
-            Utilities.debugPrint("Transaction not found, waiting...");
-          } else {
-            Utilities.debugPrint("Exception getting transaction: $e");
-            Utilities.debugPrint("$s");
-            rethrow;
-          }
+        } catch (_) {
+          // tx not found or some other error
+          Utilities.debugPrint("Did not get transaction: $_");
         }
 
         await Future<void>.delayed(Duration(seconds: 1));
