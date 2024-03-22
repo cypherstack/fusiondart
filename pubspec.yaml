@@ -13,7 +13,7 @@ dependencies:
   fixnum: ^1.1.0
   pointycastle: ^3.7.3
   protobuf: ^2.0.0
-  coinlib: ^1.0.0
+  coinlib: ^2.0.0
   hex: ^0.2.0
   bitbox:
     git:
