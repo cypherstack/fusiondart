@@ -31,7 +31,7 @@ class Output {
   static Output fromAddress({
     required int value,
     required String address,
-    required coinlib.NetworkParams network,
+    required coinlib.Network network,
   }) {
     return Output._(
       value: value,

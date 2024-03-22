@@ -427,7 +427,7 @@ abstract final class OutputHandling {
     BigInt sumAmounts,
     Uint8List pedersenTotalNonce,
   }) genComponents(
-    coinlib.NetworkParams network,
+    coinlib.Network network,
     int numBlanks,
     List<UtxoDTO> inputs,
     List<Output> outputs,

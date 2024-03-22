@@ -33,7 +33,7 @@ class Address {
   /// Creates an Address from a script public key
   static Address fromScriptPubKey(
     List<int> scriptPubKey,
-    coinlib.NetworkParams network, [
+    coinlib.Network network, [
     bool fusionReserved = false,
   ]) {
     return Utilities.getAddressFromOutputScript(

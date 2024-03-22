@@ -35,7 +35,7 @@ abstract class Utilities {
 
   // ===========================================================================
 
-  static coinlib.NetworkParams get mainNet => coinlib.NetworkParams(
+  static coinlib.Network get mainNet => coinlib.Network(
         wifPrefix: 0x80,
         p2pkhPrefix: 0x00,
         p2shPrefix: 0x05,
@@ -43,9 +43,12 @@ abstract class Utilities {
         pubHDPrefix: 0x0488b21e,
         bech32Hrp: "bc",
         messagePrefix: "\x18Bitcoin Signed Message:\n",
+        minFee: BigInt.from(1), // TODO [prio=high].
+        minOutput: BigInt.from(546), // TODO.
+        feePerKb: BigInt.from(1), // TODO.
       );
 
-  static coinlib.NetworkParams get testNet => coinlib.NetworkParams(
+  static coinlib.Network get testNet => coinlib.Network(
         wifPrefix: 0xef,
         p2pkhPrefix: 0x6f,
         p2shPrefix: 0xc4,
@@ -53,6 +56,9 @@ abstract class Utilities {
         pubHDPrefix: 0x043587cf,
         bech32Hrp: "tb",
         messagePrefix: "\x18Bitcoin Signed Message:\n",
+        minFee: BigInt.from(1), // TODO [prio=high].
+        minOutput: BigInt.from(546), // TODO.
+        feePerKb: BigInt.from(1), // TODO.
       );
 
   // ===========================================================================
@@ -109,7 +115,7 @@ abstract class Utilities {
   /// Extracts the address from an output script.
   static Address getAddressFromOutputScript(
     Uint8List scriptPubKey,
-    coinlib.NetworkParams network, [
+    coinlib.Network network, [
     bool fusionReserved = false,
   ]) {
     // Throw exception if this is not a standard P2PKH address.
@@ -531,7 +537,7 @@ abstract class Utilities {
 
   static Uint8List scriptOf({
     required String address,
-    required coinlib.NetworkParams network,
+    required coinlib.Network network,
   }) {
     if (bitbox.Address.detectFormat(address) == bitbox.Address.formatCashAddr) {
       address = bitbox.Address.toLegacyAddress(address);
