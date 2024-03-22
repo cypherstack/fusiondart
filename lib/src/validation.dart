@@ -14,7 +14,7 @@ import 'package:protobuf/protobuf.dart';
 int componentContrib(
   pb.Component component,
   int feerate,
-  coinlib.NetworkParams network,
+  coinlib.Network network,
 ) {
   if (component.hasInput()) {
     return component.input.amount.toInt() -
@@ -123,7 +123,7 @@ List<pb.InitialCommitment> checkPlayerCommit(pb.PlayerCommit msg,
   pb.CovertComponent msg,
   Uint8List roundPubkey,
   int componentFeerate,
-  coinlib.NetworkParams network,
+  coinlib.Network network,
 ) {
   Uint8List messageHash = Utilities.sha256(Uint8List.fromList(msg.component));
 
@@ -179,7 +179,7 @@ pb.InputComponent? validateProofInternal(
   List<List<int>> allComponents,
   List<int> badComponents,
   int componentFeerate,
-  coinlib.NetworkParams network,
+  coinlib.Network network,
 ) {
   final msg = protoStrictParse(pb.Proof(), proofBlob);
 
@@ -240,7 +240,7 @@ Future<pb.InputComponent> validateBlame(
   List<List<int>> allComponents,
   List<int> badComponents,
   int componentFeerate,
-  coinlib.NetworkParams network,
+  coinlib.Network network,
 ) async {
   final destCommit = pb.InitialCommitment();
   destCommit.mergeFromBuffer(destCommitBlob);

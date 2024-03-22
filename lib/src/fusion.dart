@@ -212,7 +212,7 @@ class Fusion {
   /// This method orchestrates the entire lifecycle of a CashFusion operation.
   Future<void> fuse({
     required List<UtxoDTO> inputsFromWallet,
-    required coinlib.NetworkParams network,
+    required coinlib.Network network,
   }) async {
     Utilities.debugPrint("DEBUG FUSION 223...fusion run....");
 
@@ -506,7 +506,7 @@ class Fusion {
       BigInt safetySumIn,
       Map<int, int> safetyExcessFees,
     }) allocatedOutputs,
-    required coinlib.NetworkParams network,
+    required coinlib.Network network,
   }) async {
     // Initialize a stopwatch to measure elapsed time.
     Stopwatch stopwatch = Stopwatch()..start();
@@ -960,7 +960,7 @@ class Fusion {
     required int roundCount,
     required CovertSubmitter covert,
     required Connection connection,
-    required coinlib.NetworkParams network,
+    required coinlib.Network network,
   }) async {
     Utilities.debugPrint("START OF RUN ROUND");
 

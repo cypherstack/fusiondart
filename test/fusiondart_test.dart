@@ -10,6 +10,7 @@ void main() {
       serverSsl: false,
       genesisHashHex: "AA",
       mode: FusionMode.normal,
+      torForOvert: false,
     ));
 
     expect(f, isA<Fusion>());

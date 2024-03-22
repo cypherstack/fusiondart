@@ -33,7 +33,7 @@ class Transaction {
   }) txFromComponents(
     List<List<int>> allComponents,
     List<int> sessionHash,
-    coinlib.NetworkParams network,
+    coinlib.Network network,
   ) {
     // Initialize a new Transaction.
     Transaction tx = Transaction([], []);
@@ -93,7 +93,7 @@ class Transaction {
   /// Serializes the preimage of the transaction.
   Uint8List serializePreimageBytes(
     int i, {
-    required coinlib.NetworkParams network,
+    required coinlib.Network network,
     int nHashType = 0x00000041,
     bool useCache = false,
   }) {
