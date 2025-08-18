@@ -19,11 +19,7 @@ dependencies:
     git:
       url: https://github.com/PiRK/bitbox-flutter.git
       ref: 50bf29957514a5712466ba37590a851212a244bf
-
-  socks_socket:
-    git:
-      url: https://github.com/cypherstack/socks_socket.git
-      ref: master
+  socks_socket: ^1.1.1
 
 dev_dependencies:
   lints: ^4.0.0
