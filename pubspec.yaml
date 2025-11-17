@@ -11,14 +11,18 @@ dependencies:
   crypto: ^3.0.3
   cryptography: ^2.5.0
   fixnum: ^1.1.0
-  pointycastle: ^3.7.3
+  pointycastle: ^4.0.0
   protobuf: ^4.1.0
-  coinlib: ^2.0.0
+  coinlib:
+    git:
+      url: https://www.github.com/julian-CStack/coinlib
+      path: coinlib
+      ref: f90600053a4f149a6153f30057ac7f75c21ab962
   hex: ^0.2.0
   bitbox:
     git:
-      url: https://github.com/PiRK/bitbox-flutter.git
-      ref: 50bf29957514a5712466ba37590a851212a244bf
+      url: https://github.com/cypherstack/bitbox-flutter.git
+      ref: 4c3c1aadae089dd1ace705aedf012e1c89fe53ad
   socks_socket: ^1.1.1
 
 dev_dependencies:
