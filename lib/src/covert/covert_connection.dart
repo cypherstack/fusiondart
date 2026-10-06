@@ -49,10 +49,10 @@ class CovertConnection {
   }
 
   /// Sends a ping message to keep the connection alive.
-  void ping() {
+  Future<void> ping() async {
     // If the connection exists, send a `Ping` message.
     if (connection != null) {
-      Comms.sendPb(
+      await Comms.sendPb(
         connection!,
         CovertMessage()..ping = Ping(),
         timeout: Duration(seconds: 1),

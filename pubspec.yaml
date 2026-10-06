@@ -23,7 +23,7 @@ dependencies:
     git:
       url: https://github.com/cypherstack/bitbox-flutter.git
       ref: 4c3c1aadae089dd1ace705aedf012e1c89fe53ad
-  socks_socket: ^1.1.1
+  socks_socket: ^1.4.0
 
 dev_dependencies:
   lints: ^4.0.0
