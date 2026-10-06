@@ -1,0 +1,3 @@
+tags:
+  # Run by default; skip with `dart test -x slow`.
+  slow:

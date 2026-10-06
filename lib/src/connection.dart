@@ -13,7 +13,11 @@ import 'package:socks_socket/socks_socket.dart';
 class Connection {
   Duration timeout = Duration(seconds: 1);
 
-  final Socket socket;
+  /// Writes one frame; completes once it has been flushed, or throws a
+  /// [TimeoutException] after [timeout].
+  final Future<void> Function(List<int> frame, Duration timeout) _send;
+
+  final Future<void> Function({required bool force}) _close;
 
   final Stream<List<int>> receiveStream;
 
@@ -27,10 +31,105 @@ class Connection {
 
   /// Constructor to initialize a Connection object with a socket.
   Connection._({
-    required this.socket,
+    required Future<void> Function(List<int> frame, Duration timeout) send,
+    required Future<void> Function({required bool force}) close,
     required this.receiveStream,
     this.timeout = const Duration(seconds: 1),
-  });
+  })  : _send = send,
+        _close = close;
+
+  /// A connection over a plain or TLS [Socket].
+  factory Connection._socket(Socket socket, {required Duration timeout}) {
+    var aborted = false;
+    return Connection._(
+      send: (frame, timeout) {
+        socket.add(frame);
+        return socket.flush().then((_) {
+          // destroy() can complete a pending flush normally.
+          if (aborted) throw const SocketException('Connection aborted');
+        }).timeout(timeout, onTimeout: () => throw _sendTimedOut(timeout));
+      },
+      close: ({required force}) async {
+        if (force) {
+          aborted = true;
+          socket.destroy();
+        } else {
+          await socket.close();
+        }
+      },
+      receiveStream: socket.asBroadcastStream(),
+      timeout: timeout,
+    );
+  }
+
+  /// A connection through a SOCKS5 proxy.
+  ///
+  /// Frames go through [SOCKSSocket.outputStream] rather than the underlying
+  /// socket, so the SOCKSSocket can deliver them if the server closes its
+  /// side mid-send.
+  ///
+  /// A send that times out while queued is dropped. One that times out after
+  /// it has started writing aborts the connection, since the peer may have
+  /// part of its frame.
+  ///
+  /// socks_socket closes its output sink once the server closes its side, so
+  /// frames still queued here then fail rather than being delivered.
+  factory Connection._socks(SOCKSSocket socket, {required Duration timeout}) {
+    var sending = Future<void>.value();
+    var closed = false;
+    var aborted = false;
+    void abort() {
+      aborted = true;
+      socket.socket.destroy();
+    }
+
+    return Connection._(
+      send: (frame, timeout) {
+        if (closed) {
+          return Future.error(StateError('Connection is closed'));
+        }
+        var started = false;
+        var expired = false;
+        // The output sink takes one stream at a time.
+        final sent =
+            sending = sending.catchError((Object _) {}).then((_) async {
+          if (expired) return;
+          started = true;
+          await socket.outputStream.addStream(Stream.value(frame));
+        }).then((_) {
+          // socks_socket 1.4.0 can report a write cut short by destroy() as
+          // successful.
+          if (aborted) throw const SocketException('Connection aborted');
+        });
+        return sent.timeout(timeout, onTimeout: () {
+          expired = true;
+          if (started) abort();
+          throw _sendTimedOut(timeout);
+        });
+      },
+      close: ({required force}) async {
+        closed = true;
+        if (force) {
+          abort();
+        } else {
+          // Every queued send ends by its own timeout.
+          await sending.catchError((Object _) {});
+        }
+        try {
+          await socket.close();
+        } catch (e) {
+          // SOCKSSocket.close() rethrows earlier write failures; it has torn
+          // the connection down either way.
+          Utilities.debugPrint('Connection.close(): $e');
+        }
+      },
+      receiveStream: socket.inputStream.asBroadcastStream(),
+      timeout: timeout,
+    );
+  }
+
+  static TimeoutException _sendTimedOut(Duration timeout) =>
+      TimeoutException('sendMessage Socket write timed out', timeout);
 
   /// Asynchronous function to open a new connection.
   static Future<Connection> openConnection({
@@ -51,6 +150,9 @@ class Connection {
           proxyHost: proxyInfo.host.address,
           proxyPort: proxyInfo.port,
           sslEnabled: ssl,
+          // sendMessage() enforces its own timeout; without this, socks_socket
+          // would fail any write still flushing after its 30 s default.
+          operationTimeout: const Duration(days: 1),
         );
 
         // Connect to the socks instantiated above.
@@ -59,12 +161,7 @@ class Connection {
         // Connect to CashFusion server.
         await socksSocket.connectTo(host, port);
 
-        return Connection._(
-          socket: socksSocket.socket,
-          receiveStream:
-              socksSocket.responseController.stream.asBroadcastStream(),
-          timeout: defaultTimeout,
-        );
+        return Connection._socks(socksSocket, timeout: defaultTimeout);
       } catch (e, s) {
         Utilities.debugPrint(
           'openConnection(): Failed to open proxied connection: $e\n$s',
@@ -84,11 +181,7 @@ class Connection {
         }
 
         // Create a Connection object and return it.
-        return Connection._(
-          socket: socket,
-          receiveStream: socket.asBroadcastStream(),
-          timeout: defaultTimeout,
-        );
+        return Connection._socket(socket, timeout: defaultTimeout);
       } catch (e, s) {
         Utilities.debugPrint(
             'openConnection(): Failed to open direct connection: $e\n$s');
@@ -113,15 +206,15 @@ class Connection {
     // - The message itself
     final frame = [...Connection.magic, ...lengthBytes, ...msg];
 
-    socket.add(frame);
-    await socket.flush().timeout(timeout, onTimeout: () {
-      throw TimeoutException('sendMessage Socket write timed out', timeout);
-    });
+    await _send(frame, timeout);
   }
 
-  /// Asynchronous close a socket.
-  Future<void> close() {
-    return socket.close();
+  /// Closes the connection once the frames already passed to [sendMessage]
+  /// are sent, rejecting new ones.
+  ///
+  /// With [force], closes at once and drops any frames not yet sent.
+  Future<void> close({bool force = false}) {
+    return _close(force: force);
   }
 
   /// Receive a message with a socket wrapper.
