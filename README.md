@@ -22,6 +22,12 @@ Do not import/inject CashToken, SLP, and other non-standard outputs into this pa
 
 FusionDart uses [coinlib](https://github.com/peercoin/coinlib) for cryptocurrency calculations, which [needs to be built](https://github.com/peercoin/coinlib/tree/master/coinlib#building-for-linux).  Build it according to their documentation ([macOS instructions here](https://github.com/peercoin/coinlib/tree/master/coinlib#building-for-macos)).
 
+### Toolchain
+
+`pubspec.lock` is resolved with Flutter 3.44.8 (Dart 3.12.2), the version Stack Wallet uses.  The bitbox dependency pulls in the Flutter SDK, which pins some transitive packages such as `meta` and `vector_math`, so other Flutter versions rewrite the lockfile.
+
+`dart test -x slow` skips the slow tests.
+
 ## Usage
 
 See [cypherstack/stack_wallet/lib/services/mixins/fusion_wallet_interface.dart](https://github.com/cypherstack/stack_wallet/blob/fusion/lib/services/mixins/fusion_wallet_interface.dart) for a working example.  It follows this basic pattern:
