@@ -332,6 +332,7 @@ class Fusion {
               info: "Failed to allocate inputs, please try again.");
           Utilities.debugPrint("Exception allocating outputs: $e");
           Utilities.debugPrint("$s");
+          rethrow;
         }
         // In principle we can hook a pause in here -- user can tweak tier_outputs, perhaps cancelling some unwanted tiers.
 
