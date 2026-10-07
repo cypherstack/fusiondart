@@ -77,11 +77,7 @@ class Connection {
   factory Connection._socks(SOCKSSocket socket, {required Duration timeout}) {
     var sending = Future<void>.value();
     var closed = false;
-    var aborted = false;
-    void abort() {
-      aborted = true;
-      socket.socket.destroy();
-    }
+    void abort() => socket.destroy();
 
     return Connection._(
       send: (frame, timeout) {
@@ -96,10 +92,6 @@ class Connection {
           if (expired) return;
           started = true;
           await socket.outputStream.addStream(Stream.value(frame));
-        }).then((_) {
-          // socks_socket 1.4.0 can report a write cut short by destroy() as
-          // successful.
-          if (aborted) throw const SocketException('Connection aborted');
         });
         return sent.timeout(timeout, onTimeout: () {
           expired = true;
