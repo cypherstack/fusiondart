@@ -72,8 +72,8 @@ class Connection {
   /// it has started writing aborts the connection, since the peer may have
   /// part of its frame.
   ///
-  /// socks_socket closes its output sink once the server closes its side, so
-  /// frames still queued here then fail rather than being delivered.
+  /// A server half-close ends receives but leaves output open, so frames
+  /// still queued here can be sent until this connection closes.
   factory Connection._socks(SOCKSSocket socket, {required Duration timeout}) {
     var sending = Future<void>.value();
     var closed = false;
@@ -142,6 +142,7 @@ class Connection {
           proxyHost: proxyInfo.host.address,
           proxyPort: proxyInfo.port,
           sslEnabled: ssl,
+          closeOnPeerEof: false,
           // sendMessage() enforces its own timeout; without this, socks_socket
           // would fail any write still flushing after its 30 s default.
           operationTimeout: const Duration(days: 1),
