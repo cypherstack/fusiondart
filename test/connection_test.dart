@@ -78,7 +78,8 @@ void main() {
         _frameOverhead + size);
   });
 
-  test('a send still queued when the server closes its side fails', () async {
+  test('a send still queued when the server closes its side is delivered',
+      () async {
     const size = 8 * 1024 * 1024;
     // The tunnel peer half-closes, then reads slowly.
     final proxy = await _proxy((peer, input) async {
@@ -93,17 +94,15 @@ void main() {
     final reply = expectLater(connection.recvMessage(), throwsA(anything));
     final first = connection.sendMessage(List.filled(size, 1),
         timeout: const Duration(seconds: 10));
-    // socks_socket 1.4.0 closes its output sink at the server's EOF, so the
-    // second frame can't be handed to it. It must fail, not report success.
-    final second = expectLater(
-        connection.sendMessage([1], timeout: const Duration(seconds: 10)),
-        throwsA(anything));
+    // This frame stays queued until the first finishes after the server's EOF.
+    final second =
+        connection.sendMessage([1], timeout: const Duration(seconds: 10));
     await first;
     await second;
     await reply;
     await connection.close();
     expect(await proxy.received.timeout(const Duration(seconds: 10)),
-        _frameOverhead + size);
+        2 * _frameOverhead + size + 1);
   });
 
   test('closing a proxied connection after a failed send completes', () async {

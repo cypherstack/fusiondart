@@ -371,10 +371,10 @@ packages:
     dependency: "direct main"
     description:
       name: socks_socket
-      sha256: "57118042d51e3397174d0019271bb444f207f3dd0007aced1d276e4e014acb8c"
+      sha256: "09149ed1278584554aeacc60c7aeec5bd80154e6ce1136f00d97485d09d5a338"
       url: "https://pub.dev"
     source: hosted
-    version: "1.4.0"
+    version: "2.0.0"
   source_map_stack_trace:
     dependency: transitive
     description:
