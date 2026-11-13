@@ -15,6 +15,8 @@ import 'dart:core' as $core;
 import 'package:fixnum/fixnum.dart' as $fixnum;
 import 'package:protobuf/protobuf.dart' as $pb;
 
+import 'package:fusiondart/src/protobuf/protobuf_compat.dart' as $compat;
+
 export 'package:protobuf/protobuf.dart' show GeneratedMessageGenericExtensions;
 
 class InputComponent extends $pb.GeneratedMessage {
@@ -56,7 +58,7 @@ class InputComponent extends $pb.GeneratedMessage {
   static InputComponent create() => InputComponent._();
   @$core.override
   InputComponent createEmptyInstance() => create();
-  static $pb.PbList<InputComponent> createRepeated() => $pb.PbList<InputComponent>();
+  static $pb.PbList<InputComponent> createRepeated() => $compat.newRepeated<InputComponent>(InputComponent.create);
   @$core.pragma('dart2js:noInline')
   static InputComponent getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<InputComponent>(create);
   static InputComponent? _defaultInstance;
@@ -131,7 +133,7 @@ class OutputComponent extends $pb.GeneratedMessage {
   static OutputComponent create() => OutputComponent._();
   @$core.override
   OutputComponent createEmptyInstance() => create();
-  static $pb.PbList<OutputComponent> createRepeated() => $pb.PbList<OutputComponent>();
+  static $pb.PbList<OutputComponent> createRepeated() => $compat.newRepeated<OutputComponent>(OutputComponent.create);
   @$core.pragma('dart2js:noInline')
   static OutputComponent getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<OutputComponent>(create);
   static OutputComponent? _defaultInstance;
@@ -179,7 +181,7 @@ class BlankComponent extends $pb.GeneratedMessage {
   static BlankComponent create() => BlankComponent._();
   @$core.override
   BlankComponent createEmptyInstance() => create();
-  static $pb.PbList<BlankComponent> createRepeated() => $pb.PbList<BlankComponent>();
+  static $pb.PbList<BlankComponent> createRepeated() => $compat.newRepeated<BlankComponent>(BlankComponent.create);
   @$core.pragma('dart2js:noInline')
   static BlankComponent getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<BlankComponent>(create);
   static BlankComponent? _defaultInstance;
@@ -238,7 +240,7 @@ class Component extends $pb.GeneratedMessage {
   static Component create() => Component._();
   @$core.override
   Component createEmptyInstance() => create();
-  static $pb.PbList<Component> createRepeated() => $pb.PbList<Component>();
+  static $pb.PbList<Component> createRepeated() => $compat.newRepeated<Component>(Component.create);
   @$core.pragma('dart2js:noInline')
   static Component getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Component>(create);
   static Component? _defaultInstance;
@@ -325,7 +327,7 @@ class InitialCommitment extends $pb.GeneratedMessage {
   static InitialCommitment create() => InitialCommitment._();
   @$core.override
   InitialCommitment createEmptyInstance() => create();
-  static $pb.PbList<InitialCommitment> createRepeated() => $pb.PbList<InitialCommitment>();
+  static $pb.PbList<InitialCommitment> createRepeated() => $compat.newRepeated<InitialCommitment>(InitialCommitment.create);
   @$core.pragma('dart2js:noInline')
   static InitialCommitment getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<InitialCommitment>(create);
   static InitialCommitment? _defaultInstance;
@@ -394,7 +396,7 @@ class Proof extends $pb.GeneratedMessage {
   static Proof create() => Proof._();
   @$core.override
   Proof createEmptyInstance() => create();
-  static $pb.PbList<Proof> createRepeated() => $pb.PbList<Proof>();
+  static $pb.PbList<Proof> createRepeated() => $compat.newRepeated<Proof>(Proof.create);
   @$core.pragma('dart2js:noInline')
   static Proof getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Proof>(create);
   static Proof? _defaultInstance;
@@ -463,7 +465,7 @@ class ClientHello extends $pb.GeneratedMessage {
   static ClientHello create() => ClientHello._();
   @$core.override
   ClientHello createEmptyInstance() => create();
-  static $pb.PbList<ClientHello> createRepeated() => $pb.PbList<ClientHello>();
+  static $pb.PbList<ClientHello> createRepeated() => $compat.newRepeated<ClientHello>(ClientHello.create);
   @$core.pragma('dart2js:noInline')
   static ClientHello getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ClientHello>(create);
   static ClientHello? _defaultInstance;
@@ -532,7 +534,7 @@ class ServerHello extends $pb.GeneratedMessage {
   static ServerHello create() => ServerHello._();
   @$core.override
   ServerHello createEmptyInstance() => create();
-  static $pb.PbList<ServerHello> createRepeated() => $pb.PbList<ServerHello>();
+  static $pb.PbList<ServerHello> createRepeated() => $compat.newRepeated<ServerHello>(ServerHello.create);
   @$core.pragma('dart2js:noInline')
   static ServerHello getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ServerHello>(create);
   static ServerHello? _defaultInstance;
@@ -622,7 +624,7 @@ class JoinPools_PoolTag extends $pb.GeneratedMessage {
   static JoinPools_PoolTag create() => JoinPools_PoolTag._();
   @$core.override
   JoinPools_PoolTag createEmptyInstance() => create();
-  static $pb.PbList<JoinPools_PoolTag> createRepeated() => $pb.PbList<JoinPools_PoolTag>();
+  static $pb.PbList<JoinPools_PoolTag> createRepeated() => $compat.newRepeated<JoinPools_PoolTag>(JoinPools_PoolTag.create);
   @$core.pragma('dart2js:noInline')
   static JoinPools_PoolTag getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<JoinPools_PoolTag>(create);
   static JoinPools_PoolTag? _defaultInstance;
@@ -691,7 +693,7 @@ class JoinPools extends $pb.GeneratedMessage {
   static JoinPools create() => JoinPools._();
   @$core.override
   JoinPools createEmptyInstance() => create();
-  static $pb.PbList<JoinPools> createRepeated() => $pb.PbList<JoinPools>();
+  static $pb.PbList<JoinPools> createRepeated() => $compat.newRepeated<JoinPools>(JoinPools.create);
   @$core.pragma('dart2js:noInline')
   static JoinPools getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<JoinPools>(create);
   static JoinPools? _defaultInstance;
@@ -743,7 +745,7 @@ class TierStatusUpdate_TierStatus extends $pb.GeneratedMessage {
   static TierStatusUpdate_TierStatus create() => TierStatusUpdate_TierStatus._();
   @$core.override
   TierStatusUpdate_TierStatus createEmptyInstance() => create();
-  static $pb.PbList<TierStatusUpdate_TierStatus> createRepeated() => $pb.PbList<TierStatusUpdate_TierStatus>();
+  static $pb.PbList<TierStatusUpdate_TierStatus> createRepeated() => $compat.newRepeated<TierStatusUpdate_TierStatus>(TierStatusUpdate_TierStatus.create);
   @$core.pragma('dart2js:noInline')
   static TierStatusUpdate_TierStatus getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<TierStatusUpdate_TierStatus>(create);
   static TierStatusUpdate_TierStatus? _defaultInstance;
@@ -818,7 +820,7 @@ class TierStatusUpdate extends $pb.GeneratedMessage {
   static TierStatusUpdate create() => TierStatusUpdate._();
   @$core.override
   TierStatusUpdate createEmptyInstance() => create();
-  static $pb.PbList<TierStatusUpdate> createRepeated() => $pb.PbList<TierStatusUpdate>();
+  static $pb.PbList<TierStatusUpdate> createRepeated() => $compat.newRepeated<TierStatusUpdate>(TierStatusUpdate.create);
   @$core.pragma('dart2js:noInline')
   static TierStatusUpdate getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<TierStatusUpdate>(create);
   static TierStatusUpdate? _defaultInstance;
@@ -869,7 +871,7 @@ class FusionBegin extends $pb.GeneratedMessage {
   static FusionBegin create() => FusionBegin._();
   @$core.override
   FusionBegin createEmptyInstance() => create();
-  static $pb.PbList<FusionBegin> createRepeated() => $pb.PbList<FusionBegin>();
+  static $pb.PbList<FusionBegin> createRepeated() => $compat.newRepeated<FusionBegin>(FusionBegin.create);
   @$core.pragma('dart2js:noInline')
   static FusionBegin getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<FusionBegin>(create);
   static FusionBegin? _defaultInstance;
@@ -956,7 +958,7 @@ class StartRound extends $pb.GeneratedMessage {
   static StartRound create() => StartRound._();
   @$core.override
   StartRound createEmptyInstance() => create();
-  static $pb.PbList<StartRound> createRepeated() => $pb.PbList<StartRound>();
+  static $pb.PbList<StartRound> createRepeated() => $compat.newRepeated<StartRound>(StartRound.create);
   @$core.pragma('dart2js:noInline')
   static StartRound getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<StartRound>(create);
   static StartRound? _defaultInstance;
@@ -1026,7 +1028,7 @@ class PlayerCommit extends $pb.GeneratedMessage {
   static PlayerCommit create() => PlayerCommit._();
   @$core.override
   PlayerCommit createEmptyInstance() => create();
-  static $pb.PbList<PlayerCommit> createRepeated() => $pb.PbList<PlayerCommit>();
+  static $pb.PbList<PlayerCommit> createRepeated() => $compat.newRepeated<PlayerCommit>(PlayerCommit.create);
   @$core.pragma('dart2js:noInline')
   static PlayerCommit getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PlayerCommit>(create);
   static PlayerCommit? _defaultInstance;
@@ -1097,7 +1099,7 @@ class BlindSigResponses extends $pb.GeneratedMessage {
   static BlindSigResponses create() => BlindSigResponses._();
   @$core.override
   BlindSigResponses createEmptyInstance() => create();
-  static $pb.PbList<BlindSigResponses> createRepeated() => $pb.PbList<BlindSigResponses>();
+  static $pb.PbList<BlindSigResponses> createRepeated() => $compat.newRepeated<BlindSigResponses>(BlindSigResponses.create);
   @$core.pragma('dart2js:noInline')
   static BlindSigResponses getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<BlindSigResponses>(create);
   static BlindSigResponses? _defaultInstance;
@@ -1137,7 +1139,7 @@ class AllCommitments extends $pb.GeneratedMessage {
   static AllCommitments create() => AllCommitments._();
   @$core.override
   AllCommitments createEmptyInstance() => create();
-  static $pb.PbList<AllCommitments> createRepeated() => $pb.PbList<AllCommitments>();
+  static $pb.PbList<AllCommitments> createRepeated() => $compat.newRepeated<AllCommitments>(AllCommitments.create);
   @$core.pragma('dart2js:noInline')
   static AllCommitments getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<AllCommitments>(create);
   static AllCommitments? _defaultInstance;
@@ -1184,7 +1186,7 @@ class CovertComponent extends $pb.GeneratedMessage {
   static CovertComponent create() => CovertComponent._();
   @$core.override
   CovertComponent createEmptyInstance() => create();
-  static $pb.PbList<CovertComponent> createRepeated() => $pb.PbList<CovertComponent>();
+  static $pb.PbList<CovertComponent> createRepeated() => $compat.newRepeated<CovertComponent>(CovertComponent.create);
   @$core.pragma('dart2js:noInline')
   static CovertComponent getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CovertComponent>(create);
   static CovertComponent? _defaultInstance;
@@ -1256,7 +1258,7 @@ class ShareCovertComponents extends $pb.GeneratedMessage {
   static ShareCovertComponents create() => ShareCovertComponents._();
   @$core.override
   ShareCovertComponents createEmptyInstance() => create();
-  static $pb.PbList<ShareCovertComponents> createRepeated() => $pb.PbList<ShareCovertComponents>();
+  static $pb.PbList<ShareCovertComponents> createRepeated() => $compat.newRepeated<ShareCovertComponents>(ShareCovertComponents.create);
   @$core.pragma('dart2js:noInline')
   static ShareCovertComponents getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ShareCovertComponents>(create);
   static ShareCovertComponents? _defaultInstance;
@@ -1322,7 +1324,7 @@ class CovertTransactionSignature extends $pb.GeneratedMessage {
   static CovertTransactionSignature create() => CovertTransactionSignature._();
   @$core.override
   CovertTransactionSignature createEmptyInstance() => create();
-  static $pb.PbList<CovertTransactionSignature> createRepeated() => $pb.PbList<CovertTransactionSignature>();
+  static $pb.PbList<CovertTransactionSignature> createRepeated() => $compat.newRepeated<CovertTransactionSignature>(CovertTransactionSignature.create);
   @$core.pragma('dart2js:noInline')
   static CovertTransactionSignature getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CovertTransactionSignature>(create);
   static CovertTransactionSignature? _defaultInstance;
@@ -1393,7 +1395,7 @@ class FusionResult extends $pb.GeneratedMessage {
   static FusionResult create() => FusionResult._();
   @$core.override
   FusionResult createEmptyInstance() => create();
-  static $pb.PbList<FusionResult> createRepeated() => $pb.PbList<FusionResult>();
+  static $pb.PbList<FusionResult> createRepeated() => $compat.newRepeated<FusionResult>(FusionResult.create);
   @$core.pragma('dart2js:noInline')
   static FusionResult getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<FusionResult>(create);
   static FusionResult? _defaultInstance;
@@ -1448,7 +1450,7 @@ class MyProofsList extends $pb.GeneratedMessage {
   static MyProofsList create() => MyProofsList._();
   @$core.override
   MyProofsList createEmptyInstance() => create();
-  static $pb.PbList<MyProofsList> createRepeated() => $pb.PbList<MyProofsList>();
+  static $pb.PbList<MyProofsList> createRepeated() => $compat.newRepeated<MyProofsList>(MyProofsList.create);
   @$core.pragma('dart2js:noInline')
   static MyProofsList getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<MyProofsList>(create);
   static MyProofsList? _defaultInstance;
@@ -1502,7 +1504,7 @@ class TheirProofsList_RelayedProof extends $pb.GeneratedMessage {
   static TheirProofsList_RelayedProof create() => TheirProofsList_RelayedProof._();
   @$core.override
   TheirProofsList_RelayedProof createEmptyInstance() => create();
-  static $pb.PbList<TheirProofsList_RelayedProof> createRepeated() => $pb.PbList<TheirProofsList_RelayedProof>();
+  static $pb.PbList<TheirProofsList_RelayedProof> createRepeated() => $compat.newRepeated<TheirProofsList_RelayedProof>(TheirProofsList_RelayedProof.create);
   @$core.pragma('dart2js:noInline')
   static TheirProofsList_RelayedProof getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<TheirProofsList_RelayedProof>(create);
   static TheirProofsList_RelayedProof? _defaultInstance;
@@ -1565,7 +1567,7 @@ class TheirProofsList extends $pb.GeneratedMessage {
   static TheirProofsList create() => TheirProofsList._();
   @$core.override
   TheirProofsList createEmptyInstance() => create();
-  static $pb.PbList<TheirProofsList> createRepeated() => $pb.PbList<TheirProofsList>();
+  static $pb.PbList<TheirProofsList> createRepeated() => $compat.newRepeated<TheirProofsList>(TheirProofsList.create);
   @$core.pragma('dart2js:noInline')
   static TheirProofsList getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<TheirProofsList>(create);
   static TheirProofsList? _defaultInstance;
@@ -1628,7 +1630,7 @@ class Blames_BlameProof extends $pb.GeneratedMessage {
   static Blames_BlameProof create() => Blames_BlameProof._();
   @$core.override
   Blames_BlameProof createEmptyInstance() => create();
-  static $pb.PbList<Blames_BlameProof> createRepeated() => $pb.PbList<Blames_BlameProof>();
+  static $pb.PbList<Blames_BlameProof> createRepeated() => $compat.newRepeated<Blames_BlameProof>(Blames_BlameProof.create);
   @$core.pragma('dart2js:noInline')
   static Blames_BlameProof getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Blames_BlameProof>(create);
   static Blames_BlameProof? _defaultInstance;
@@ -1718,7 +1720,7 @@ class Blames extends $pb.GeneratedMessage {
   static Blames create() => Blames._();
   @$core.override
   Blames createEmptyInstance() => create();
-  static $pb.PbList<Blames> createRepeated() => $pb.PbList<Blames>();
+  static $pb.PbList<Blames> createRepeated() => $compat.newRepeated<Blames>(Blames.create);
   @$core.pragma('dart2js:noInline')
   static Blames getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Blames>(create);
   static Blames? _defaultInstance;
@@ -1752,7 +1754,7 @@ class RestartRound extends $pb.GeneratedMessage {
   static RestartRound create() => RestartRound._();
   @$core.override
   RestartRound createEmptyInstance() => create();
-  static $pb.PbList<RestartRound> createRepeated() => $pb.PbList<RestartRound>();
+  static $pb.PbList<RestartRound> createRepeated() => $compat.newRepeated<RestartRound>(RestartRound.create);
   @$core.pragma('dart2js:noInline')
   static RestartRound getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RestartRound>(create);
   static RestartRound? _defaultInstance;
@@ -1790,7 +1792,7 @@ class Error extends $pb.GeneratedMessage {
   static Error create() => Error._();
   @$core.override
   Error createEmptyInstance() => create();
-  static $pb.PbList<Error> createRepeated() => $pb.PbList<Error>();
+  static $pb.PbList<Error> createRepeated() => $compat.newRepeated<Error>(Error.create);
   @$core.pragma('dart2js:noInline')
   static Error getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Error>(create);
   static Error? _defaultInstance;
@@ -1830,7 +1832,7 @@ class Ping extends $pb.GeneratedMessage {
   static Ping create() => Ping._();
   @$core.override
   Ping createEmptyInstance() => create();
-  static $pb.PbList<Ping> createRepeated() => $pb.PbList<Ping>();
+  static $pb.PbList<Ping> createRepeated() => $compat.newRepeated<Ping>(Ping.create);
   @$core.pragma('dart2js:noInline')
   static Ping getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Ping>(create);
   static Ping? _defaultInstance;
@@ -1861,7 +1863,7 @@ class OK extends $pb.GeneratedMessage {
   static OK create() => OK._();
   @$core.override
   OK createEmptyInstance() => create();
-  static $pb.PbList<OK> createRepeated() => $pb.PbList<OK>();
+  static $pb.PbList<OK> createRepeated() => $compat.newRepeated<OK>(OK.create);
   @$core.pragma('dart2js:noInline')
   static OK getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<OK>(create);
   static OK? _defaultInstance;
@@ -1927,7 +1929,7 @@ class ClientMessage extends $pb.GeneratedMessage {
   static ClientMessage create() => ClientMessage._();
   @$core.override
   ClientMessage createEmptyInstance() => create();
-  static $pb.PbList<ClientMessage> createRepeated() => $pb.PbList<ClientMessage>();
+  static $pb.PbList<ClientMessage> createRepeated() => $compat.newRepeated<ClientMessage>(ClientMessage.create);
   @$core.pragma('dart2js:noInline')
   static ClientMessage getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ClientMessage>(create);
   static ClientMessage? _defaultInstance;
@@ -2081,7 +2083,7 @@ class ServerMessage extends $pb.GeneratedMessage {
   static ServerMessage create() => ServerMessage._();
   @$core.override
   ServerMessage createEmptyInstance() => create();
-  static $pb.PbList<ServerMessage> createRepeated() => $pb.PbList<ServerMessage>();
+  static $pb.PbList<ServerMessage> createRepeated() => $compat.newRepeated<ServerMessage>(ServerMessage.create);
   @$core.pragma('dart2js:noInline')
   static ServerMessage getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ServerMessage>(create);
   static ServerMessage? _defaultInstance;
@@ -2261,7 +2263,7 @@ class CovertMessage extends $pb.GeneratedMessage {
   static CovertMessage create() => CovertMessage._();
   @$core.override
   CovertMessage createEmptyInstance() => create();
-  static $pb.PbList<CovertMessage> createRepeated() => $pb.PbList<CovertMessage>();
+  static $pb.PbList<CovertMessage> createRepeated() => $compat.newRepeated<CovertMessage>(CovertMessage.create);
   @$core.pragma('dart2js:noInline')
   static CovertMessage getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CovertMessage>(create);
   static CovertMessage? _defaultInstance;
@@ -2349,7 +2351,7 @@ class CovertResponse extends $pb.GeneratedMessage {
   static CovertResponse create() => CovertResponse._();
   @$core.override
   CovertResponse createEmptyInstance() => create();
-  static $pb.PbList<CovertResponse> createRepeated() => $pb.PbList<CovertResponse>();
+  static $pb.PbList<CovertResponse> createRepeated() => $compat.newRepeated<CovertResponse>(CovertResponse.create);
   @$core.pragma('dart2js:noInline')
   static CovertResponse getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CovertResponse>(create);
   static CovertResponse? _defaultInstance;

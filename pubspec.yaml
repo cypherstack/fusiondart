@@ -12,7 +12,7 @@ dependencies:
   cryptography: ^2.5.0
   fixnum: ^1.1.0
   pointycastle: ^4.0.0
-  protobuf: ^4.1.0
+  protobuf: ">=4.1.0 <7.0.0"
   coinlib:
     git:
       url: https://www.github.com/julian-CStack/coinlib
