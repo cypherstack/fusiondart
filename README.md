@@ -28,6 +28,9 @@ FusionDart uses [coinlib](https://github.com/peercoin/coinlib) for cryptocurrenc
 
 `dart test -x slow` skips the slow tests.
 
+The checked-in protocol bindings support protobuf runtime versions 4.1
+through 6.x. See the regeneration instructions below before updating them.
+
 ## Usage
 
 See [cypherstack/stack_wallet/lib/services/mixins/fusion_wallet_interface.dart](https://github.com/cypherstack/stack_wallet/blob/fusion/lib/services/mixins/fusion_wallet_interface.dart) for a working example.  It follows this basic pattern:
@@ -83,25 +86,26 @@ This section describes how to generate Dart files based on the `fusion.proto` fi
 
 ### Prerequisites
 
-- Ensure that you have the `protoc` command-line tool installed.
-- Navigate to the directory containing your `fusion.proto` file.
+- Install `protoc` 3.21.12.
+- Install the protobuf 4-era Dart generator used by the checked-in bindings:
+
+    ```bash
+    dart pub global activate protoc_plugin 22.1.0
+    ```
 
 ### Steps
 
-1. Open your terminal and navigate to the directory where your `fusion.proto` file is located.
-2. Run the following script ([fusiondart/lib/src/protobuf/build-proto-fusion.sh](https://github.com/cypherstack/fusiondart/blob/staging/lib/src/protobuf/build-proto-fusion.sh)) to generate the Dart files:
+1. From any directory, run:
 
     ```bash
-    #!/bin/bash
-
-    # This script will build the dart files based on fusion.proto.
-
-    # The path to your .proto file. Adjust this if necessary.
-    PROTO_FILE="fusion.proto"
-
-    # Run the protoc command.
-    protoc --dart_out=grpc:. $PROTO_FILE
+    ./lib/src/protobuf/build-proto-fusion.sh
     ```
 
-3. After running the script, Dart files will be generated in the same directory as your `.proto` file.
-4. Manually copy any generated Dart files that you need to your `lib` folder.
+The checked-in bindings use `protoc` 3.21.12 and `protoc_plugin` 22.1.0. Their
+`fusion.proto` SHA-256 is
+`22b8a137176c28ecd12bb6fde8c44662b555a470e79a5203105e363abf9307da`.
+The script regenerates the files in place and runs
+`tool/patch_generated_proto.dart`. The postprocessor preserves the generated
+public `createRepeated()` methods while replacing the `PbList()` constructor
+removed in protobuf 6 with an implementation supported by protobuf 4 through
+6. It is safe to run the postprocessor more than once.
